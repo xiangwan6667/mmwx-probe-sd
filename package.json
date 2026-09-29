@@ -2,7 +2,7 @@
   "name": "mmwx-probe-sd",
   "private": true,
   "version": "0.1.0",
-  "description": "SD Probe: unofficial customized probe frontend based on mmwx-group/mmwx-probe",
+  "description": "mmwx-probe-sd: unofficial customized probe frontend based on mmwx-group/mmwx-probe",
   "cloudflare": {
     "bindings": {
       "MMWX_ORIGIN": {

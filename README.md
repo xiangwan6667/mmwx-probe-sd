@@ -1,4 +1,4 @@
-# SD Probe
+# mmwx-probe-sd
 
 **面向个人自托管场景的非官方独立探针前端。** 本项目基于 [mmwx-group/mmwx-probe](https://github.com/mmwx-group/mmwx-probe) 二次开发，由 [xiangwan6667](https://github.com/xiangwan6667) 维护，代码仓库为 [`mmwx-probe-sd`](https://github.com/xiangwan6667/mmwx-probe-sd)。
 
@@ -180,4 +180,4 @@ npm run dev
 
 按许可证要求，非商业使用、学习、审计、修改和 Fork 可以进行；发布修改版或通过网络提供修改版服务时，需要公开相应完整源码、保留版权并说明修改。商业使用需事先获得原版权方书面授权，不得移除或绕过授权机制。具体权利与限制以 [LICENSE](LICENSE) 原文为准。
 
-**SD Probe 是非官方修改版，与原作者及官方项目不存在官方背书关系。**
+**mmwx-probe-sd 是非官方修改版，与原作者及官方项目不存在官方背书关系。**
