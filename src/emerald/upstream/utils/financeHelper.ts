@@ -144,7 +144,7 @@ export function shouldExcludeFreeNodes(): boolean {
 }
 
 export function getStoredFinanceCurrency(): CurrencyCode {
-  return normalizeCurrency(getLocalStorageItem('fin_currency') || 'CNY')
+  return normalizeCurrency(getLocalStorageItem('fin_currency') || 'USD')
 }
 
 export function setStoredFinanceCurrency(currency: CurrencyCode): void {

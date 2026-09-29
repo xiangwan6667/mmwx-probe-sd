@@ -795,24 +795,6 @@ onMounted(() => {
           </div>
         </CardX>
 
-        <!-- 进程卡片 -->
-        <CardX
-          size="small"
-          class="border-none transition-all rounded-md"
-          :class="pickSurfaceClass('bg-background/60 hover:bg-background', 'bg-background/50 hover:bg-background backdrop-blur-xs')"
-        >
-          <template #header>
-            <div class="flex items-center justify-between">
-              <span class="text-base font-bold">进程</span>
-              <span class="text-xs">
-                {{ latestStatus?.process ?? '-' }}
-              </span>
-            </div>
-          </template>
-          <div class="h-48">
-            <Empty description="主控未提供进程数" />
-          </div>
-        </CardX>
       </div>
     </Spinner>
   </div>

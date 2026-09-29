@@ -22,7 +22,7 @@ const NodeEarthMaps = defineAsyncComponent(() => import('@emerald/components/Nod
 const appStore = useAppStore()
 const { pickSurfaceClass } = useBackgroundSurface()
 const nodesStore = useNodesStore()
-const selectedCurrency = ref('CNY')
+const selectedCurrency = ref('USD')
 const excludeFreeNodes = ref(true)
 
 const summaryNodes = computed(() => props.nodes ?? nodesStore.nodes)
@@ -44,6 +44,7 @@ function getMetricSwitchStyle(index: number): Record<string, string> {
 function setExchangeRateBaseCurrency(event: Event): void {
   const target = event.target as HTMLSelectElement
   selectedCurrency.value = target.value
+  if (financeHelper.isSupportedCurrency(target.value)) financeHelper.setStoredFinanceCurrency(target.value)
 }
 
 function sumMetric(nodes: NodeData[], key: keyof NodeData): number {
@@ -78,12 +79,10 @@ const formattedDiskUsed = computed(() => formatBytesSplit(totalDisk.value.used, 
 const formattedDiskTotal = computed(() => formatBytesSplit(totalDisk.value.total, appStore.byteDecimals))
 
 const financeGroups = computed(() => financeHelper.calculateFinanceGroups(summaryNodes.value, excludeFreeNodes.value))
-const financeRateCurrencies = computed(() => financeGroups.value.map(group => group.currency))
-const selectedGroup = computed(() => financeGroups.value.find(group => group.currency === selectedCurrency.value) || financeGroups.value[0])
-const exchangeRateBaseCurrency = computed(() => selectedGroup.value?.currency || 'CNY')
-const formattedRemainingValue = computed(() => financeGroups.value.length > 1
-  ? { symbol: '', value: '多币种', currency: '点击查看' }
-  : financeHelper.formatFinanceAmount(selectedGroup.value?.remaining ?? Number.NaN, exchangeRateBaseCurrency.value))
+const financeRateCurrencies = computed(() => [...new Set([selectedCurrency.value, ...financeGroups.value.map(group => group.currency)])])
+const selectedGroup = computed(() => financeGroups.value.find(group => group.currency === selectedCurrency.value))
+const exchangeRateBaseCurrency = computed(() => selectedCurrency.value)
+const formattedRemainingValue = computed(() => financeHelper.formatFinanceAmount(selectedGroup.value?.remaining, exchangeRateBaseCurrency.value))
 const financeSummaryItems = computed(() => [
   { label: '总价值', ...financeHelper.formatFinanceAmount(selectedGroup.value?.total ?? Number.NaN, exchangeRateBaseCurrency.value) },
   { label: '月均支出', ...financeHelper.formatFinanceAmount(selectedGroup.value?.monthly ?? Number.NaN, exchangeRateBaseCurrency.value) },
