@@ -15,7 +15,7 @@ concurrency:
 
 jobs:
   sync:
-    if: github.repository != 'mmwx-group/mmwx-probe'
+    if: github.repository != 'xiangwan6667/mmwx-probe-sd'
     runs-on: ubuntu-latest
     steps:
       - name: Check out user repository
@@ -25,7 +25,7 @@ jobs:
 
       - name: Merge upstream updates
         env:
-          UPSTREAM_REPOSITORY: mmwx-group/mmwx-probe
+          UPSTREAM_REPOSITORY: xiangwan6667/mmwx-probe-sd
           UPSTREAM_BRANCH: main
         run: |
           git config user.name "github-actions[bot]"
