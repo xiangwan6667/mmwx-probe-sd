@@ -12,14 +12,15 @@ test('probe routes reject cross-origin and source-less requests before contactin
   let calls = 0;
   context.mock.method(globalThis, 'fetch', async () => { calls++; return Response.json({ servers: [] }); });
   for (const path of ['probe', 'series', 'stream', 'forward']) {
-    for (const headers of [
+    const rejectedHeaders: Record<string, string>[] = [
       {},
       { Origin: 'https://other.example' },
       { Origin: 'null' },
       { Referer: 'https://probe.example.evil/page' },
       { 'Sec-Fetch-Site': 'cross-site', Origin: 'https://probe.example' },
       { 'Sec-Fetch-Site': 'same-origin', Origin: 'https://other.example' },
-    ]) {
+    ];
+    for (const headers of rejectedHeaders) {
       const response = await worker.fetch(new Request(`https://probe.example/api/${path}`, { headers }), env);
       assert.equal(response.status, 404, `${path}: ${JSON.stringify(headers)}`);
       assert.equal(response.headers.get('cache-control'), 'no-store');
@@ -37,12 +38,13 @@ test('same-origin fetch and websocket handshakes use only the Worker secret', as
       'Set-Cookie': 'private=value',
     } });
   });
-  for (const headers of [
+  const allowedHeaders: Record<string, string>[] = [
     { 'Sec-Fetch-Site': 'same-origin' },
     { Origin: 'https://probe.example' },
     { Referer: 'https://probe.example/emerald/index.html' },
     { Origin: 'https://probe.example', Upgrade: 'websocket' },
-  ]) {
+  ];
+  for (const headers of allowedHeaders) {
     const response = await worker.fetch(new Request('https://probe.example/api/probe?server=0', { headers: {
       ...headers, Cookie: 'session=secret', Authorization: 'Bearer browser', 'X-MMwx-Probe-Token': 'browser-forged',
     } }), env);
