@@ -35,7 +35,7 @@ export function toPublicNote(server: ProbeServer): string {
   } : undefined;
 
   const routes = new Map((server.return_routes ?? []).map(route => [route.carrier, route]));
-  const premium = new Set(['CN2GIA', 'CTGGIA', '9929', 'CMIN2', '163PP']);
+  const premium = new Set(['CN2GIA', 'CTGGIA', '9929', '10099', 'CMIN2', '163PP']);
   const extra = (['telecom', 'unicom', 'mobile'] as const).flatMap(carrier => {
     const raw = routes.get(carrier)?.route_type?.trim();
     if (!raw || /^(unknown|未知)$/i.test(raw)) return [];

@@ -1255,7 +1255,7 @@ const routeCarrierLabels = {
   unicom: "联通",
   mobile: "移动",
 } as const;
-const goldRoutes = new Set(["CN2GIA", "CTGGIA", "9929", "CMIN2", "163PP"]);
+const goldRoutes = new Set(["CN2GIA", "CTGGIA", "9929", "10099", "CMIN2", "163PP"]);
 function displayReturnRoute(route: string): string {
   return route.toUpperCase().replace(/[^A-Z0-9]/g, "") === "CMIN"
     ? "CMI"

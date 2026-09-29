@@ -7,13 +7,14 @@ const note = (server: Partial<ProbeServer>) => JSON.parse(toNezhaData({enabled: 
 
 test('Nezha cards receive real price, expiry and route tags without fabricated IP flags', () => {
   const data = note({renewal_price: 69, renewal_currency: 'CNY', renewal_cycle: 'month', expires_at: '2026-10-31T00:00:00Z', traffic_limit: 1024 ** 4,
-    return_routes: [{carrier: 'telecom', route_type: 'CN2GIA'}, {carrier: 'mobile', route_type: 'CMIN'}]});
+    return_routes: [{carrier: 'telecom', route_type: 'CN2GIA'}, {carrier: 'unicom', route_type: '10099'}, {carrier: 'mobile', route_type: 'CMIN'}]});
   assert.equal(data.billingDataMod.amount, '¥69');
   assert.equal(data.billingDataMod.cycle, '月');
   assert.equal(data.billingDataMod.autoRenewal, '0');
   assert.equal(data.billingDataMod.startDate, '2026-09-30T00:00:00.000Z');
   assert.equal(data.planDataMod.trafficVol, '1 TiB');
   assert.match(data.planDataMod.extra, /green:CN2GIA/);
+  assert.match(data.planDataMod.extra, /green:10099/);
   assert.match(data.planDataMod.extra, /gray:CMI/);
   assert.equal(data.planDataMod.IPv4, '');
 });
