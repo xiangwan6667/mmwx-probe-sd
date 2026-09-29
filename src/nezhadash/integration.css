@@ -6,6 +6,25 @@
   --menu-muted: hsl(var(--muted-foreground));
   color: hsl(var(--foreground));
 }
+
+/* Match the reference site's translucent cards only when a custom background
+   is configured. The image layer remains sharp; only card surfaces blur it. */
+.nezha-glass-root.has-custom-background [class*="bg-card"],
+.nezha-glass-root.has-custom-background .server-card-list > article,
+.nezha-glass-root.has-custom-background .server-card-list > div {
+  background-color: hsl(var(--card) / 0.58) !important;
+  border-color: hsl(var(--border) / 0.55);
+  box-shadow: 0 10px 30px rgb(15 23 42 / 0.12), inset 0 1px 0 rgb(255 255 255 / 0.24);
+  -webkit-backdrop-filter: blur(16px) saturate(125%);
+  backdrop-filter: blur(16px) saturate(125%);
+}
+.dark .nezha-glass-root.has-custom-background [class*="bg-card"],
+.dark .nezha-glass-root.has-custom-background .server-card-list > article,
+.dark .nezha-glass-root.has-custom-background .server-card-list > div {
+  background-color: hsl(var(--card) / 0.62) !important;
+  border-color: hsl(var(--border) / 0.48);
+  box-shadow: 0 10px 30px rgb(0 0 0 / 0.26), inset 0 1px 0 rgb(255 255 255 / 0.08);
+}
 .probe-theme-switch { display: inline-flex; align-items: center; justify-content: center; width: 34px; height: 32px; border: 1px solid hsl(var(--border)); border-radius: 999px; background: hsl(var(--card)); }
 .probe-theme-switch svg { width: 16px; height: 16px; }
 .mmwx-passkey button { font: inherit; font-size: 14px; color: inherit; border: 0; background: none; padding: 0; opacity: .5; }

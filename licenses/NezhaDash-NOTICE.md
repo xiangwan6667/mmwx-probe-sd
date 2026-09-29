@@ -44,6 +44,8 @@ Modifications by xiangwan6667, September 2026:
   including dropdown menus, while retaining intentionally hidden scrollbars.
 - Configure the original desktop/mobile background layers through public Worker
   settings; initialize them before mount and remove the background polling loop.
+- Add a conditional glass surface treatment for cards when a custom background
+  is present, while leaving the original opaque surfaces unchanged otherwise.
 - Respect the host history retention range and show only available resource charts.
   Do not invent process counts or historical CPU/memory data absent from MMWX.
 - Use local flag/font styles and original asset paths, retain host attribution,

@@ -17,6 +17,7 @@ import { cn } from "./lib/utils";
 import ErrorPage from "./pages/ErrorPage";
 import Server from "./pages/Server";
 import { RouteSync } from "../RouteSync";
+import { hasCustomBackground } from "../background-state";
 
 const NotFound = lazy(() => import("./pages/NotFound"));
 const loadServerDetail = () => import("./pages/ServerDetail");
@@ -77,6 +78,7 @@ const MainApp: React.FC = () => {
 		window.CustomMobileBackgroundImage !== ""
 			? window.CustomMobileBackgroundImage
 			: undefined;
+	const hasGlassBackground = hasCustomBackground(customBackgroundImage, customMobileBackgroundImage);
 
 	return (
 		<ErrorBoundary>
@@ -101,8 +103,9 @@ const MainApp: React.FC = () => {
 				/>
 			)}
 			<div
-				className={cn("flex min-h-screen w-full flex-col", {
+				className={cn("nezha-glass-root flex min-h-screen w-full flex-col", {
 					"bg-background": !customBackgroundImage && !customMobileBackgroundImage,
+					"has-custom-background": hasGlassBackground,
 				})}
 			>
 				<main className="flex z-20 min-h-[calc(100vh-calc(var(--spacing)*16))] flex-1 flex-col gap-4 p-4 md:p-10 md:pt-8">
