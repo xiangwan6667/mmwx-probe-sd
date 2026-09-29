@@ -1,3 +1,4 @@
+import { LuminaUnlocks } from "../../../ProbeUnlocks";
 import { formatFixed } from "@lumina/utils/format";
 import { ProbeLineBadges } from '../../../ProbeLineBadges';
 import { memo, useRef, useState } from "react";
@@ -330,6 +331,7 @@ function CompactNodeHeader({
     <header className="compact-node-header">
       <div className="compact-node-title-wrap">
         <div className="compact-node-title-row">
+          <LuminaUnlocks uuid={node.uuid} />
           <Flag region={node.region} size={15} />
           <Link
             to={`/instance/${encodeURIComponent(node.uuid)}`}
@@ -719,6 +721,7 @@ export const CompactNodeCard = memo(function CompactNodeCard({
       />
       <CompactNodeChips subtitle={subtitle} tags={footerTags} ipv4={node.ipv4} ipv6={node.ipv6} />
       <CompactNodeVitals node={node} loadFraction={loadFraction} />
+      <ProbeLineBadges uuid={uuid} />
       <CompactNodeInfoStrip
         node={node}
         trafficTrend={trafficTrend}
@@ -750,7 +753,6 @@ export const CompactNodeCard = memo(function CompactNodeCard({
           pingError={pingError}
         />
       )}
-      <ProbeLineBadges uuid={uuid} />
     </article>
   );
 });

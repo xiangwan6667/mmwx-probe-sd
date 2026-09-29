@@ -1,5 +1,9 @@
 /* Shared switch uses Lumina's original palette, including its body portal. */
-:root { --probe-scrollbar-color: var(--text-tertiary); }
+:root {
+  --probe-scrollbar-color: var(--text-tertiary);
+  /* Use the upstream pure-black preset before the public config arrives. */
+  --dark-depth: 100;
+}
 :root .probe-theme-dropdown {
   --menu-surface: var(--surface);
   --menu-border: var(--border);
@@ -17,3 +21,29 @@
 .probe-line-name { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .probe-line-badge strong { color: var(--text-primary); font-variant-numeric: tabular-nums; white-space: nowrap; }
 .probe-line-empty { color: var(--text-tertiary); font-size: 11px; }
+.probe-card-footer-badges { display: flex; align-items: center; flex-wrap: wrap; gap: 8px; }
+.probe-card-footer-badges > .dstatus-tags-row:not(.dstatus-tags-measure) { width: auto; flex: 0 1 auto; }
+/* Use the upstream traffic popover surface, typography and row rhythm. */
+.node-traffic-trigger.lumina-unlocks-trigger { display: inline-flex; flex: none; width: 28px; height: 28px; align-items: center; justify-content: center; padding: 0; border: 1px solid var(--border); background: var(--fill-tertiary); color: var(--text-secondary); }
+.lumina-unlocks-panel { margin: 0; width: min(320px, calc(100vw - 16px)); box-sizing: border-box; overflow: auto; overscroll-behavior: contain; font-family: inherit; }
+.lumina-unlocks-panel::backdrop { background: transparent; pointer-events: none; }
+.lumina-unlocks-tabs { display: flex; gap: 4px; margin: 10px 0 6px; padding-bottom: 6px; border-bottom: 1px solid var(--hairline); }
+.lumina-unlocks-tabs button { flex: 1; min-height: 32px; border: 0; border-radius: 7px; background: transparent; color: var(--text-tertiary); font: inherit; cursor: pointer; }
+.lumina-unlocks-tabs button[aria-pressed="true"] { background: var(--fill-tertiary); color: var(--progress-cpu); }
+.lumina-unlocks-tabs small { margin-left: 5px; font-size: 10px; font-variant-numeric: tabular-nums; }
+.lumina-unlocks-panel :focus-visible { outline: 2px solid var(--ring); outline-offset: 2px; }
+.lumina-unlocks-list { list-style: none; padding: 0; margin: 0; }
+.lumina-unlocks-list .node-traffic-popover-row { padding: 4px 0; }
+.lumina-unlocks-label { min-width: 0; }
+.lumina-unlocks-label > span:last-child { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.lumina-unlocks-label svg { width: 14px; height: 14px; flex: none; }
+.lumina-unlocks-letter { min-width: 18px; font-size: 9px; font-weight: 600; }
+.lumina-unlocks-status { display: inline-flex; align-items: center; justify-content: flex-end; gap: 4px; max-width: 55%; flex: none; color: var(--text-tertiary); font-size: 11px; }
+.lumina-unlocks-status > span { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.lumina-unlocks-status svg { width: 12px; height: 12px; flex: none; }
+.lumina-unlocks-status[data-tone="info"] { color: var(--text-primary); }
+.lumina-unlocks-status[data-tone="ok"] { color: var(--status-success); }
+.lumina-unlocks-status[data-tone="partial"] { color: var(--status-warning); }
+.lumina-unlocks-status[data-tone="banned"] { color: var(--status-offline); }
+.lumina-unlocks-empty { padding: 8px; text-align: center; color: var(--text-tertiary); }
+@media (prefers-reduced-motion: reduce) { .lumina-unlocks-panel { animation: none; } }

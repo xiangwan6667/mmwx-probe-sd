@@ -1,3 +1,4 @@
+import { NezhaUnlocks } from "../../ProbeUnlocks";
 // MMWX adaptation (2026-09-29): host data/theme/router integration; see licenses/NezhaDash-NOTICE.md.
 import { getProbe } from "../../bridge";
 import { billableTraffic, trafficModeLabel } from "../../../traffic-display";
@@ -65,14 +66,15 @@ function ServerCardInline({
 		<section>
 			<Card
 				className={cn(
-					"flex items-center lg:flex-row justify-start gap-3 p-3 md:px-5 cursor-pointer hover:bg-accent/50 transition-colors min-w-[900px] w-full",
+					"nezha-server-card flex items-center lg:flex-row justify-start gap-3 p-3 md:px-5 cursor-pointer hover:bg-accent/50 transition-colors min-w-[900px] w-full",
 					{
 						"bg-card/70": customBackgroundImage,
 					},
 				)}
 				onClick={cardClick}
 			>
-				<section
+				<NezhaUnlocks id={serverInfo.id} corner />
+			<section
 					className={cn("grid items-center gap-2 lg:w-36")}
 					style={{ gridTemplateColumns: "auto auto 1fr" }}
 				>
@@ -209,13 +211,14 @@ function ServerCardInline({
 	) : (
 		<Card
 			className={cn(
-				"flex  min-h-[61px] min-w-[900px] items-center justify-start p-3 md:px-5 flex-row cursor-pointer hover:bg-accent/50 transition-colors",
+				"nezha-server-card flex  min-h-[61px] min-w-[900px] items-center justify-start p-3 md:px-5 flex-row cursor-pointer hover:bg-accent/50 transition-colors",
 				{
 					"bg-card/70": customBackgroundImage,
 				},
 			)}
 			onClick={cardClick}
 		>
+			<NezhaUnlocks id={serverInfo.id} corner />
 			<section
 				className={cn("grid items-center gap-2 w-40")}
 				style={{ gridTemplateColumns: "auto auto 1fr" }}

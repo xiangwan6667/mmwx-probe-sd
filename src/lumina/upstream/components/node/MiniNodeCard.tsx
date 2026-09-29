@@ -1,3 +1,4 @@
+import { LuminaUnlocks } from "../../../ProbeUnlocks";
 import { formatFixed } from "@lumina/utils/format";
 import { ProbeLineBadges } from '../../../ProbeLineBadges';
 import { memo, useState, type CSSProperties, type ReactNode } from "react";
@@ -51,6 +52,7 @@ function MiniHeader({
   const detailHref = `/instance/${encodeURIComponent(node.uuid)}`;
   return (
     <header className="mini-node-header">
+      <LuminaUnlocks uuid={node.uuid} />
       <Flag region={node.region} size={14} />
       <Link to={detailHref} className="mini-node-title" title={node.name}>
         {node.name}
@@ -437,6 +439,7 @@ export const MiniNodeCard = memo(function MiniNodeCard({
         osName={osName}
         showTodayTraffic={showTodayTraffic}
       />
+      <ProbeLineBadges uuid={uuid} />
       <MiniChips
         tags={footerTags}
         renewalPrice={showCosts ? renewalPrice : null}
@@ -454,7 +457,6 @@ export const MiniNodeCard = memo(function MiniNodeCard({
         pingLoading={pingLoading}
         pingError={pingError}
       />
-      <ProbeLineBadges uuid={uuid} />
     </article>
   );
 });

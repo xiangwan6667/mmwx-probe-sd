@@ -3,3 +3,9 @@
   --probe-scrollbar-color: var(--muted-foreground);
   background-color: var(--background);
 }
+
+/* Keep the upstream negative-z background above the body's opaque canvas,
+   while retaining it behind cards, menus and other application content. */
+#app {
+  isolation: isolate;
+}

@@ -13,9 +13,9 @@ test('Nezha cards receive real price, expiry and route tags without fabricated I
   assert.equal(data.billingDataMod.autoRenewal, '0');
   assert.equal(data.billingDataMod.startDate, '2026-09-30T00:00:00.000Z');
   assert.equal(data.planDataMod.trafficVol, '1 TiB');
-  assert.match(data.planDataMod.extra, /green:CN2GIA/);
-  assert.match(data.planDataMod.extra, /gray:10099/);
-  assert.match(data.planDataMod.extra, /gray:CMI/);
+  assert.match(data.planDataMod.extra, /green:电信 CN2GIA/);
+  assert.match(data.planDataMod.extra, /gray:联通 10099/);
+  assert.match(data.planDataMod.extra, /gray:移动 CMI/);
   assert.equal(data.planDataMod.IPv4, '');
 });
 

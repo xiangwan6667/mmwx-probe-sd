@@ -1,4 +1,5 @@
 <script setup lang="ts">
+import ProbeUnlocks from "../components/ProbeUnlocks.vue"
 import { Icon } from '@iconify/vue'
 import { computed, defineAsyncComponent, onMounted } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
@@ -222,6 +223,7 @@ const trafficProgressStyle = computed(() => ({
           <Icon icon="tabler:arrow-left" :width="16" :height="16" />
         </Button>
         <div class="text-lg font-bold flex gap-2 items-center">
+          <ProbeUnlocks :uuid="data.uuid" />
           <img
             :src="getFlagSrc(data.region)" :alt="getRegionDisplayName(data.region)"
             class="size-6"

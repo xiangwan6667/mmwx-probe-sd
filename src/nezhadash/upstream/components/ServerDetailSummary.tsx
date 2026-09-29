@@ -1,4 +1,5 @@
 "use client";
+import { NezhaUnlocks } from "../../ProbeUnlocks";
 
 import { Progress } from "@/components/ui/progress";
 import { useWebSocketContext } from "@/hooks/use-websocket-context";
@@ -34,6 +35,7 @@ export default function ServerDetailSummary({
 
 	return (
 		<div className="mb-2 flex flex-wrap items-center gap-4 server-detail-summary">
+            <NezhaUnlocks id={server_id} />
 			<section className="flex w-24 flex-col justify-center gap-1 px-1.5 py-1">
 				<section className="flex items-center justify-between">
 					<span className="text-[10px] text-muted-foreground">CPU</span>

@@ -1,3 +1,4 @@
+import { LuminaUnlocks } from "../../../ProbeUnlocks";
 import { formatFixed } from "@lumina/utils/format";
 import { ProbeLineBadges } from '../../../ProbeLineBadges';
 import { memo, useCallback, useLayoutEffect, useRef, useState, type ReactNode } from "react";
@@ -212,6 +213,7 @@ function NodeCardHeader({
     <header className="server-card-header">
       <div className="server-card-title-block">
         <div className="server-card-title-row">
+          <LuminaUnlocks uuid={node.uuid} />
           <Flag region={node.region} size={15} />
           <Link
             to={`/instance/${encodeURIComponent(node.uuid)}`}
@@ -683,23 +685,25 @@ function NodeCardFooter({
           color={expireColor}
         />
       </div>
-      {(footerTags.length > 0 || renewalPrice) && (
-        <>
-          <div className="dstatus-tags-row" ref={rowRef} title={footerTags.length > 0 ? tagTitle : undefined}>
-            {visibleTags.map((tag, index) => (
-              <FooterTagChip key={`${tag.label}-${index}`} tag={tag} />
-            ))}
-            {renewalPrice && <FooterPriceChip renewalPrice={renewalPrice} titled />}
-          </div>
-          <div className="dstatus-tags-row dstatus-tags-measure" ref={measureRef} aria-hidden>
-            {footerTags.map((tag, index) => (
-              <FooterTagChip key={`${tag.label}-${index}`} tag={tag} />
-            ))}
-            {renewalPrice && <FooterPriceChip renewalPrice={renewalPrice} />}
-          </div>
-        </>
-      )}
-      <ProbeLineBadges uuid={uuid} />
+      <div className="probe-card-footer-badges">
+        <ProbeLineBadges uuid={uuid} />
+        {(footerTags.length > 0 || renewalPrice) && (
+          <>
+            <div className="dstatus-tags-row" ref={rowRef} title={footerTags.length > 0 ? tagTitle : undefined}>
+              {visibleTags.map((tag, index) => (
+                <FooterTagChip key={`${tag.label}-${index}`} tag={tag} />
+              ))}
+              {renewalPrice && <FooterPriceChip renewalPrice={renewalPrice} titled />}
+            </div>
+            <div className="dstatus-tags-row dstatus-tags-measure" ref={measureRef} aria-hidden>
+              {footerTags.map((tag, index) => (
+                <FooterTagChip key={`${tag.label}-${index}`} tag={tag} />
+              ))}
+              {renewalPrice && <FooterPriceChip renewalPrice={renewalPrice} />}
+            </div>
+          </>
+        )}
+      </div>
     </div>
   );
 }

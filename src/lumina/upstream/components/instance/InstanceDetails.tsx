@@ -1,4 +1,5 @@
 import { formatFixed } from "@lumina/utils/format";
+import { LuminaUnlocks } from '../../../ProbeUnlocks';
 import { useEffect, type ReactNode } from "react";
 import { RefreshCw } from "lucide-react";
 import { useNodeMeta, useNodeMetrics } from "@lumina/hooks/useNode";
@@ -63,7 +64,7 @@ export function InstanceDetails({
   return (
     <InstancePanel
       title={panelTitle}
-      titleAction={<InstanceSwitcher currentUuid={uuid} />}
+      titleAction={<><LuminaUnlocks uuid={uuid} /><InstanceSwitcher currentUuid={uuid} /></>}
       description={
         isOnline ? undefined : "节点当前离线，以下展示最近一次上报的缓存数据。"
       }

@@ -86,9 +86,7 @@
     "zod": "^3.25.76"
   },
   "overrides": {
-    "miniflare": {
-      "undici": "7.29.1"
-    }
+    "undici": "7.29.1"
   },
   "devDependencies": {
     "@cloudflare/workers-types": "^5.20260731.1",

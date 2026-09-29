@@ -1,3 +1,4 @@
+import { NezhaUnlocks } from "../../ProbeUnlocks";
 // MMWX adaptation (2026-09-29): host data/theme/router integration; see licenses/NezhaDash-NOTICE.md.
 import { getProbe } from "../../bridge";
 import { billableTraffic, trafficModeLabel } from "../../../traffic-display";
@@ -69,7 +70,7 @@ function ServerCard({
 	return online ? (
 		<Card
 			className={cn(
-				"flex flex-col items-center justify-start gap-3 p-3 md:px-5 cursor-pointer hover:bg-accent/50 transition-colors",
+				"nezha-server-card flex flex-col items-center justify-start gap-3 p-3 md:px-5 cursor-pointer hover:bg-accent/50 transition-colors",
 				{
 					"flex-col": fixedTopServerName,
 					"lg:flex-row": !fixedTopServerName,
@@ -80,6 +81,7 @@ function ServerCard({
 			)}
 			onClick={cardClick}
 		>
+			<NezhaUnlocks id={serverInfo.id} corner />
 			<section
 				className={cn("grid items-center gap-2", {
 					"lg:w-40": !fixedTopServerName,
@@ -228,7 +230,7 @@ function ServerCard({
 	) : (
 		<Card
 			className={cn(
-				"flex flex-col items-center justify-start gap-3 sm:gap-0 p-3 md:px-5 cursor-pointer hover:bg-accent/50 transition-colors",
+				"nezha-server-card flex flex-col items-center justify-start gap-3 sm:gap-0 p-3 md:px-5 cursor-pointer hover:bg-accent/50 transition-colors",
 				showNetTransfer
 					? "lg:min-h-[91px] min-h-[123px]"
 					: "lg:min-h-[61px] min-h-[93px]",
@@ -242,6 +244,7 @@ function ServerCard({
 			)}
 			onClick={cardClick}
 		>
+			<NezhaUnlocks id={serverInfo.id} corner />
 			<section
 				className={cn("grid items-center gap-2", {
 					"lg:w-40": !fixedTopServerName,

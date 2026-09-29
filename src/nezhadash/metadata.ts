@@ -1,4 +1,5 @@
 import type { ProbeServer } from '../types';
+import { serverRouteLines } from '../probe-route-lines';
 
 const cycles = {
   month: { label: '月', months: 1 }, quarter: { label: '季', months: 3 },
@@ -34,17 +35,8 @@ export function toPublicNote(server: ProbeServer): string {
     endDate: permanent ? '0000-00-00' : end?.toISOString() ?? '',
   } : undefined;
 
-  const routes = new Map((server.return_routes ?? []).map(route => [route.carrier, route]));
-  const premium = new Set(['CN2GIA', 'CTGGIA', '9929', 'CMIN2', '163PP']);
-  const extra = (['telecom', 'unicom', 'mobile'] as const).flatMap(carrier => {
-    const raw = routes.get(carrier)?.route_type?.trim();
-    if (!raw || /^(unknown|未知)$/i.test(raw)) return [];
-    let text = raw.toUpperCase().replace(/[^A-Z0-9]/g, '');
-    if (!text) return [];
-    if (text === 'CMIN') text = 'CMI';
-    if (text === '163' && carrier === 'telecom' && server.telecom_paid_peer) text = '163PP';
-    return [`${premium.has(text) ? 'green' : 'gray'}:${text}`];
-  }).join(',');
+  const extra = serverRouteLines(server)
+    .map(line => `${line.premium ? 'green' : 'gray'}:${line.name} ${line.route.replace(/[,\r\n]/g, ' ')}`).join(',');
   const limit = server.traffic_limit;
   let trafficVol = '';
   if (typeof limit === 'number' && Number.isFinite(limit) && limit > 0) {

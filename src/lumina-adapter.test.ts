@@ -1,6 +1,11 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import { payloadToNodes, payloadToRealtime, pingSnapshot, todayTraffic } from './lumina/data-adapter';
+
+test('Lumina uses the upstream pure-black preset at 100 percent', async () => {
+ const {publicConfig}=await import('./lumina/data-adapter');
+ assert.equal(publicConfig({enabled:true}).theme_settings.darkDepth,100);
+});
 test('Lumina preserves zero, unknown metrics and host node indices', () => {
  const payload = {enabled:true,servers:[{online:true,cpu_pct:0,boot_traffic_up:0,tcp_connections:0}]};
  assert.equal(payloadToNodes(payload)[0].uuid,'0');
@@ -74,6 +79,6 @@ test('Footer routes use return-route results rather than ping latency',async()=>
  const {cardRouteLines}=await import('./lumina/data-adapter');
  const payload:import('./types').ProbePayload={enabled:true,servers:[{online:true,return_routes:[{carrier:'telecom',route_type:'CN2GIA'},{carrier:'unicom',route_type:'10099'},{carrier:'mobile',route_type:'CMIN'}],ping:[{label:'电信',current_ms:35,loss_pct:0,buckets:[]}]}]};
  assert.deepEqual(cardRouteLines(payload,'0').map(line=>[line.name,line.route]),[['电信','CN2GIA'],['联通','10099'],['移动','CMI']]);
- assert.deepEqual(cardRouteLines({enabled:true,servers:[{online:true}]},'0').map(line=>line.route),['未知','未知','未知']);
+ assert.deepEqual(cardRouteLines({enabled:true,servers:[{online:true}]},'0'),[]);
  assert.deepEqual(cardRouteLines({...payload,enabled:false},'0'),[]);
 });

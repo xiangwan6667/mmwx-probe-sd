@@ -1,3 +1,4 @@
+import { LuminaUnlocks } from '../../../ProbeUnlocks';
 import { formatFixed } from "@lumina/utils/format";
 import { memo, useCallback, useState } from "react";
 import { Link } from "react-router-dom";
@@ -291,6 +292,7 @@ const NodeRow = memo(function NodeRow({ uuid, showCosts }: { uuid: string; showC
       <div className="node-list-cell node-list-node">
         <div className="node-list-node-text">
           <div className="node-list-node-head">
+            <LuminaUnlocks uuid={uuid} />
             <Flag region={node.region} size={14} />
             <span className="node-list-name" title={node.name}>
               {node.name}

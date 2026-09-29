@@ -1,4 +1,31 @@
 /* Only integration controls: upstream page styles live unmodified in index.css. */
+.nezha-unlocks-trigger { width: 28px; height: 28px; padding: 0; border-radius: 999px; flex: none; }
+.nezha-server-card { position: relative; }
+.nezha-server-card:has(.nezha-unlocks-corner) > section:first-of-type { margin-left: 30px; max-width: calc(100% - 30px); }
+.nezha-unlocks-corner { position: absolute; top: 10px; left: 10px; }
+.nezha-unlocks-corner svg { width: 14px; height: 14px; }
+.nezha-unlocks-panel { width: min(320px, calc(100vw - 16px)); max-height: var(--radix-popover-content-available-height); overflow: auto; overscroll-behavior: contain; border-radius: 16px; }
+.nezha-unlocks-heading { display: flex; align-items: center; justify-content: space-between; gap: 8px; font-size: 13px; margin-bottom: 12px; }
+.nezha-unlocks-heading > span { color: hsl(var(--muted-foreground)); }
+.nezha-unlocks-tabs { display: flex; gap: 3px; margin-bottom: 8px; }
+.nezha-unlocks-tabs button { flex: 1; border-radius: 999px; padding: 4px 8px; font-size: 11px; gap: 4px; }
+.nezha-unlocks-tabs small { opacity: .65; }
+.nezha-unlocks-list { list-style: none; margin: 0; padding: 0; font-size: 12px; }
+.nezha-unlocks-list li { display: flex; align-items: center; gap: 8px; padding: 4px 0; }
+.nezha-unlocks-list svg { width: 15px; height: 15px; flex: none; }
+.nezha-unlocks-label { flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.nezha-unlocks-letter { width: 20px; font-size: 9px; text-align: center; }
+.nezha-unlocks-status { display: inline-flex; align-items: center; justify-content: flex-end; gap: 4px; max-width: 55%; color: hsl(var(--muted-foreground)); font-size: 11px; }
+.nezha-unlocks-status > span { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.nezha-unlocks-status svg { width: 12px; height: 12px; }
+.nezha-unlocks-list [data-tone="info"] { color: hsl(var(--foreground)); }
+.nezha-unlocks-list [data-tone="ok"] { color: #047857; }
+.nezha-unlocks-list [data-tone="partial"] { color: #b45309; }
+.nezha-unlocks-list [data-tone="banned"] { color: #be123c; }
+.dark .nezha-unlocks-list [data-tone="ok"] { color: #6ee7b7; }
+.dark .nezha-unlocks-list [data-tone="partial"] { color: #fcd34d; }
+.dark .nezha-unlocks-list [data-tone="banned"] { color: #fda4af; }
+.nezha-unlocks-empty { color: hsl(var(--muted-foreground)); text-align: center; font-size: 12px; padding: 8px; }
 .probe-theme-dropdown {
   --menu-surface: hsl(var(--popover));
   --menu-border: hsl(var(--border));

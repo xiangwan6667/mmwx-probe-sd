@@ -9,13 +9,14 @@
 - Nezha 和 Emerald 仅在配置内容变化时更新设置；Nezha 历史请求缓存限制为 64 项、5 秒有效期，请求超时 15 秒，失败后可重试。
 - Nezha 图表字典改用无原型对象，避免线路名称为 `__proto__`、`constructor` 等时触发异常。
 - Worker 上游地址统一要求 HTTPS（本地回环开发允许 HTTP），拒绝带凭据和无效协议的地址。登录代理禁止跟随重定向，删除调用方凭据头；改写 JSON 后清理旧长度、压缩和摘要头；网络异常返回不含内部细节的 502。
-- 升级 Wrangler，并仅对 Miniflare 的 Undici 固定安全补丁版本 7.29.1。完整 `npm audit` 当前为 0 告警。
-- 移除 Nezha、Emerald、LuminaPlus 自动生成的地区分组及卡片分组标签，保留国旗和回程线路。LuminaPlus 深色边框恢复更清晰的上游色值，背景仍为纯黑。
+- 升级 Wrangler，将 Undici 固定到安全补丁版本 7.29.1（当前由 Miniflare 引入）；使用顶层覆盖以兼容 CI 的 npm 10。完整 `npm audit` 当前为 0 告警。
+- 移除 Nezha、Emerald、LuminaPlus 自动生成的地区分组及卡片分组标签，保留国旗和回程线路。LuminaPlus 完整恢复上游配色 token，使用原版 `darkDepth: 100` 纯黑预设：画布为黑色，卡片和浮层保留原版层次。
 - 移植主题外层画布随明暗模式匹配主题底色，只有 iframe 内部负责滚动；LuminaPlus 和 Emerald 接入共用滚动条样式，修复透明轨道露出浅色底造成的白边。
+- Emerald 应用根节点建立独立层叠上下文，避免原版负层级背景被页面画布遮挡；浅色和深色渐变、网格与卡片底色均保留。
 
 ## 验证与边界
 
-- 81 项自动测试、TypeScript/Vue 类型检查、生产构建通过。
+- 85 项自动测试、TypeScript/Vue 类型检查、生产构建通过；npm 10.9.8 在独立目录执行完整 `npm ci` 通过。
 - Wrangler `deploy --dry-run` 本地打包通过，未部署。
 - 浏览器使用本地模拟数据验证；未访问真实主控或使用生产密钥。
 - Origin/Referer 校验是浏览器来源限制，不是用户身份认证，不能阻止自行构造请求的客户端。

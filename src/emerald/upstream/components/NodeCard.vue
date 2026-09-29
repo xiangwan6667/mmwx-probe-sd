@@ -1,4 +1,6 @@
 <script setup lang="ts">
+import ProbeUnlocks from "./ProbeUnlocks.vue"
+import ProbeLineBadges from './ProbeLineBadges.vue'
 import type { NodeData } from '@emerald/stores/nodes'
 import { Icon } from '@iconify/vue'
 import { computed } from 'vue'
@@ -66,6 +68,7 @@ function openPingDialog() {
   >
     <template #header>
       <div class="flex gap-2 min-w-0 items-center">
+        <ProbeUnlocks :uuid="props.node.uuid" />
         <div class="size-2 rounded-full relative" :class="[props.node.online ? 'bg-emerald-600' : 'bg-red-600']">
           <div
             class="animate-ping absolute inset-0 rounded-full opacity-50"
@@ -306,6 +309,7 @@ function openPingDialog() {
             </div>
           </div>
         </div>
+        <ProbeLineBadges :uuid="props.node.uuid" />
         <div v-if="customTags.length > 0" class="flex shrink-0 flex-wrap gap-1 items-center">
           <Badge
             v-for="(tag, index) in customTags" :key="index" variant="outline"

@@ -4,18 +4,7 @@ import { triISPRows } from '../tri-isp';
 import type { NodeInfo, NodeRealtime, PingRecordsResponse, PingTask, PingTaskStats, PublicConfig } from './upstream/types/komari';
 import type { TrafficMetricSeries } from './upstream/utils/trafficStats';
 const number = (value: unknown): number => typeof value === 'number' && Number.isFinite(value) ? value : NaN;
-export function cardRouteLines(payload: ProbePayload, uuid: string) {
- const server=payload.enabled ? payload.servers?.[Number(uuid)] : undefined;
- if(!server) return [];
- return (['telecom','unicom','mobile'] as const).map((carrier,index)=>{
-  const result=server.return_routes?.find(route=>route.carrier===carrier);
-  const raw=result?.route_type?.trim();
-  let route=raw&&!/^(unknown|未知)$/i.test(raw) ? raw.toUpperCase() : '未知';
-  if(route==='CMIN') route='CMI';
-  if(route==='163'&&carrier==='telecom'&&server.telecom_paid_peer) route='163PP';
-  return {key:carrier,name:['电信','联通','移动'][index],route,region:result?.region,testedAt:result?.tested_at};
- });
-}
+export { cardRouteLines } from '../probe-route-lines';
 const baseNodesCache = new WeakMap<ProbePayload, ReturnType<typeof emeraldNodes>>();
 const nodesCache = new WeakMap<ProbePayload, NodeInfo[]>();
 const realtimeCache = new WeakMap<ProbePayload, Record<string, NodeRealtime & {online:boolean}>>();
@@ -50,7 +39,7 @@ export function publicConfig(payload:ProbePayload, loginEnabled=false):PublicCon
   (homepagePingBindings[String(pingTaskId(series))]??=[]).push(String(index));
  });
  const days=Math.max(1,Math.min(7,payload.history_days||1));
- return {sitename:payload.title||'妙妙屋探针',description:'',theme:'lumina',allow_cors:false,disable_password_login:!loginEnabled,oauth_enable:false,private_site:false,record_enabled:true,record_preserve_time:days*24,ping_record_preserve_time:days*24,metric_retention_days:days,custom_head:'',custom_body:'',theme_settings:{showGroupTabs:false,showCardGroup:false,homepagePingBindings,homepageMultiPingNodeTaskIds,enableHomepageMultiPing:Object.keys(homepageMultiPingNodeTaskIds).length>0,enableAdminButton:loginEnabled,hideAdminEntryWhenLoggedOut:!loginEnabled,fakePingForUnbound:false,showConnections:true,showCostsToGuests:true}};
+ return {sitename:payload.title||'妙妙屋探针',description:'',theme:'lumina',allow_cors:false,disable_password_login:!loginEnabled,oauth_enable:false,private_site:false,record_enabled:true,record_preserve_time:days*24,ping_record_preserve_time:days*24,metric_retention_days:days,custom_head:'',custom_body:'',theme_settings:{darkDepth:100,showGroupTabs:false,showCardGroup:false,homepagePingBindings,homepageMultiPingNodeTaskIds,enableHomepageMultiPing:Object.keys(homepageMultiPingNodeTaskIds).length>0,enableAdminButton:loginEnabled,hideAdminEntryWhenLoggedOut:!loginEnabled,fakePingForUnbound:false,showConnections:true,showCostsToGuests:true}};
 }
 // Stable positive ids remain consistent when nodes or task ordering change.
 export function pingTaskId(series:Pick<ProbePingSeries,'key'|'label'>):number {

@@ -1,4 +1,6 @@
 <script setup lang="ts">
+import ProbeUnlocks from "./ProbeUnlocks.vue"
+import ProbeLineBadges from './ProbeLineBadges.vue'
 import type { NodeData } from '@emerald/stores/nodes'
 import { Icon } from '@iconify/vue'
 import { computed, ref } from 'vue'
@@ -190,6 +192,7 @@ function getRowTransitionStyle(index: number): Record<string, string> {
               <!-- 节点名称 -->
               <div v-else-if="col.key === 'name'" class="space-y-0.5" :class="[!node.online && 'blur-sm opacity-30']">
                 <div class="flex gap-1 items-center text-xs font-semibold">
+                  <ProbeUnlocks v-if="node.online" :uuid="node.uuid" />
                   <img
                     v-if="hasRegion(node.region)" :src="getFlagSrc(node.region)"
                     :alt="getRegionDisplayName(node.region)" class="size-5 rounded-sm"
@@ -223,7 +226,8 @@ function getRowTransitionStyle(index: number): Record<string, string> {
               </div>
 
               <!-- 标签 -->
-              <div v-else-if="col.key === 'tags'">
+              <div v-else-if="col.key === 'tags'" class="space-y-1">
+                <ProbeLineBadges :uuid="node.uuid" />
                 <div class="flex flex-wrap gap-1 items-center">
                   <Badge
                     v-for="(tag, tagIndex) in getCustomTags(node)" :key="tagIndex" variant="outline"
@@ -361,11 +365,11 @@ function getRowTransitionStyle(index: number): Record<string, string> {
 
           <div
             v-if="!node.online" class="absolute inset-0 z-2 p-2 bg-background/10 rounded-lg flex items-center"
-            aria-hidden="true"
           >
             <div class="grid gap-2 items-center justify-center" :style="gridStyle">
               <div class="h-full space-y-1" :style="offlineOverlayContentStyle">
                 <div class="text-sm font-semibold truncate">
+                  <ProbeUnlocks :uuid="node.uuid" />
                   <span class="text-red-500">离线</span> {{ node.name }}
                 </div>
                 <div class="text-xs text-muted-foreground">
