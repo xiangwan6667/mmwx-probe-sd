@@ -46,6 +46,27 @@ function upstreamURL(request: Request, env: Env): URL | null {
   return origin;
 }
 
+/**
+ * Gate browser access to this site's probe endpoints. Origin is normally
+ * absent on same-origin GET, so also accept Fetch Metadata or Referer.
+ * These headers are not authentication: non-browser clients can forge them.
+ */
+function isProbeRequestAllowed(request: Request, incoming: URL): boolean {
+  const site = request.headers.get("Sec-Fetch-Site");
+  if (site === "cross-site" || site === "same-site") return false;
+  const origin = request.headers.get("Origin");
+  if (origin !== null && origin !== incoming.origin) return false;
+  const referer = request.headers.get("Referer");
+  if (referer) {
+    try {
+      if (new URL(referer).origin !== incoming.origin) return false;
+    } catch {
+      return false;
+    }
+  }
+  return origin === incoming.origin || site === "same-origin" || Boolean(referer);
+}
+
 async function proxyAuth(
   request: Request,
   incoming: URL,
@@ -150,6 +171,9 @@ export default {
     if (!target) return env.ASSETS.fetch(request);
     if (request.method !== "GET")
       return new Response("Method not allowed", { status: 405 });
+    if (!isProbeRequestAllowed(request, incoming)) {
+      return new Response("Not found", { status: 404, headers: { "Cache-Control": "no-store" } });
+    }
     if (!env.PROBE_TOKEN) {
       return new Response("Probe access secret is not configured", {
         status: 503,
@@ -163,15 +187,24 @@ export default {
     headers.set("X-MMwx-Probe-Token", env.PROBE_TOKEN);
 
     const upstream = await fetch(
-      new Request(target, { method: "GET", headers }),
+      new Request(target, { method: "GET", headers, redirect: "manual" }),
     );
     // WebSocket 的 101 Response 必须原样返回，不能重新构造 body/headers。
     if (upstream.status === 101 || upstream.webSocket) return upstream;
+
+    if (upstream.status >= 300 && upstream.status < 400) {
+      return new Response("Upstream redirect rejected", { status: 502, headers: { "Cache-Control": "no-store" } });
+    }
 
     const responseHeaders = new Headers(upstream.headers);
     responseHeaders.set("Cache-Control", "no-store");
     responseHeaders.set("X-Content-Type-Options", "nosniff");
     responseHeaders.delete("set-cookie");
+    // Do not inherit upstream CORS permission for this site's public data.
+    responseHeaders.delete("access-control-allow-origin");
+    responseHeaders.delete("access-control-allow-credentials");
+    responseHeaders.delete("access-control-allow-headers");
+    responseHeaders.delete("access-control-allow-methods");
     return new Response(upstream.body, {
       status: upstream.status,
       statusText: upstream.statusText,
