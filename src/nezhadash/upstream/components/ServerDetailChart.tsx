@@ -125,11 +125,11 @@ function PeriodSelector({
 		<TooltipProvider delayDuration={120}>
 			<div
 				ref={containerRef}
-				className="relative flex gap-0.5 mb-3 flex-wrap sm:-mt-5 -mt-3 p-0.5 bg-muted dark:bg-muted/40 rounded-full w-fit border border-border/60 dark:border-border"
+				className="nezha-glass-control nezha-segmented relative flex gap-0.5 mb-3 flex-wrap sm:-mt-5 -mt-3 p-0.5 bg-muted dark:bg-muted rounded-full w-fit"
 			>
 				{indicator && (
 					<div
-						className="active-indicator-fade-in absolute left-0 top-0 z-10 bg-white dark:bg-background rounded-full ring-1 ring-border/60 dark:ring-border/40"
+						className="nezha-segmented-indicator active-indicator-fade-in pointer-events-none absolute left-0 top-0 z-10 bg-white dark:bg-stone-700 rounded-full"
 						style={{
 							height: indicator.height,
 							transform: `translate(${indicator.x}px, ${indicator.y}px)`,

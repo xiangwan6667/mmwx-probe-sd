@@ -43,6 +43,24 @@
 }
 .probe-theme-switch { display: inline-flex; align-items: center; justify-content: center; width: 34px; height: 32px; border: 1px solid hsl(var(--border)); border-radius: 999px; background: hsl(var(--card)); }
 .probe-theme-switch svg { width: 16px; height: 16px; }
+/* One surface and selection treatment for groups, detail tabs and both charts.
+   Blur belongs to the track; its child indicator must not create a second blur. */
+.nezha-segmented {
+  isolation: isolate;
+}
+.nezha-segmented-indicator {
+  background-color: hsl(var(--card));
+  box-shadow: 0 1px 4px rgb(0 0 0 / 0.08);
+}
+.dark .nezha-segmented-indicator {
+  background-color: hsl(24 6% 26%);
+}
+:root:has(.nezha-glass-root.has-custom-background) .nezha-segmented-indicator {
+  background-color: hsl(var(--card) / 0.86);
+}
+:root.dark:has(.nezha-glass-root.has-custom-background) .nezha-segmented-indicator {
+  background-color: hsl(24 6% 26% / 0.86);
+}
 .mmwx-passkey button { font: inherit; font-size: 14px; color: inherit; border: 0; background: none; padding: 0; opacity: .5; }
 .mmwx-passkey button svg { display: none; }
 .mmwx-passkey button::after { content: '登录'; }

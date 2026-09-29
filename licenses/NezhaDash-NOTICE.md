@@ -47,6 +47,8 @@ Modifications by xiangwan6667, September 2026:
 - Add conditional glass surfaces for cards, controls and portalled menus when a
   custom background is present. Replace obsolete opacity utilities that removed
   the view-toggle background colors; retain their selected-state colors.
+- Unify resource/network time-range tracks with the group/detail tab glass
+  surfaces in both color modes; keep selection indicators from intercepting clicks.
 - Respect the host history retention range and show only available resource charts.
   Do not invent process counts or historical CPU/memory data absent from MMWX.
 - Use local flag/font styles and original asset paths, retain host attribution,

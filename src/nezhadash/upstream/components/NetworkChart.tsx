@@ -589,11 +589,11 @@ export const NetworkChartClient = React.memo(function NetworkChart({
 				<TooltipProvider delayDuration={120}>
 					<div
 						ref={containerRef}
-						className="relative flex items-center gap-1 rounded-full bg-muted dark:bg-muted/40 p-0.5 border border-border/60 dark:border-border"
+						className="nezha-glass-control nezha-segmented relative flex items-center gap-1 rounded-full bg-muted dark:bg-muted p-0.5"
 					>
 						{indicator && (
 							<div
-								className="active-indicator-fade-in absolute left-0 top-0 z-10 bg-white dark:bg-background rounded-full ring-1 ring-border/60 dark:ring-border/40"
+								className="nezha-segmented-indicator active-indicator-fade-in pointer-events-none absolute left-0 top-0 z-10 bg-white dark:bg-stone-700 rounded-full"
 								style={{
 									height: indicator.height,
 									transform: `translate(${indicator.x}px, ${indicator.y}px)`,

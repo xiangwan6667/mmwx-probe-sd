@@ -24,7 +24,7 @@ export default function TabSwitch({
 			<div
 				ref={containerRef}
 				className={cn(
-					"nezha-glass-control relative flex items-center gap-1 rounded-[50px] bg-stone-100 p-[3px] dark:bg-stone-800",
+					"nezha-glass-control nezha-segmented relative flex items-center gap-1 rounded-[50px] bg-stone-100 p-[3px] dark:bg-stone-800",
 					{
 						"bg-stone-100/70 dark:bg-stone-800/70": customBackgroundImage,
 					},
@@ -32,7 +32,7 @@ export default function TabSwitch({
 			>
 				{indicator && (
 					<div
-						className="active-indicator-fade-in absolute left-0 top-0 z-10 content-center bg-white shadow-lg shadow-black/5 dark:bg-stone-700 dark:shadow-white/5"
+						className="nezha-segmented-indicator active-indicator-fade-in pointer-events-none absolute left-0 top-0 z-10 content-center bg-white shadow-lg shadow-black/5 dark:bg-stone-700 dark:shadow-white/5"
 						style={{
 							borderRadius: 46,
 							height: indicator.height,
