@@ -1,6 +1,6 @@
-import { useEffect, useId, useRef, useState } from "react";
+import { useEffect, useId, useLayoutEffect, useRef, useState } from "react";
 import { createPortal } from "react-dom";
-import { Check, Palette, Sun, Moon, SunMoon, X } from "lucide-react";
+import { Check, Palette, Sun, Moon, SunMoon } from "lucide-react";
 import type { ProbeAppearance } from "./types";
 import { themeOptions } from "./theme-preference";
 import {
@@ -28,7 +28,9 @@ export function ThemeSwitch({
   const theme = useThemePreference();
   const mode = useColorModePreference(appearance?.color_mode);
   const [open, setOpen] = useState(false);
-  const dialog = useRef<HTMLDialogElement>(null);
+  const menu = useRef<HTMLDivElement>(null);
+  const trigger = useRef<HTMLButtonElement>(null);
+  const menuId = useId();
   const titleId = useId();
 
   useEffect(() => {
@@ -43,15 +45,36 @@ export function ThemeSwitch({
     return () => media.removeEventListener("change", sync);
   }, [appearance, mode]);
 
-  useEffect(() => {
-    if (open) dialog.current?.showModal();
-    else dialog.current?.close();
+  useLayoutEffect(() => {
+    if (!open) return;
+    const position = () => {
+      if (!trigger.current || !menu.current) return;
+      const anchor = trigger.current.getBoundingClientRect();
+      const panel = menu.current;
+      const gap = 8;
+      const top = Math.max(
+        gap,
+        Math.min(anchor.bottom + gap, window.innerHeight - 80),
+      );
+      panel.style.left = `${Math.max(gap, Math.min(anchor.right - panel.offsetWidth, window.innerWidth - panel.offsetWidth - gap))}px`;
+      panel.style.top = `${top}px`;
+      panel.style.maxHeight = `${window.innerHeight - top - gap}px`;
+    };
+    position();
+    window.addEventListener("resize", position);
+    window.addEventListener("scroll", position, true);
+    return () => {
+      window.removeEventListener("resize", position);
+      window.removeEventListener("scroll", position, true);
+    };
   }, [open]);
 
   return (
     <>
       <button
+        ref={trigger}
         type="button"
+        popoverTarget={menuId}
         className={
           className ? `probe-theme-switch ${className}` : "probe-theme-switch"
         }
@@ -59,36 +82,21 @@ export function ThemeSwitch({
         aria-haspopup="dialog"
         aria-expanded={open}
         title="切换主题"
-        onClick={() => setOpen(true)}
       >
         <Palette size={18} aria-hidden="true" />
       </button>
       {createPortal(
-        <dialog
-          ref={dialog}
-          className="probe-theme-dialog"
+        <div
+          ref={menu}
+          id={menuId}
+          popover="auto"
+          role="dialog"
+          className="probe-theme-dropdown"
           aria-labelledby={titleId}
-          onClose={() => setOpen(false)}
-          onCancel={() => setOpen(false)}
-          onClick={(event) => {
-            if (event.target === event.currentTarget) setOpen(false);
-          }}
+          onToggle={(event) => setOpen(event.newState === "open")}
         >
           <div className="probe-theme-panel">
-            <header>
-              <div>
-                <h2 id={titleId}>外观设置</h2>
-                <p>选择喜欢的风格，仅对当前浏览器生效</p>
-              </div>
-              <button
-                type="button"
-                className="probe-theme-close"
-                aria-label="关闭外观设置"
-                onClick={() => setOpen(false)}
-              >
-                <X size={20} />
-              </button>
-            </header>
+            <h2 id={titleId}>外观设置</h2>
             <fieldset>
               <legend>主题风格</legend>
               <div className="probe-theme-options">
@@ -99,7 +107,7 @@ export function ThemeSwitch({
                     className="probe-theme-option"
                     aria-pressed={theme === option.value}
                     onClick={() => {
-                      setOpen(false);
+                      menu.current?.hidePopover();
                       saveThemePreference(option.value);
                       applyAppearance(appearance);
                     }}
@@ -114,7 +122,6 @@ export function ThemeSwitch({
                     </span>
                     <span>
                       <strong>{option.label}</strong>
-                      <small>{option.description}</small>
                     </span>
                     {theme === option.value && (
                       <Check size={18} aria-hidden="true" />
@@ -142,11 +149,8 @@ export function ThemeSwitch({
                 ))}
               </div>
             </fieldset>
-            <p className="probe-theme-note">
-              设置自动保存；选择「跟随主控」可恢复站点默认风格。
-            </p>
           </div>
-        </dialog>,
+        </div>,
         document.body,
       )}
     </>
