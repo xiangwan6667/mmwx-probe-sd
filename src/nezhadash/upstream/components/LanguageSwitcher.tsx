@@ -1,3 +1,4 @@
+// MMWX adaptation: keep language selection from locking page scroll; see licenses/NezhaDash-NOTICE.md.
 "use client";
 
 import { CheckCircleIcon, LanguageIcon } from "@heroicons/react/20/solid";
@@ -44,12 +45,12 @@ export function LanguageSwitcher() {
 	];
 
 	return (
-		<DropdownMenu>
+		<DropdownMenu modal={false}>
 			<DropdownMenuTrigger asChild>
 				<Button
 					variant="outline"
 					size="sm"
-					className={cn("rounded-full px-[9px] bg-white dark:bg-black", {
+					className={cn("nezha-glass-control rounded-full px-[9px] bg-white dark:bg-black", {
 						"bg-white/70 dark:bg-black/70": customBackgroundImage,
 					})}
 				>

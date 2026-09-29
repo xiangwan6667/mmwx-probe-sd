@@ -49,6 +49,12 @@ Modifications by xiangwan6667, September 2026:
   the view-toggle background colors; retain their selected-state colors.
 - Unify resource/network time-range tracks with the group/detail tab glass
   surfaces in both color modes; keep selection indicators from intercepting clicks.
+- Keep the language menu non-modal to avoid scrollbar-induced layout shifts.
+  Paint the custom background beneath the scrollbar gutter and size fixed image
+  layers using the host's large viewport to avoid mobile browser-chrome resizing.
+- Keep glass toolbar controls free of the cards' broad drop shadows.
+- Apply the same glass surface to header controls, chart/map tooltips and
+  ordinary tooltips; remove opaque inner chart-tooltip fills with backgrounds.
 - Respect the host history retention range and show only available resource charts.
   Do not invent process counts or historical CPU/memory data absent from MMWX.
 - Use local flag/font styles and original asset paths, retain host attribution,
@@ -78,6 +84,8 @@ Modified upstream files (each also carries a modification notice):
 - `components/ThemeProvider.tsx`
 - `components/ThemeColorManager.tsx` (resolve system colors through the host document)
 - `components/ThemeSwitcher.tsx`
+- `components/LanguageSwitcher.tsx` (non-modal language menu)
+- `components/MapTooltip.tsx`, `components/ui/tooltip.tsx` (glass tooltips)
 - `hooks/use-background.ts` (runtime initialization and event-based updates)
 - `lib/nezha-api.ts`
 - `lib/utils.ts`

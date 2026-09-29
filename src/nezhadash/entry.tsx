@@ -26,6 +26,10 @@ if (window.parent === window) window.location.replace(`/${window.location.hash}`
 window.addEventListener('message', event => {
   if (event.origin !== window.location.origin || event.source !== window.parent) return;
   if (event.data?.type === 'mmwx-probe-data' && event.data.data?.enabled) {
+    const height = event.data.backgroundViewportHeight;
+    if (typeof height === 'number' && Number.isFinite(height) && height > 0) {
+      document.documentElement.style.setProperty('--nezha-viewport-height', `${height}px`);
+    }
     receiveProbe(event.data.data, event.data.error);
     queryClient.invalidateQueries({ queryKey: ['setting'] });
     queryClient.invalidateQueries({ queryKey: ['server-group'] });

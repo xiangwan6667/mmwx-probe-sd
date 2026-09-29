@@ -7,6 +7,33 @@
   color: hsl(var(--foreground));
 }
 
+/* Transparent scrollbar tracks expose the document canvas, not fixed divs. */
+:root:has(.nezha-glass-root.has-custom-background) {
+  --nezha-background-shade: transparent;
+  background-image: linear-gradient(var(--nezha-background-shade), var(--nezha-background-shade)), var(--nezha-desktop-image);
+  background-size: cover;
+  background-position: center;
+  background-attachment: fixed;
+  background-repeat: no-repeat;
+}
+:root.dark:has(.nezha-glass-root.has-custom-background) {
+  --nezha-background-shade: rgb(0 0 0 / 0.25);
+}
+:root:has(.nezha-glass-root.has-custom-background) body {
+  background-color: transparent !important;
+}
+.nezha-wallpaper {
+  bottom: auto;
+  width: 100vw;
+  height: var(--nezha-viewport-height, 100lvh);
+  pointer-events: none;
+}
+@media (max-width: 639px) {
+  :root:has(.nezha-glass-root.has-custom-background) {
+    background-image: linear-gradient(var(--nezha-background-shade), var(--nezha-background-shade)), var(--nezha-mobile-image);
+  }
+}
+
 /* Scope to this theme document, including menus portalled directly to body.
    Do not apply blur to the page wrapper: each surface must sample the image. */
 :root:has(.nezha-glass-root.has-custom-background) {
@@ -34,6 +61,14 @@
 :root:has(.nezha-glass-root.has-custom-background) :is(.nezha-glass-popup, .probe-theme-dropdown) {
   background-color: var(--nezha-glass-menu) !important;
   --menu-surface: var(--nezha-glass-menu);
+}
+/* Small toolbar controls need a glass fill, not the cards' broad drop shadow. */
+:root:has(.nezha-glass-root.has-custom-background) .nezha-chart-tooltip-values {
+  background-color: transparent;
+  border-color: var(--nezha-glass-border);
+}
+:root:has(.nezha-glass-root.has-custom-background) :is(.nezha-glass-control, .probe-theme-switch) {
+  box-shadow: none;
 }
 :root:has(.nezha-glass-root.has-custom-background) .nezha-view-toggle[aria-pressed="true"] {
   background-color: rgb(37 99 235 / 0.85) !important;

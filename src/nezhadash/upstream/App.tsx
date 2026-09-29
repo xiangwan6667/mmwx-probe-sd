@@ -1,7 +1,7 @@
 // MMWX adaptation (2026-09-29): host data/theme/router integration; see licenses/NezhaDash-NOTICE.md.
 import { useQuery } from "@tanstack/react-query";
 import type React from "react";
-import { lazy, Suspense, useEffect, useState } from "react";
+import { lazy, Suspense, useEffect, useLayoutEffect, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { Route, HashRouter as Router, Routes } from "react-router-dom";
 
@@ -45,6 +45,19 @@ const MainApp: React.FC = () => {
 	const { setTheme } = useTheme();
 	const [isCustomCodeInjected, setIsCustomCodeInjected] = useState(false);
 	const { backgroundImage: customBackgroundImage } = useBackground();
+	const customMobileBackgroundImage = window.CustomMobileBackgroundImage || undefined;
+
+	// Paint the viewport canvas too: a fixed element alone cannot paint beneath
+	// a classic scrollbar's gutter. Keep the same image visible at the page edge.
+	useLayoutEffect(() => {
+		const root = document.documentElement;
+		root.style.setProperty('--nezha-desktop-image', customBackgroundImage ? `url(${JSON.stringify(customBackgroundImage)})` : 'none');
+		root.style.setProperty('--nezha-mobile-image', customMobileBackgroundImage ? `url(${JSON.stringify(customMobileBackgroundImage)})` : 'var(--nezha-desktop-image)');
+		return () => {
+			root.style.removeProperty('--nezha-desktop-image');
+			root.style.removeProperty('--nezha-mobile-image');
+		};
+	}, [customBackgroundImage, customMobileBackgroundImage]);
 
 	useEffect(() => {
 		loadServerDetail();
@@ -74,10 +87,6 @@ const MainApp: React.FC = () => {
 		return null;
 	}
 
-	const customMobileBackgroundImage =
-		window.CustomMobileBackgroundImage !== ""
-			? window.CustomMobileBackgroundImage
-			: undefined;
 	const hasGlassBackground = hasCustomBackground(customBackgroundImage, customMobileBackgroundImage);
 
 	return (
@@ -86,7 +95,7 @@ const MainApp: React.FC = () => {
 			{customBackgroundImage && (
 				<div
 					className={cn(
-						"fixed inset-0 z-0 bg-cover min-h-lvh bg-no-repeat bg-center dark:brightness-75",
+						"nezha-wallpaper fixed inset-0 z-0 bg-cover bg-no-repeat bg-center dark:brightness-75",
 						{
 							"hidden sm:block": customMobileBackgroundImage,
 						},
@@ -97,7 +106,7 @@ const MainApp: React.FC = () => {
 			{customMobileBackgroundImage && (
 				<div
 					className={cn(
-						"fixed inset-0 z-0 bg-cover min-h-lvh bg-no-repeat bg-center sm:hidden dark:brightness-75",
+						"nezha-wallpaper fixed inset-0 z-0 bg-cover bg-no-repeat bg-center sm:hidden dark:brightness-75",
 					)}
 					style={{ backgroundImage: `url(${JSON.stringify(customMobileBackgroundImage)})` }}
 				/>

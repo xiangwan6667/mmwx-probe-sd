@@ -1,3 +1,4 @@
+// MMWX adaptation: shared glass tooltip surface; see licenses/NezhaDash-NOTICE.md.
 import { memo } from "react";
 import { useTranslation } from "react-i18next";
 import { useNavigate } from "react-router-dom";
@@ -20,7 +21,7 @@ const MapTooltip = memo(function MapTooltip() {
 
 	return (
 		<div
-			className="tooltip-animate absolute hidden lg:block bg-white dark:bg-neutral-800 px-2 py-1 rounded shadow-lg text-sm dark:border dark:border-neutral-700 z-50"
+			className="nezha-glass-popup tooltip-animate absolute hidden lg:block bg-white dark:bg-neutral-800 px-2 py-1 rounded shadow-lg text-sm dark:border dark:border-neutral-700 z-50"
 			data-testid="map-tooltip"
 			key={tooltipData.country}
 			style={{
