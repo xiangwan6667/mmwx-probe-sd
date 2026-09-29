@@ -31,7 +31,6 @@ export function ThemeSwitch({
   const menu = useRef<HTMLDivElement>(null);
   const trigger = useRef<HTMLButtonElement>(null);
   const menuId = useId();
-  const titleId = useId();
 
   useEffect(() => {
     applyAppearance(appearance);
@@ -92,11 +91,10 @@ export function ThemeSwitch({
           popover="auto"
           role="dialog"
           className="probe-theme-dropdown"
-          aria-labelledby={titleId}
+          aria-label="外观设置"
           onToggle={(event) => setOpen(event.newState === "open")}
         >
           <div className="probe-theme-panel">
-            <h2 id={titleId}>外观设置</h2>
             <fieldset>
               <legend>主题风格</legend>
               <div className="probe-theme-options">
@@ -115,11 +113,7 @@ export function ThemeSwitch({
                     <span
                       className={`probe-theme-swatch swatch-${option.value}`}
                       aria-hidden="true"
-                    >
-                      <i />
-                      <i />
-                      <i />
-                    </span>
+                    />
                     <span>
                       <strong>{option.label}</strong>
                     </span>
