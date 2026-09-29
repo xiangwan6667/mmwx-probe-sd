@@ -784,9 +784,9 @@ onMounted(() => {
             <div class="flex items-center justify-between">
               <span class="text-base font-bold">连接</span>
               <div class="text-xs flex gap-1 items-baseline">
-                <span>TCP: {{ latestStatus?.connections ?? '-' }}</span>
+                <span>TCP: {{ latestStatus?.connections != null && Number.isFinite(latestStatus.connections) ? Math.round(latestStatus.connections) : '-' }}</span>
                 <span>·</span>
-                <span>UDP: {{ latestStatus?.connections_udp ?? '-' }}</span>
+                <span>UDP: {{ latestStatus?.connections_udp != null && Number.isFinite(latestStatus.connections_udp) ? Math.round(latestStatus.connections_udp) : '-' }}</span>
               </div>
             </div>
           </template>
