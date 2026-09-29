@@ -129,11 +129,6 @@ export default function Servers({
 	const [currentGroup, setCurrentGroup] = useState<string>("All");
 	const nezhaWsData = lastData;
 
-	const customBackgroundImage =
-		(window.CustomBackgroundImage as string) !== ""
-			? window.CustomBackgroundImage
-			: undefined;
-
 	const restoreScrollPosition = useCallback(() => {
 		const isFromMainPage = sessionStorage.getItem("fromMainPage") === "true";
 		const savedPosition = sessionStorage.getItem("scrollPosition");
@@ -454,18 +449,17 @@ export default function Servers({
 			>
 				<section className="flex items-center gap-2 w-full overflow-hidden">
 					<button
+						aria-label="显示地图"
+						aria-pressed={showMap === "1"}
 						onClick={() => {
 							setShowMap(showMap === "0" ? "1" : "0");
 							localStorage.setItem("showMap", showMap === "0" ? "1" : "0");
 						}}
 						className={cn(
-							"inset-shadow-2xs inset-shadow-white/20 flex cursor-pointer flex-col items-center gap-0 rounded-[50px] bg-blue-100 p-2.5 text-blue-600 transition-all dark:bg-blue-900 dark:text-blue-100",
+							"nezha-glass-control nezha-view-toggle inset-shadow-2xs inset-shadow-white/20 flex cursor-pointer flex-col items-center gap-0 rounded-[50px] bg-blue-100 p-2.5 text-blue-600 transition-all dark:bg-blue-900 dark:text-blue-100",
 							{
 								"inset-shadow-black/20 bg-blue-600 text-white dark:bg-blue-100 dark:text-blue-600":
 									showMap === "1",
-							},
-							{
-								"bg-opacity-70 dark:bg-opacity-70": customBackgroundImage,
 							},
 						)}
 					>
@@ -473,6 +467,8 @@ export default function Servers({
 					</button>
 					{hasServices && (
 						<button
+							aria-label="显示服务状态"
+							aria-pressed={showServices === "1"}
 							onClick={() => {
 								setShowServices(showServices === "0" ? "1" : "0");
 								localStorage.setItem(
@@ -481,13 +477,10 @@ export default function Servers({
 								);
 							}}
 							className={cn(
-								"inset-shadow-2xs inset-shadow-white/20 flex cursor-pointer flex-col items-center gap-0 rounded-[50px] bg-blue-100 p-2.5 text-blue-600 transition-all dark:bg-blue-900 dark:text-blue-100",
+								"nezha-glass-control nezha-view-toggle inset-shadow-2xs inset-shadow-white/20 flex cursor-pointer flex-col items-center gap-0 rounded-[50px] bg-blue-100 p-2.5 text-blue-600 transition-all dark:bg-blue-900 dark:text-blue-100",
 								{
 									"inset-shadow-black/20 bg-blue-600 text-white dark:bg-blue-100 dark:text-blue-600":
 										showServices === "1",
-								},
-								{
-									"bg-opacity-70 dark:bg-opacity-70": customBackgroundImage,
 								},
 							)}
 						>
@@ -495,18 +488,17 @@ export default function Servers({
 						</button>
 					)}
 					<button
+						aria-label="切换列表布局"
+						aria-pressed={inline === "1"}
 						onClick={() => {
 							setInline(inline === "0" ? "1" : "0");
 							localStorage.setItem("inline", inline === "0" ? "1" : "0");
 						}}
 						className={cn(
-							"inset-shadow-2xs inset-shadow-white/20 flex cursor-pointer flex-col items-center gap-0 rounded-[50px] bg-blue-100 p-2.5 text-blue-600 transition-all dark:bg-blue-900 dark:text-blue-100",
+							"nezha-glass-control nezha-view-toggle inset-shadow-2xs inset-shadow-white/20 flex cursor-pointer flex-col items-center gap-0 rounded-[50px] bg-blue-100 p-2.5 text-blue-600 transition-all dark:bg-blue-900 dark:text-blue-100",
 							{
 								"inset-shadow-black/20 bg-blue-600 text-white dark:bg-blue-100 dark:text-blue-600":
 									inline === "1",
-							},
-							{
-								"bg-opacity-70 dark:bg-opacity-70": customBackgroundImage,
 							},
 						)}
 					>
@@ -520,11 +512,7 @@ export default function Servers({
 				</section>
 				<div
 					className={cn(
-						"flex h-8 items-center rounded-full border border-stone-200 bg-white text-sm text-stone-600 shadow-xs transition-all dark:border-stone-800 dark:bg-stone-800 dark:text-stone-300 dark:shadow-none shrink-0",
-						{
-							"dark:border-stone-600/80 dark:bg-stone-800/80 bg-white/75":
-								customBackgroundImage,
-						},
+						"nezha-glass-control flex h-8 items-center rounded-full border border-stone-200 bg-white text-sm text-stone-600 shadow-xs transition-all dark:border-stone-800 dark:bg-stone-800 dark:text-stone-300 dark:shadow-none shrink-0",
 						{
 							" text-blue-600  dark:text-blue-400": sortType !== "default",
 						},

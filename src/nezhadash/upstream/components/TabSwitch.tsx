@@ -1,3 +1,4 @@
+// MMWX adaptation: shared background glass controls; see licenses/NezhaDash-NOTICE.md.
 import { useTranslation } from "react-i18next";
 import { useActiveIndicator } from "@/hooks/use-active-indicator";
 import { cn } from "@/lib/utils";
@@ -23,7 +24,7 @@ export default function TabSwitch({
 			<div
 				ref={containerRef}
 				className={cn(
-					"relative flex items-center gap-1 rounded-[50px] bg-stone-100 p-[3px] dark:bg-stone-800",
+					"nezha-glass-control relative flex items-center gap-1 rounded-[50px] bg-stone-100 p-[3px] dark:bg-stone-800",
 					{
 						"bg-stone-100/70 dark:bg-stone-800/70": customBackgroundImage,
 					},

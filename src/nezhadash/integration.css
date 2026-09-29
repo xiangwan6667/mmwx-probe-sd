@@ -7,23 +7,39 @@
   color: hsl(var(--foreground));
 }
 
-/* Match the reference site's translucent cards only when a custom background
-   is configured. The image layer remains sharp; only card surfaces blur it. */
-.nezha-glass-root.has-custom-background [class*="bg-card"],
-.nezha-glass-root.has-custom-background .server-card-list > article,
-.nezha-glass-root.has-custom-background .server-card-list > div {
-  background-color: hsl(var(--card) / 0.58) !important;
-  border-color: hsl(var(--border) / 0.55);
-  box-shadow: 0 10px 30px rgb(15 23 42 / 0.12), inset 0 1px 0 rgb(255 255 255 / 0.24);
+/* Scope to this theme document, including menus portalled directly to body.
+   Do not apply blur to the page wrapper: each surface must sample the image. */
+:root:has(.nezha-glass-root.has-custom-background) {
+  --nezha-glass-surface: hsl(var(--card) / 0.58);
+  --nezha-glass-menu: hsl(var(--popover) / 0.78);
+  --nezha-glass-border: hsl(var(--border) / 0.55);
+  --nezha-glass-shadow: 0 10px 30px rgb(15 23 42 / 0.12), inset 0 1px 0 rgb(255 255 255 / 0.24);
+}
+:root.dark:has(.nezha-glass-root.has-custom-background) {
+  --nezha-glass-surface: hsl(var(--card) / 0.62);
+  --nezha-glass-menu: hsl(var(--popover) / 0.8);
+  --nezha-glass-border: hsl(var(--border) / 0.48);
+  --nezha-glass-shadow: 0 10px 30px rgb(0 0 0 / 0.26), inset 0 1px 0 rgb(255 255 255 / 0.08);
+}
+:root:has(.nezha-glass-root.has-custom-background) :is(
+  [class~="bg-card"], [class~="bg-card/70"], .nezha-glass-control,
+  .probe-theme-switch, .nezha-glass-popup, .probe-theme-dropdown
+) {
+  background-color: var(--nezha-glass-surface) !important;
+  border-color: var(--nezha-glass-border);
+  box-shadow: var(--nezha-glass-shadow);
   -webkit-backdrop-filter: blur(16px) saturate(125%);
   backdrop-filter: blur(16px) saturate(125%);
 }
-.dark .nezha-glass-root.has-custom-background [class*="bg-card"],
-.dark .nezha-glass-root.has-custom-background .server-card-list > article,
-.dark .nezha-glass-root.has-custom-background .server-card-list > div {
-  background-color: hsl(var(--card) / 0.62) !important;
-  border-color: hsl(var(--border) / 0.48);
-  box-shadow: 0 10px 30px rgb(0 0 0 / 0.26), inset 0 1px 0 rgb(255 255 255 / 0.08);
+:root:has(.nezha-glass-root.has-custom-background) :is(.nezha-glass-popup, .probe-theme-dropdown) {
+  background-color: var(--nezha-glass-menu) !important;
+  --menu-surface: var(--nezha-glass-menu);
+}
+:root:has(.nezha-glass-root.has-custom-background) .nezha-view-toggle[aria-pressed="true"] {
+  background-color: rgb(37 99 235 / 0.85) !important;
+}
+:root.dark:has(.nezha-glass-root.has-custom-background) .nezha-view-toggle[aria-pressed="true"] {
+  background-color: rgb(219 234 254 / 0.85) !important;
 }
 .probe-theme-switch { display: inline-flex; align-items: center; justify-content: center; width: 34px; height: 32px; border: 1px solid hsl(var(--border)); border-radius: 999px; background: hsl(var(--card)); }
 .probe-theme-switch svg { width: 16px; height: 16px; }

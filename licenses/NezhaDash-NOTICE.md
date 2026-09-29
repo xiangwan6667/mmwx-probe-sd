@@ -44,8 +44,9 @@ Modifications by xiangwan6667, September 2026:
   including dropdown menus, while retaining intentionally hidden scrollbars.
 - Configure the original desktop/mobile background layers through public Worker
   settings; initialize them before mount and remove the background polling loop.
-- Add a conditional glass surface treatment for cards when a custom background
-  is present, while leaving the original opaque surfaces unchanged otherwise.
+- Add conditional glass surfaces for cards, controls and portalled menus when a
+  custom background is present. Replace obsolete opacity utilities that removed
+  the view-toggle background colors; retain their selected-state colors.
 - Respect the host history retention range and show only available resource charts.
   Do not invent process counts or historical CPU/memory data absent from MMWX.
 - Use local flag/font styles and original asset paths, retain host attribution,
@@ -68,6 +69,8 @@ Modified upstream files (each also carries a modification notice):
 - `components/ServerOverview.tsx`
 - `components/TrafficBar.tsx`
 - `components/VisitorCapsuleBar.tsx`
+- `components/GroupSwitch.tsx`, `components/TabSwitch.tsx`, `components/SearchButton.tsx` (glass controls)
+- `components/ui/dropdown-menu.tsx`, `components/ui/popover.tsx`, `components/ui/dialog.tsx`, `components/ui/select.tsx` (glass portals)
 - `components/ui/card.tsx`
 - `components/ui/chart.tsx` (suppress pointer focus frames while retaining keyboard focus and tooltips)
 - `components/ThemeProvider.tsx`
