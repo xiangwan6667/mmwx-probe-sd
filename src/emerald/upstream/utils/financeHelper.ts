@@ -74,6 +74,14 @@ export const DISPLAY_FINANCE_CURRENCIES = [
 export type ExchangeRates = Partial<Record<CurrencyCode, number>>
 export type ExchangeRateSource = 'cache' | 'network' | 'stale-cache' | 'default'
 
+interface ExchangeRatesCache {
+  base: 'CNY'
+  date: string
+  fetchedAt: number
+  rates: Partial<Record<CurrencyCode, number>>
+}
+
+const CACHE_KEY = 'komari_finance_exchange_rates_cny_v1'
 const MS_PER_DAY = 24 * 60 * 60 * 1000
 const MONTH_DAYS = 30
 const LONG_TERM_YEARS = 100
@@ -84,6 +92,16 @@ export const CURRENCY_SYMBOLS = Object.fromEntries(
   Object.entries(FINANCE_CURRENCY_CONFIG).map(([currency, config]) => [currency, config.symbol]),
 ) as Record<CurrencyCode, string>
 
+const EXCHANGE_RATE_APIS = [
+  {
+    url: 'https://api.frankfurter.app/latest?from=CNY',
+    parse: (data: unknown) => (data as { rates?: unknown }).rates,
+  },
+  {
+    url: 'https://open.er-api.com/v6/latest/CNY',
+    parse: (data: unknown) => (data as { rates?: unknown }).rates,
+  },
+] as const
 const EXPLICIT_CURRENCY_ALIASES: Record<string, CurrencyCode> = {
   '$': 'USD',
   'US$': 'USD',
@@ -267,7 +285,36 @@ export async function getDailyExchangeRates(): Promise<{
   rates: ExchangeRates
   source: ExchangeRateSource
 }> {
-  return { rates: DEFAULT_EXCHANGE_RATES, source: 'default' }
+  const today = getTodayDateKey()
+  const cached = readCachedExchangeRates()
+
+  if (cached && cached.date === today) {
+    return {
+      rates: cached.rates,
+      source: 'cache',
+    }
+  }
+
+  const fetchedRates = await fetchExchangeRates()
+  if (fetchedRates) {
+    writeCachedExchangeRates(fetchedRates, today)
+    return {
+      rates: fetchedRates,
+      source: 'network',
+    }
+  }
+
+  if (cached) {
+    return {
+      rates: cached.rates,
+      source: 'stale-cache',
+    }
+  }
+
+  return {
+    rates: DEFAULT_EXCHANGE_RATES,
+    source: 'default',
+  }
 }
 
 function getPriceCNY(node: NodeData, exchangeRates: ExchangeRates): number {
@@ -283,16 +330,88 @@ function getPriceCNY(node: NodeData, exchangeRates: ExchangeRates): number {
   return rate && rate > 0 ? price / rate : Number.NaN
 }
 
+async function fetchExchangeRates(): Promise<ExchangeRates | null> {
+  for (const api of EXCHANGE_RATE_APIS) {
+    try {
+      const response = await fetchWithTimeout(api.url)
+      if (!response.ok)
+        continue
+
+      const data = await response.json()
+      const rates = sanitizeExchangeRates(api.parse(data))
+      if (rates)
+        return rates
+    }
+    catch (error) {
+      console.warn(`获取汇率失败: ${api.url}`, error)
+    }
+  }
+
+  return null
+}
+
 export async function fetchWithTimeout(url: string, timeoutMs = 5000): Promise<Response> {
   const controller = new AbortController()
-  const timeoutId = window.setTimeout(() => controller.abort(), timeoutMs)
+  const timeoutId = globalThis.setTimeout(() => controller.abort(), timeoutMs)
 
   try {
     return await fetch(url, { signal: controller.signal })
   }
   finally {
-    window.clearTimeout(timeoutId)
+    globalThis.clearTimeout(timeoutId)
   }
+}
+
+function readCachedExchangeRates(): { date: string, rates: ExchangeRates } | null {
+  try {
+    const rawValue = getLocalStorageItem(CACHE_KEY)
+    if (!rawValue)
+      return null
+
+    const cache = JSON.parse(rawValue) as ExchangeRatesCache
+    const rates = sanitizeExchangeRates(cache.rates)
+    if (cache.base !== 'CNY' || !cache.date || !rates)
+      return null
+
+    return {
+      date: cache.date,
+      rates,
+    }
+  }
+  catch {
+    return null
+  }
+}
+
+function writeCachedExchangeRates(rates: ExchangeRates, date: string): void {
+  const cache: ExchangeRatesCache = {
+    base: 'CNY',
+    date,
+    fetchedAt: Date.now(),
+    rates,
+  }
+  setLocalStorageItem(CACHE_KEY, JSON.stringify(cache))
+}
+
+function sanitizeExchangeRates(rates: unknown): ExchangeRates | null {
+  if (!rates || typeof rates !== 'object')
+    return null
+
+  const record = rates as Record<string, unknown>
+  const result = { CNY: 1 } as ExchangeRates
+
+  for (const currency of SUPPORTED_FINANCE_CURRENCIES) {
+    if (currency === 'CNY')
+      continue
+
+    const value = Number(record[currency])
+    if (!Number.isFinite(value) || value <= 0)
+      continue
+
+    result[currency] = value
+  }
+
+  return Object.keys(result).length > 1 ? result : null
 }
 
 function getLocalStorageItem(key: string): string | null {
@@ -354,4 +473,21 @@ export function calculateFinanceGroups(nodes: NodeData[], excludeFreeTags = true
     else groups.set(entry.currency, entry)
   }
   return [...groups.values()]
+}
+
+/** Convert every original-currency subtotal with rates quoted per 1 CNY. */
+export function calculateConvertedFinance(nodes: NodeData[], target: string, rates: ExchangeRates, excludeFreeTags = true, now = new Date()) {
+  const groups = calculateFinanceGroups(nodes, excludeFreeTags, now)
+  const totals: { total: number | null, monthly: number | null, remaining: number | null } = {total: 0, monthly: 0, remaining: 0}
+  for (const group of groups) {
+    const sourceRate = group.currency === 'CNY' ? 1 : rates[group.currency as CurrencyCode]
+    const targetRate = target === 'CNY' ? 1 : rates[target as CurrencyCode]
+    const factor = group.currency === target ? 1 : sourceRate && targetRate && sourceRate > 0 && targetRate > 0 ? targetRate / sourceRate : null
+    for (const key of ['total', 'monthly', 'remaining'] as const) {
+      const value = group[key]
+      totals[key] = totals[key] === null || value === null || (value !== 0 && factor === null)
+        ? null : totals[key]! + (value === 0 ? 0 : value * factor!)
+    }
+  }
+  return { currency: target, ...totals }
 }

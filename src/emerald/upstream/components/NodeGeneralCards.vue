@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import type { NodeData } from '@emerald/stores/nodes'
 import { Icon } from '@iconify/vue'
-import { computed, defineAsyncComponent, onMounted, ref } from 'vue'
+import { computed, defineAsyncComponent, onMounted, ref, shallowRef } from 'vue'
 import NodeEarthGlobe from '@emerald/components/NodeEarthGlobe.vue'
 import { CardX } from '@emerald/components/ui/card-x'
 import { DataTooltip } from '@emerald/components/ui/data-tooltip'
@@ -23,6 +23,7 @@ const appStore = useAppStore()
 const { pickSurfaceClass } = useBackgroundSurface()
 const nodesStore = useNodesStore()
 const selectedCurrency = ref('USD')
+const exchangeRates = shallowRef<financeHelper.ExchangeRates>(financeHelper.DEFAULT_EXCHANGE_RATES)
 const excludeFreeNodes = ref(true)
 
 const summaryNodes = computed(() => props.nodes ?? nodesStore.nodes)
@@ -79,8 +80,8 @@ const formattedDiskUsed = computed(() => formatBytesSplit(totalDisk.value.used, 
 const formattedDiskTotal = computed(() => formatBytesSplit(totalDisk.value.total, appStore.byteDecimals))
 
 const financeGroups = computed(() => financeHelper.calculateFinanceGroups(summaryNodes.value, excludeFreeNodes.value))
-const financeRateCurrencies = computed(() => [...new Set([selectedCurrency.value, ...financeGroups.value.map(group => group.currency)])])
-const selectedGroup = computed(() => financeGroups.value.find(group => group.currency === selectedCurrency.value))
+const financeRateCurrencies = computed(() => [...new Set(['USD', 'CNY', selectedCurrency.value, ...financeGroups.value.map(group => group.currency)])])
+const selectedGroup = computed(() => financeHelper.calculateConvertedFinance(summaryNodes.value, selectedCurrency.value, exchangeRates.value, excludeFreeNodes.value))
 const exchangeRateBaseCurrency = computed(() => selectedCurrency.value)
 const formattedRemainingValue = computed(() => financeHelper.formatFinanceAmount(selectedGroup.value?.remaining, exchangeRateBaseCurrency.value))
 const financeSummaryItems = computed(() => [
@@ -106,6 +107,7 @@ const cardGridClass = computed(() => showVisualPanel.value
 onMounted(() => {
   selectedCurrency.value = financeHelper.getStoredFinanceCurrency()
   excludeFreeNodes.value = financeHelper.shouldExcludeFreeNodes()
+  void financeHelper.getDailyExchangeRates().then(result => { exchangeRates.value = result.rates })
 })
 </script>
 
