@@ -4,10 +4,14 @@ export type ProbeColorMode = NonNullable<ProbeAppearance["color_mode"]>;
 
 export const themeOptions = [
   { value: "server", label: "跟随主控", description: "使用站点默认风格" },
-  { value: "pixel", label: "Pixel", description: "像素边框 · 复古简洁" },
-  { value: "flat", label: "Flat", description: "扁平设计 · 清爽柔和" },
-  { value: "anime", label: "Anime", description: "动漫配色 · 轻盈活泼" },
-  { value: "premium", label: "Premium", description: "精致面板 · 全景布局" },
+  { value: "flat", label: "扁平", description: "扁平设计 · 清爽柔和" },
+  { value: "pixel", label: "像素", description: "像素边框 · 复古简洁" },
+  { value: "anime", label: "二次元", description: "动漫配色 · 轻盈活泼" },
+  {
+    value: "premium",
+    label: "高级黑金（付费许可证）",
+    description: "精致面板 · 全景布局",
+  },
 ] as const;
 
 export type ProbeThemePreference = (typeof themeOptions)[number]["value"];
