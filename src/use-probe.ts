@@ -1,15 +1,11 @@
 import { useEffect, useRef, useState } from "react";
-import type { ProbeAppearance, ProbePayload, ThemeName } from "./types";
+import type { ProbeAppearance, ProbePayload } from "./types";
 import { applyProbeDocumentBranding } from "./document-branding";
-import { normalizeColorMode, type ProbeColorMode } from "./theme-preference";
+import { resolveTheme } from "./theme-preference";
+import { readColorModePreference, readThemePreference } from "./theme-settings";
+export { readColorModePreference, saveColorModePreference } from "./theme-settings";
 
 const APPEARANCE_CACHE = "mmwx-probe-appearance";
-const COLOR_MODE_PREFERENCE = "mmwx-probe-color-mode";
-
-function normalizeTheme(value?: string): ThemeName {
-  const theme = value?.trim();
-  return theme && /^[A-Za-z0-9_-]{1,64}$/.test(theme) ? theme : "pixel";
-}
 
 export function applyAppearance(input?: ProbeAppearance) {
   const cached = (() => {
@@ -22,7 +18,7 @@ export function applyAppearance(input?: ProbeAppearance) {
     }
   })();
   const appearance = input || cached || { theme: "pixel", color_mode: "light" };
-  const theme = normalizeTheme(appearance.theme);
+  const theme = resolveTheme(readThemePreference(), appearance.theme);
   const colorMode = readColorModePreference(appearance.color_mode);
   const root = document.documentElement;
   for (const className of Array.from(root.classList)) {
@@ -43,27 +39,6 @@ export function applyAppearance(input?: ProbeAppearance) {
     } catch {
       // Theme switching must keep working when storage is blocked.
     }
-  }
-}
-
-export function readColorModePreference(
-  fallback?: ProbeAppearance["color_mode"],
-): ProbeColorMode {
-  try {
-    return normalizeColorMode(
-      localStorage.getItem(COLOR_MODE_PREFERENCE),
-      normalizeColorMode(fallback),
-    );
-  } catch {
-    return normalizeColorMode(fallback);
-  }
-}
-
-export function saveColorModePreference(mode: ProbeColorMode) {
-  try {
-    localStorage.setItem(COLOR_MODE_PREFERENCE, mode);
-  } catch {
-    // Applying the selected mode for the current page still succeeds.
   }
 }
 

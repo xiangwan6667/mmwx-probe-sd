@@ -101,6 +101,8 @@ import {
   probeRangeOptions,
 } from "./probe-ranges";
 import { ThemeSwitch } from "./ThemeSwitch";
+import { useThemePreference } from "./theme-settings";
+import { resolveTheme } from "./theme-preference";
 import { PasskeyLogin } from "./PasskeyLogin";
 import { Twemoji } from "./Twemoji";
 import { displayServerName } from "./server-name";
@@ -2234,6 +2236,7 @@ function ProbeLicenseNameplate({
 
 export function App() {
   const { data, error } = useProbe();
+  const themePreference = useThemePreference();
   const [view, setView] = useState<"card" | "list">(() =>
     localStorage.getItem("probe-view") === "list" ? "list" : "card",
   );
@@ -2262,7 +2265,7 @@ export function App() {
       </main>
     );
   if (!data?.enabled) return <main className="center">探针尚未启用</main>;
-  if (data.appearance?.theme === "premium") {
+  if (resolveTheme(themePreference, data.appearance?.theme) === "premium") {
     return (
       <Suspense
         fallback={<main className="center">正在加载 Premium 主题…</main>}

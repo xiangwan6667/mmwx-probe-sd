@@ -1,8 +1,8 @@
 {
-  "name": "mmwx-probe",
+  "name": "mmwx-probe-sd",
   "private": true,
   "version": "0.1.0",
-  "description": "Standalone Cloudflare Worker probe frontend for MiaoMiaoWuX",
+  "description": "SD Probe: unofficial customized probe frontend based on mmwx-group/mmwx-probe",
   "cloudflare": {
     "bindings": {
       "MMWX_ORIGIN": {
@@ -15,6 +15,7 @@
   },
   "type": "module",
   "scripts": {
+    "test": "tsx --test src/*.test.ts",
     "dev": "vite",
     "build": "tsc -b && vite build",
     "preview": "vite preview",
@@ -44,6 +45,7 @@
     "@types/react": "^19.2.0",
     "@types/react-dom": "^19.2.0",
     "@types/twemoji": "^13.1.1",
+    "tsx": "^4.23.15",
     "typescript": "~5.9.3",
     "wrangler": "^4.116.0"
   }
