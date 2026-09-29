@@ -2279,7 +2279,6 @@ export function App() {
       <HistoryDaysContext.Provider value={data.history_days ?? 1}>
         <Suspense fallback={<main className="center">正在加载 NezhaDash 主题…</main>}>
           <NezhaDashPage data={data} error={error}
-            renderDetail={(server, index) => <ServerCard server={server} index={index} triISP={data.tri_isp} />}
             licenseBadge={data.license_badge && <div className="probe-license-footer"><ProbeLicenseNameplate name={data.license_badge.name} displayName={data.license_badge.display_name} /></div>}
           />
         </Suspense>

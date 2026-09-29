@@ -35,9 +35,9 @@
 
 在右上角 **外观设置 → NezhaDash** 启用，支持浅色、深色和跟随系统。界面显示中文，内部主题标识为 `nezhadash`；主控支持自定义主题标识时也可将它设为默认值。
 
-主题移植自 [hamster1963/nezha-dash-v2](https://github.com/hamster1963/nezha-dash-v2) 的暖灰配色与紧凑监控布局，提供总数/在线/离线/网络概览、搜索、地区筛选、资源和网速排序，以及手机布局。点击节点进入详情，继续使用本项目的流量、延迟和连接数历史功能；实际显示项由主控提供的数据决定。筛选和排序不会改变详情请求的节点编号，未上报的数据以「—」表示，实时网络合计只统计在线节点。
+直接复用 [hamster1963/nezha-dash-v2](https://github.com/hamster1963/nezha-dash-v2) 的页面和组件源码：顶部时钟、网络插画、概览、分组标签、卡片/列表、地图、命令搜索及详情图表沿用原版布局、样式和交互。源码位于 `src/nezhadash/upstream`，以独立页面加载，避免 Tailwind 样式影响其他主题。数据由外层现有连接传入，不另建探针轮询或 WebSocket。地区作为原版分组，节点编号保持主控原始序号。
 
-这是对现有 MMWX 数据接口的适配，不是完整哪吒前端，也不接入哪吒服务端。主控特有的 Premium 大屏、地图和转发链总览仍使用原有主题。NezhaDash 上游使用 Apache-2.0，许可证及改动说明见 [licenses/NezhaDash-NOTICE.md](licenses/NezhaDash-NOTICE.md)；本项目原有代码的许可证不变。
+必要适配包括 MMWX 数据、Passkey 登录、主题菜单、中文默认语言和历史范围。原版的资源/网速实时图表记录本次访问期间收到的数据；网络延迟、丢包与连接数历史使用主控公开接口。主控未提供的资源历史不伪造样本，服务可用性监控不会模拟哪吒数据。历史范围遵循 `history_days`，不依赖哪吒登录态。NezhaDash 上游使用 Apache-2.0，许可证、修改文件说明及来源清单见 [licenses/NezhaDash-NOTICE.md](licenses/NezhaDash-NOTICE.md)；本项目原有代码的许可证不变。
 
 ## 工作方式
 

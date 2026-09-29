@@ -82,7 +82,7 @@ export function PasskeyLogin() {
         setError("主控地址未配置");
         return;
       }
-      window.location.href = `${target}/#mmwx_token=${encodeURIComponent(payload.token)}`;
+      (window.top || window).location.href = `${target}/#mmwx_token=${encodeURIComponent(payload.token)}`;
     } catch (err) {
       // 用户在系统弹窗点取消(NotAllowedError)不算错误,静默收场。
       if (err instanceof Error && err.name === "NotAllowedError") return;

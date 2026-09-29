@@ -1,0 +1,16 @@
+{
+	"online": "En ligne",
+	"offline": "Hors ligne",
+	"login": "Connexion",
+	"NoResults": "Aucun résultat trouvé.",
+	"serverCard": {
+		"download": "Téléchargement",
+		"totalDownload": "Téléchargement"
+	},
+	"serverDetailChart": {
+		"download": "Téléchargement"
+	},
+	"serverDetail": {
+		"download": "Téléchargement"
+	}
+}

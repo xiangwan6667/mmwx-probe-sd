@@ -1,0 +1,13 @@
+/* Only integration controls: upstream page styles live unmodified in index.css. */
+.probe-theme-dropdown {
+  --menu-surface: hsl(var(--popover));
+  --menu-border: hsl(var(--border));
+  --menu-accent: #3b82f6;
+  --menu-muted: hsl(var(--muted-foreground));
+  color: hsl(var(--foreground));
+}
+.probe-theme-switch { display: inline-flex; align-items: center; justify-content: center; width: 34px; height: 32px; border: 1px solid hsl(var(--border)); border-radius: 999px; background: hsl(var(--card)); }
+.probe-theme-switch svg { width: 16px; height: 16px; }
+.mmwx-passkey button { font: inherit; font-size: 14px; color: inherit; border: 0; background: none; padding: 0; opacity: .5; }
+.mmwx-passkey button svg { display: none; }
+.mmwx-passkey button::after { content: '登录'; }
