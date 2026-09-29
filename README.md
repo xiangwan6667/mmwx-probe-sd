@@ -25,14 +25,6 @@
 
 这些变量在 Worker 运行时读取，不能只填到构建环境中。`PROBE_TOKEN` 使用 **Secret** 保存，不要提交到仓库。启用 Passkey 登录还需在主控注册 Passkey，并按主控要求配置探针的 related origins。
 
-本地复制 [`.dev.vars.example`](.dev.vars.example) 为 `.dev.vars`，填写：
-
-```dotenv
-MMWX_ORIGIN=https://panel.example.com
-PROBE_TOKEN=替换为主控生成的探针访问密钥
-ENABLE_MASTER_LOGIN=false
-```
-
 ### 其他配置的来源
 
 | 配置 | 设置位置 / 数据来源 |
@@ -72,7 +64,7 @@ Fork 连接 Cloudflare Workers Builds 后，`main` 分支收到更新即可自�
 
 ## 本地开发
 
-需要 Node.js 22+。按上面的示例配置 `.dev.vars`，然后执行：
+需要 Node.js 22+。复制 [`.dev.vars.example`](.dev.vars.example) 为 `.dev.vars`，按变量表填写，然后执行：
 
 ```bash
 npm ci
