@@ -11,3 +11,42 @@
 .mmwx-passkey button { font: inherit; font-size: 14px; color: inherit; border: 0; background: none; padding: 0; opacity: .5; }
 .mmwx-passkey button svg { display: none; }
 .mmwx-passkey button::after { content: '登录'; }
+
+/* Reuse the theme menu primitives without a mobile native select sheet. */
+.nezha-sort-trigger {
+  display: inline-flex;
+  height: 100%;
+  align-items: center;
+  gap: 6px;
+  padding: 0 12px 0 9px;
+  border-radius: 0 999px 999px 0;
+  white-space: nowrap;
+  font-weight: 500;
+}
+.nezha-sort-trigger:focus-visible {
+  outline: 2px solid hsl(var(--ring));
+  outline-offset: 2px;
+}
+.nezha-sort-menu {
+  width: 168px;
+  max-width: calc(100vw - 24px);
+  max-height: min(320px, var(--radix-dropdown-menu-content-available-height));
+  overflow-y: auto;
+  overscroll-behavior: contain;
+  border-radius: 12px;
+  padding: 5px;
+  box-shadow: 0 8px 24px #0002;
+}
+.nezha-sort-item {
+  min-height: 36px;
+  border-radius: 7px;
+  font-size: 13px;
+}
+.nezha-sort-item[data-state="checked"] {
+  background: hsl(var(--accent));
+  color: hsl(var(--accent-foreground));
+  font-weight: 600;
+}
+@media (pointer: coarse) {
+  .nezha-sort-item { min-height: 44px; }
+}

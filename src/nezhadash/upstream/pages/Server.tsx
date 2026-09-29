@@ -1,3 +1,4 @@
+// MMWX adaptation: anchored sorting menu on desktop and mobile; see licenses/NezhaDash-NOTICE.md.
 import {
 	ArrowDownIcon,
 	ArrowsUpDownIcon,
@@ -17,6 +18,8 @@ import ServerCard from "@/components/ServerCard";
 import ServerCardInline from "@/components/ServerCardInline";
 import ServerOverview from "@/components/ServerOverview";
 import { ServiceTracker } from "@/components/ServiceTracker";
+import { ChevronDown } from "lucide-react";
+import { DropdownMenu, DropdownMenuTrigger, DropdownMenuContent, DropdownMenuRadioGroup, DropdownMenuRadioItem } from "@/components/ui/dropdown-menu";
 import { SORT_TYPES } from "@/context/sort-context";
 import { useSort } from "@/hooks/use-sort";
 import { useStatus } from "@/hooks/use-status";
@@ -526,10 +529,10 @@ export default function Servers({
 					)}
 				>
 					<button
-						aria-label="Toggle sort direction"
+						aria-label={sortOrder === "asc" ? "切换为降序" : "切换为升序"}
 						onClick={() => setSortOrder(sortOrder === "asc" ? "desc" : "asc")}
 						disabled={sortType === "default"}
-						className="flex h-full cursor-pointer items-center gap-1.5 px-3 disabled:cursor-not-allowed disabled:opacity-40"
+						className="flex h-full cursor-pointer items-center gap-1.5 px-3 disabled:cursor-default disabled:opacity-40"
 					>
 						<div className="text-stone-900 dark:text-stone-100">
 							{sortOrder === "asc" && sortType !== "default" ? (
@@ -546,30 +549,28 @@ export default function Servers({
 						</span>
 					</button>
 					<span className="text-stone-300 dark:text-stone-600 mb-0.5">|</span>
-					<span className="relative ml-2 mr-3.25 inline-flex items-center">
-						<span
-							className="pointer-events-none select-none opacity-0 text-sm font-medium whitespace-nowrap"
-							aria-hidden
-						>
-							{t(`sort.types.${sortType.replace(/ /g, "_")}`)}
-						</span>
-						<select
-							aria-label="Sort metric"
-							value={sortType}
-							onChange={(e) => {
-								const val = e.target.value as typeof sortType;
-								setSortType(val);
-								if (val === "default") setSortOrder("desc");
-							}}
-							className="absolute inset-0 cursor-pointer appearance-none bg-transparent text-sm font-medium outline-none"
-						>
-							{SORT_TYPES.map((type) => (
-								<option key={type} value={type}>
-									{t(`sort.types.${type.replace(/ /g, "_")}`)}
-								</option>
-							))}
-						</select>
-					</span>
+					<DropdownMenu modal={false}>
+						<DropdownMenuTrigger asChild>
+							<button type="button" aria-label="排序方式" className="nezha-sort-trigger">
+								{t(`sort.types.${sortType.replace(/ /g, "_")}`)}
+								<ChevronDown size={13} aria-hidden="true" />
+							</button>
+						</DropdownMenuTrigger>
+						<DropdownMenuContent align="end" sideOffset={8} collisionPadding={12} className="nezha-sort-menu" aria-label="排序方式">
+							<DropdownMenuRadioGroup value={sortType} onValueChange={(value) => {
+								const next = SORT_TYPES.find(type => type === value);
+								if (!next) return;
+								setSortType(next);
+								if (next === "default") setSortOrder("desc");
+							}}>
+								{SORT_TYPES.map(type => (
+									<DropdownMenuRadioItem key={type} value={type} className="nezha-sort-item">
+										{t(`sort.types.${type.replace(/ /g, "_")}`)}
+									</DropdownMenuRadioItem>
+								))}
+							</DropdownMenuRadioGroup>
+						</DropdownMenuContent>
+					</DropdownMenu>
 				</div>
 			</div>
 			{hasServers && showMap === "1" && (

@@ -52,6 +52,7 @@ Modified upstream files (each also carries a modification notice):
 - `components/ThemeSwitcher.tsx`
 - `lib/nezha-api.ts`
 - `lib/utils.ts`
+- `pages/Server.tsx` (replace native sorting select with anchored theme menu)
 - `pages/ServerDetail.tsx`
 - `types/nezha-api.ts`
 

@@ -2320,6 +2320,31 @@
   margin-top: 0.55rem;
   overflow-y: auto;
   scrollbar-gutter: stable;
+  scrollbar-width: thin;
+  scrollbar-color: rgba(216, 180, 106, 0.45) rgba(216, 180, 106, 0.06);
+}
+
+/* Fallback for browsers without standard scrollbar styling. */
+.premium-probe-heatmap::-webkit-scrollbar,
+.premium-probe-quota-rank::-webkit-scrollbar {
+  width: 6px;
+  height: 6px;
+}
+
+.premium-probe-heatmap::-webkit-scrollbar-track,
+.premium-probe-quota-rank::-webkit-scrollbar-track {
+  background: rgba(216, 180, 106, 0.06);
+}
+
+.premium-probe-heatmap::-webkit-scrollbar-thumb,
+.premium-probe-quota-rank::-webkit-scrollbar-thumb {
+  border-radius: 999px;
+  background: rgba(216, 180, 106, 0.45);
+}
+
+.premium-probe-heatmap::-webkit-scrollbar-button,
+.premium-probe-quota-rank::-webkit-scrollbar-button {
+  display: none;
 }
 
 .premium-probe-heatmap > div {
