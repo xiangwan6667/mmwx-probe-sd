@@ -3,3 +3,7 @@ MMWX_ORIGIN=https://panel.example.com
 PROBE_TOKEN=replace-with-the-generated-probe-token
 # 默认隐藏主控登录入口；需要时显式设为 true。
 ENABLE_MASTER_LOGIN=false
+# 可选：Nezha 背景图片，支持 HTTPS 图片地址或本站 / 开头的路径。
+NEZHA_BACKGROUND_URL=
+# 可选：手机专用背景；不填时沿用上面的背景。
+NEZHA_MOBILE_BACKGROUND_URL=

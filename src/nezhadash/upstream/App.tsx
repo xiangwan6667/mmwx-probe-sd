@@ -89,7 +89,7 @@ const MainApp: React.FC = () => {
 							"hidden sm:block": customMobileBackgroundImage,
 						},
 					)}
-					style={{ backgroundImage: `url(${customBackgroundImage})` }}
+					style={{ backgroundImage: `url(${JSON.stringify(customBackgroundImage)})` }}
 				/>
 			)}
 			{customMobileBackgroundImage && (
@@ -97,12 +97,12 @@ const MainApp: React.FC = () => {
 					className={cn(
 						"fixed inset-0 z-0 bg-cover min-h-lvh bg-no-repeat bg-center sm:hidden dark:brightness-75",
 					)}
-					style={{ backgroundImage: `url(${customMobileBackgroundImage})` }}
+					style={{ backgroundImage: `url(${JSON.stringify(customMobileBackgroundImage)})` }}
 				/>
 			)}
 			<div
 				className={cn("flex min-h-screen w-full flex-col", {
-					"bg-background": !customBackgroundImage,
+					"bg-background": !customBackgroundImage && !customMobileBackgroundImage,
 				})}
 			>
 				<main className="flex z-20 min-h-[calc(100vh-calc(var(--spacing)*16))] flex-1 flex-col gap-4 p-4 md:p-10 md:pt-8">

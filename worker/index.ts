@@ -1,8 +1,12 @@
+import { backgroundURL } from '../src/background-url';
+
 interface Env {
   ASSETS: Fetcher;
   MMWX_ORIGIN: string;
   PROBE_TOKEN: string;
   ENABLE_MASTER_LOGIN?: string;
+  NEZHA_BACKGROUND_URL?: string;
+  NEZHA_MOBILE_BACKGROUND_URL?: string;
 }
 
 const routes: Record<string, string> = {
@@ -118,7 +122,11 @@ export default {
       if (request.method !== "GET")
         return new Response("Method not allowed", { status: 405 });
       return Response.json(
-        { master_login_enabled: masterLoginEnabled },
+        {
+          master_login_enabled: masterLoginEnabled,
+          nezha_background_url: backgroundURL(env.NEZHA_BACKGROUND_URL),
+          nezha_mobile_background_url: backgroundURL(env.NEZHA_MOBILE_BACKGROUND_URL),
+        },
         { headers: { "Cache-Control": "no-store" } },
       );
     }

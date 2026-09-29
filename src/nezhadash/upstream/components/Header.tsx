@@ -152,6 +152,7 @@ function Header() {
 							variant="outline"
 							size="sm"
 							onClick={handleBackgroundToggle}
+							aria-label="切换背景显示"
 							className={cn("rounded-full px-[9px] bg-white dark:bg-black", {
 								"bg-white/70 dark:bg-black/70": customBackgroundImage,
 								"hidden sm:block": customMobileBackgroundImage,

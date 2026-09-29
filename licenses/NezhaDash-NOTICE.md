@@ -42,6 +42,8 @@ Modifications by xiangwan6667, September 2026:
   colors with the host, including when a suspended page becomes visible again.
 - Share theme-aware scrollbar styling between the host and theme document,
   including dropdown menus, while retaining intentionally hidden scrollbars.
+- Configure the original desktop/mobile background layers through public Worker
+  settings; initialize them before mount and remove the background polling loop.
 - Respect the host history retention range and show only available resource charts.
   Do not invent process counts or historical CPU/memory data absent from MMWX.
 - Use local flag/font styles and original asset paths, retain host attribution,
@@ -69,6 +71,7 @@ Modified upstream files (each also carries a modification notice):
 - `components/ThemeProvider.tsx`
 - `components/ThemeColorManager.tsx` (resolve system colors through the host document)
 - `components/ThemeSwitcher.tsx`
+- `hooks/use-background.ts` (runtime initialization and event-based updates)
 - `lib/nezha-api.ts`
 - `lib/utils.ts`
 - `lib/theme-colors.ts` (BITJEBE capsule palette)

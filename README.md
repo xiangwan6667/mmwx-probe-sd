@@ -22,8 +22,12 @@
 | `MMWX_ORIGIN` | 是 | Text | 无 | 妙妙屋 X 主控的 HTTPS 地址，如 `https://panel.example.com`，不带路径 |
 | `PROBE_TOKEN` | 是 | Secret | 无 | 主控 **系统设置 → 探针** 生成的独立探针访问密钥，不是账号密码或登录 Token |
 | `ENABLE_MASTER_LOGIN` | 否 | Text | 关闭 | 仅填写小写 `true` 时开启主控快捷登录、跳转和 Passkey 登录接口；不填或填 `false` 均关闭 |
+| `NEZHA_BACKGROUND_URL` | 否 | Text | 无背景图 | Nezha 背景图片地址，如 `https://images.example.com/background.webp`；也支持本站 `/background.webp` 路径 |
+| `NEZHA_MOBILE_BACKGROUND_URL` | 否 | Text | 沿用通用背景 | Nezha 手机专用背景图片，格式同上；屏幕宽度小于 640px 时使用 |
 
 这些变量在 Worker 运行时读取，不能只填到构建环境中。`PROBE_TOKEN` 使用 **Secret** 保存，不要提交到仓库。启用 Passkey 登录还需在主控注册 Passkey，并按主控要求配置探针的 related origins。
+
+背景仅影响 Nezha 主题，图片居中铺满，深色模式自动压暗；不填背景变量则保持默认纯色。图片地址会公开给浏览器，请使用可直接访问的图片链接。使用本站路径时，将图片放入 `public/` 后重新构建部署。修改变量后重新部署并刷新页面生效。
 
 ### 其他配置的来源
 
@@ -36,7 +40,7 @@
 | 三网回程标签 | 主控公开探针接口的 `return_routes`，按电信、联通、移动展示探测结果 |
 | 访客 IP、地区、网络组织 | Cloudflare 请求信息自动提供，无需配置查询密钥；本地开发可能不可用 |
 
-`ASSETS` 是 `wrangler.jsonc` 自动创建的静态资源绑定，无需手动添加。正常部署不需要设置 `VITE_*` 构建变量；上游保留的 `VITE_GIT_HASH` 仅用于 Nezha 页脚版本链接，不控制探针功能。上游源码中的 `window.Custom*`、`window.Hide*` 等也不是 Cloudflare 环境变量，本版未提供对应的部署配置入口。
+`ASSETS` 是 `wrangler.jsonc` 自动创建的静态资源绑定，无需手动添加。正常部署不需要设置 `VITE_*` 构建变量；上游保留的 `VITE_GIT_HASH` 仅用于 Nezha 页脚版本链接，不控制探针功能。上游源码中的 `window.Custom*`、`window.Hide*` 等不是 Cloudflare 环境变量；背景请使用上表中的变量。
 
 ## 主控指定主题
 

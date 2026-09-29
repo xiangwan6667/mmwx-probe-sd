@@ -15,7 +15,7 @@ function environment(flag?: string) {
 test("master login is disabled by default and only exact true enables it", async () => {
   for (const flag of [undefined, "false", "1", "TRUE", "true"]) {
     const response = await worker.fetch(new Request("https://probe.example/api/site-config"), environment(flag));
-    assert.deepEqual(await response.json(), { master_login_enabled: flag === "true" });
+    assert.deepEqual(await response.json(), { master_login_enabled: flag === "true", nezha_background_url: '', nezha_mobile_background_url: '' });
     assert.equal(response.headers.get("cache-control"), "no-store");
   }
 });
@@ -42,10 +42,29 @@ test("frontend shares one runtime settings request across consumers", async (con
   context.mock.method(globalThis, "fetch", async (path: string) => {
     assert.equal(path, "/api/site-config");
     requests += 1;
-    return Response.json({ master_login_enabled: true });
+    return Response.json({ master_login_enabled: true, nezha_background_url: 'https://images.example/bg.jpg', nezha_mobile_background_url: '/mobile.webp' });
   });
   const [first, second] = await Promise.all([loadSiteSettings(), loadSiteSettings()]);
-  assert.deepEqual(first, { master_login_enabled: true });
+  assert.deepEqual(first, { master_login_enabled: true, nezha_background_url: 'https://images.example/bg.jpg', nezha_mobile_background_url: '/mobile.webp' });
   assert.deepEqual(second, first);
   assert.equal(requests, 1);
+});
+
+test('background runtime variables are public URLs, never executable CSS or credentials', async () => {
+  for (const [input, expected] of [
+    [' https://images.example/bg.jpg ', 'https://images.example/bg.jpg'],
+    ['/background.webp', '/background.webp'],
+    ['javascript:alert(1)', ''], ['//other.example/bg.jpg', ''],
+    ['https://user:password@images.example/bg.jpg', ''],
+    ['https://images.example/bg.jpg);color:red', 'https://images.example/bg.jpg);color:red'],
+    ['', ''],
+  ]) {
+    const env = { ...environment(), NEZHA_BACKGROUND_URL: input, NEZHA_MOBILE_BACKGROUND_URL: '/phone.jpg' };
+    const response = await worker.fetch(new Request('https://probe.example/api/site-config'), env);
+    const body = await response.json() as Record<string, unknown>;
+    assert.equal(body.nezha_background_url, expected);
+    assert.equal(body.nezha_mobile_background_url, '/phone.jpg');
+    assert.equal(body.PROBE_TOKEN, undefined);
+    assert.equal(body.MMWX_ORIGIN, undefined);
+  }
 });

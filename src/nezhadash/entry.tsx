@@ -11,6 +11,7 @@ import { WebSocketContext } from './upstream/context/websocket-context';
 import { toNezhaData } from './adapter';
 import { receiveProbe, useProbeBridge } from './bridge';
 import type { NezhaWebsocketResponse } from './upstream/types/nezha-api';
+import { loadSiteSettings } from '../site-settings';
 import './upstream/i18n';
 import 'flag-icons/css/flag-icons.min.css';
 import 'font-logos/assets/font-logos.css';
@@ -40,5 +41,11 @@ function Root() {
   if (!probe || !data) return <div className="min-h-screen flex items-center justify-center text-sm">正在连接主控…</div>;
   return <ThemeProvider><QueryClientProvider client={queryClient}><WebSocketContext.Provider value={{ lastData: data, connected: !probe.error, messageHistory: history, needReconnect: false, reconnect: () => {}, setNeedReconnect: () => {} }}><CommandProvider><StatusProvider><SortProvider><TooltipProvider><App /></TooltipProvider></SortProvider></StatusProvider></CommandProvider></WebSocketContext.Provider></QueryClientProvider></ThemeProvider>;
 }
-createRoot(document.getElementById('root')!).render(<Root />);
-window.parent.postMessage({ type: 'nezhadash-ready' }, window.location.origin);
+// Initialize upstream background globals before mounting its components.
+void loadSiteSettings().then(settings => {
+  window.CustomBackgroundImage = settings.nezha_background_url;
+  window.CustomMobileBackgroundImage = settings.nezha_mobile_background_url || settings.nezha_background_url;
+  try { sessionStorage.removeItem('savedBackgroundImage'); } catch { /* Storage may be disabled. */ }
+  createRoot(document.getElementById('root')!).render(<Root />);
+  window.parent.postMessage({ type: 'nezhadash-ready' }, window.location.origin);
+});
