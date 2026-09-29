@@ -563,7 +563,6 @@ function GpuChart({
 							<p role="status" className="flex h-full items-center text-muted-foreground">暂无该时段的历史数据</p>
 						) : (
 							<AreaChart
-								syncId="serverDetailCharts"
 								accessibilityLayer
 								data={displayData}
 								margin={{
@@ -758,7 +757,6 @@ function CpuChart({
 							<p role="status" className="flex h-full items-center text-muted-foreground">暂无该时段的历史数据</p>
 						) : (
 							<AreaChart
-								syncId="serverDetailCharts"
 								accessibilityLayer
 								data={displayData}
 								margin={{
@@ -955,7 +953,6 @@ function ProcessChart({
 							<p role="status" className="flex h-full items-center text-muted-foreground">暂无该时段的历史数据</p>
 						) : (
 							<AreaChart
-								syncId="serverDetailCharts"
 								accessibilityLayer
 								data={displayData}
 								margin={{
@@ -1259,7 +1256,6 @@ function MemChart({
 							<p role="status" className="flex h-full items-center text-muted-foreground">暂无该时段的历史数据</p>
 						) : (
 							<AreaChart
-								syncId="serverDetailCharts"
 								accessibilityLayer
 								data={displayData}
 								margin={{
@@ -1488,7 +1484,6 @@ function DiskChart({
 							<p role="status" className="flex h-full items-center text-muted-foreground">暂无磁盘历史数据</p>
 						) : (
 							<AreaChart
-								syncId="serverDetailCharts"
 								accessibilityLayer
 								data={displayData}
 								margin={{
@@ -1780,7 +1775,6 @@ function NetworkChart({
 							<p role="status" className="flex h-full items-center text-muted-foreground">暂无该时段的历史数据</p>
 						) : (
 							<LineChart
-								syncId="serverDetailCharts"
 								accessibilityLayer
 								data={displayData}
 								margin={{
@@ -2062,7 +2056,6 @@ function ConnectChart({
 							<p role="status" className="flex h-full items-center text-muted-foreground">暂无该时段的历史数据</p>
 						) : (
 							<LineChart
-								syncId="serverDetailCharts"
 								accessibilityLayer
 								data={displayData}
 								margin={{
