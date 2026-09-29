@@ -99,6 +99,20 @@ async function proxyAuth(
 export default {
   async fetch(request: Request, env: Env): Promise<Response> {
     const incoming = new URL(request.url);
+    if (incoming.pathname === "/api/visitor") {
+      const headers = { "Cache-Control": "private, no-store", "X-Content-Type-Options": "nosniff" };
+      if (request.method !== "GET") return new Response("Method not allowed", { status: 405, headers });
+      const ip = request.headers.get("CF-Connecting-IP");
+      const cf = request.cf;
+      if (!ip || !cf) return new Response(null, { status: 204, headers });
+      const code = typeof cf.country === "string" ? cf.country : "";
+      return Response.json({
+        ip,
+        country: typeof cf.city === "string" && cf.city ? cf.city : code,
+        code,
+        org: typeof cf.asOrganization === "string" ? cf.asOrganization : "",
+      }, { headers });
+    }
     const masterLoginEnabled = env.ENABLE_MASTER_LOGIN === "true";
     if (incoming.pathname === "/api/site-config") {
       if (request.method !== "GET")

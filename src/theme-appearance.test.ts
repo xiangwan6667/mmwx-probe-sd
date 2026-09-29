@@ -122,3 +122,5 @@ check(
 saveThemePreference("server");
 applyAppearance({ theme: "anime" });
 check(classes.has("theme-anime"), "reset must work when storage is blocked");
+applyAppearance();
+check(classes.has("theme-anime"), "system resync must retain the master theme when storage is blocked");

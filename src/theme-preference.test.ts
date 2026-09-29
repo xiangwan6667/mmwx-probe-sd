@@ -14,7 +14,7 @@ equal(resolveTheme("server", "nezhadash"), "nezha", "legacy master theme continu
 equal(normalizeThemePreference("nezha"), "nezha", "new Nezha preference is valid");
 equal(nextColorMode("dark"), "system", "dark cycles to system");
 equal(nextColorMode("system"), "light", "system cycles to light");
-equal(normalizeColorMode("sepia"), "light", "invalid mode uses safe default");
+equal(normalizeColorMode("sepia"), "system", "invalid mode follows the system by default");
 equal(
   normalizeColorMode(undefined, "system"),
   "system",

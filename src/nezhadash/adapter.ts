@@ -1,5 +1,6 @@
 import type { ProbePayload, ProbePingSeries } from '../types';
 import { bootTraffic } from '../traffic-display';
+import { toPublicNote } from './metadata';
 import type { MonitorResponse, NezhaWebsocketResponse, ServerGroupResponse } from './upstream/types/nezha-api';
 
 // Only the public MMWX payload crosses the bridge; IDs remain API array indices.
@@ -9,7 +10,7 @@ export function toNezhaData(data: ProbePayload, now = Date.now()): NezhaWebsocke
       const traffic = bootTraffic(server);
       const load = server.loadavg?.trim().split(/\s+/).map(Number) ?? [];
       return {
-        id, name: server.name || `服务器 ${id + 1}`, public_note: '',
+        id, name: server.name || `服务器 ${id + 1}`, public_note: toPublicNote(server),
         last_active: server.online ? new Date(now).toISOString() : '0001-01-01T00:00:00Z',
         country_code: server.region_country || (/^[a-z]{2}$/i.test(server.region || '') ? server.region! : ''),
         host: { platform: server.os || '', platform_version: server.kernel || '', cpu: server.cpu_model ? [server.cpu_model] : [], gpu: [],

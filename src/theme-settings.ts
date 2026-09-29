@@ -39,7 +39,7 @@ function syncStorage(event: StorageEvent) {
   listeners.forEach((listener) => listener());
 }
 
-function subscribe(listener: () => void) {
+export function subscribeThemeSettings(listener: () => void) {
   if (listeners.size === 0) window.addEventListener("storage", syncStorage);
   listeners.add(listener);
   return () => {
@@ -57,10 +57,19 @@ export function saveThemePreference(theme: ProbeThemePreference) {
   save(THEME_KEY, normalizeThemePreference(theme));
 }
 
-export function readColorModePreference(
-  fallback?: ProbeColorMode,
-): ProbeColorMode {
-  return normalizeColorMode(read(COLOR_KEY), normalizeColorMode(fallback));
+export function readColorModePreference(): ProbeColorMode {
+  return normalizeColorMode(read(COLOR_KEY));
+}
+
+// Embedded documents can inherit the parent's forced color-scheme. Read the
+// host media query so choosing system never resolves against that stale scheme.
+export function systemColorScheme(): MediaQueryList {
+  try {
+    if (window.parent !== window) return window.parent.matchMedia("(prefers-color-scheme: dark)");
+  } catch {
+    // Standalone tests or cross-origin embedding use the current document.
+  }
+  return matchMedia("(prefers-color-scheme: dark)");
 }
 
 export function saveColorModePreference(mode: ProbeColorMode) {
@@ -68,11 +77,9 @@ export function saveColorModePreference(mode: ProbeColorMode) {
 }
 
 export function useThemePreference() {
-  return useSyncExternalStore(subscribe, readThemePreference);
+  return useSyncExternalStore(subscribeThemeSettings, readThemePreference);
 }
 
-export function useColorModePreference(fallback?: ProbeColorMode) {
-  return useSyncExternalStore(subscribe, () =>
-    readColorModePreference(fallback),
-  );
+export function useColorModePreference() {
+  return useSyncExternalStore(subscribeThemeSettings, readColorModePreference);
 }

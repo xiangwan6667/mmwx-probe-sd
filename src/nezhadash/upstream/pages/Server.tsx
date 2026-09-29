@@ -17,6 +17,7 @@ import { Loader } from "@/components/loading/Loader";
 import ServerCard from "@/components/ServerCard";
 import ServerCardInline from "@/components/ServerCardInline";
 import ServerOverview from "@/components/ServerOverview";
+import VisitorCapsuleBar from "@/components/VisitorCapsuleBar";
 import { ServiceTracker } from "@/components/ServiceTracker";
 import { ChevronDown } from "lucide-react";
 import { DropdownMenu, DropdownMenuTrigger, DropdownMenuContent, DropdownMenuRadioGroup, DropdownMenuRadioItem } from "@/components/ui/dropdown-menu";
@@ -437,6 +438,7 @@ export default function Servers({
 
 	return (
 		<div className="mx-auto w-full max-w-5xl px-0">
+			<VisitorCapsuleBar />
 			<ServerOverview
 				total={totalServers}
 				online={onlineServers}

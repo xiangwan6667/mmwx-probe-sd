@@ -1364,7 +1364,6 @@ footer a:hover {
   overscroll-behavior-x: contain;
   cursor: grab;
   user-select: none;
-  scrollbar-width: thin;
 }
 .chart-scroll:active {
   cursor: grabbing;

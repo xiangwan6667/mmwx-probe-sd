@@ -36,7 +36,7 @@ export function resolveTheme(
 
 export function normalizeColorMode(
   value: string | null | undefined,
-  fallback: ProbeColorMode = "light",
+  fallback: ProbeColorMode = "system",
 ): ProbeColorMode {
   return value === "light" || value === "dark" || value === "system"
     ? value

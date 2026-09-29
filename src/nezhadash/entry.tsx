@@ -15,6 +15,7 @@ import './upstream/i18n';
 import 'flag-icons/css/flag-icons.min.css';
 import 'font-logos/assets/font-logos.css';
 import './upstream/index.css';
+import '../scrollbars.css';
 import './integration.css';
 import '../touch-controls.css';
 

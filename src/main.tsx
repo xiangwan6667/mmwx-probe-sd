@@ -4,6 +4,7 @@ import { App } from './App'
 import { applyAppearance } from './use-probe'
 import './styles.css'
 import './touch-controls.css'
+import './scrollbars.css'
 
 applyAppearance()
 createRoot(document.getElementById('root')!).render(

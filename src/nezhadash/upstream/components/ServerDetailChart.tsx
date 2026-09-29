@@ -559,6 +559,8 @@ function GpuChart({
 					>
 						{isLoading ? (
 							<ChartSkeleton />
+						) : period !== "realtime" && displayData.length === 0 ? (
+							<p role="status" className="flex h-full items-center text-muted-foreground">暂无该时段的历史数据</p>
 						) : (
 							<AreaChart
 								syncId="serverDetailCharts"
@@ -752,6 +754,8 @@ function CpuChart({
 					>
 						{isLoading ? (
 							<ChartSkeleton />
+						) : period !== "realtime" && displayData.length === 0 ? (
+							<p role="status" className="flex h-full items-center text-muted-foreground">暂无该时段的历史数据</p>
 						) : (
 							<AreaChart
 								syncId="serverDetailCharts"
@@ -947,6 +951,8 @@ function ProcessChart({
 					>
 						{isLoading ? (
 							<ChartSkeleton />
+						) : period !== "realtime" && displayData.length === 0 ? (
+							<p role="status" className="flex h-full items-center text-muted-foreground">暂无该时段的历史数据</p>
 						) : (
 							<AreaChart
 								syncId="serverDetailCharts"
@@ -1249,6 +1255,8 @@ function MemChart({
 					>
 						{isMemLoading ? (
 							<ChartSkeleton />
+						) : period !== "realtime" && displayData.length === 0 ? (
+							<p role="status" className="flex h-full items-center text-muted-foreground">暂无该时段的历史数据</p>
 						) : (
 							<AreaChart
 								syncId="serverDetailCharts"
@@ -1476,6 +1484,8 @@ function DiskChart({
 					>
 						{isLoading ? (
 							<ChartSkeleton />
+						) : period !== "realtime" && displayData.length === 0 ? (
+							<p role="status" className="flex h-full items-center text-muted-foreground">暂无磁盘历史数据</p>
 						) : (
 							<AreaChart
 								syncId="serverDetailCharts"
@@ -1766,6 +1776,8 @@ function NetworkChart({
 					>
 						{isNetworkLoading ? (
 							<ChartSkeleton />
+						) : period !== "realtime" && displayData.length === 0 ? (
+							<p role="status" className="flex h-full items-center text-muted-foreground">暂无该时段的历史数据</p>
 						) : (
 							<LineChart
 								syncId="serverDetailCharts"
@@ -2046,6 +2058,8 @@ function ConnectChart({
 					>
 						{isConnectLoading ? (
 							<ChartSkeleton />
+						) : period !== "realtime" && displayData.length === 0 ? (
+							<p role="status" className="flex h-full items-center text-muted-foreground">暂无该时段的历史数据</p>
 						) : (
 							<LineChart
 								syncId="serverDetailCharts"

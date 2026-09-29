@@ -1,7 +1,9 @@
 "use client";
+// MMWX adaptation: resolve system colors through the host; see licenses/NezhaDash-NOTICE.md.
 
 import { useEffect } from "react";
 import { useTheme } from "@/hooks/use-theme";
+import { systemColorScheme } from "../../../theme-settings";
 
 export function ThemeColorManager() {
 	const { theme } = useTheme();
@@ -10,7 +12,7 @@ export function ThemeColorManager() {
 		const updateThemeColor = () => {
 			const currentTheme =
 				theme === "system"
-					? window.matchMedia("(prefers-color-scheme: dark)").matches
+					? systemColorScheme().matches
 						? "dark"
 						: "light"
 					: theme;
@@ -36,7 +38,7 @@ export function ThemeColorManager() {
 		updateThemeColor();
 
 		// Listen for system theme changes
-		const mediaQuery = window.matchMedia("(prefers-color-scheme: dark)");
+		const mediaQuery = systemColorScheme();
 		mediaQuery.addEventListener("change", updateThemeColor);
 
 		return () => mediaQuery.removeEventListener("change", updateThemeColor);

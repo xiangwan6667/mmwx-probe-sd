@@ -31,8 +31,13 @@ export const fetchMonitor = async (id: number, period: MonitorPeriod = '24h') =>
   return toMonitor(id, getProbe().servers?.[id]?.name || `服务器 ${id + 1}`, result);
 };
 export const fetchServerMetrics = async (id: number, metric: MetricType, period: MetricPeriod = '24h'): Promise<ServerMetricsResponse> => {
-  // Only documented public system series are mapped; unsupported metrics stay empty.
-  const fields: Partial<Record<MetricType, string>> = { tcp_conn: 'tcp_connections', udp_conn: 'udp_connections' };
+  // Keep CPU in percent and memory/network in bytes, as expected by upstream charts.
+  // Missing series (e.g. disk on older masters) must remain empty, never use live values.
+  const fields: Partial<Record<MetricType, string>> = {
+    cpu: 'cpu_pct', memory: 'mem_used', disk: 'disk_used',
+    net_out_speed: 'upload_speed', net_in_speed: 'download_speed',
+    tcp_conn: 'tcp_connections', udp_conn: 'udp_connections',
+  };
   const field = fields[metric];
   const body = field ? await series(id, period, true) : null;
   return { success: true, data: { server_id: id, server_name: getProbe().servers?.[id]?.name || '', metric,

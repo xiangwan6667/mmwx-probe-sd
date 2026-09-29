@@ -12,6 +12,25 @@
 .mmwx-passkey button svg { display: none; }
 .mmwx-passkey button::after { content: '登录'; }
 
+:root {
+  --probe-scrollbar-color: hsl(var(--muted-foreground));
+}
+
+/* Touch/click must not leave a browser focus frame around SVG charts.
+   Keep a theme-colored indicator for keyboard navigation. */
+[data-chart] .recharts-wrapper:focus,
+[data-chart] .recharts-surface:focus,
+[data-chart] .recharts-surface [tabindex]:focus {
+  outline: none;
+}
+[data-chart] .recharts-surface:focus-visible {
+  outline: 2px solid hsl(var(--ring));
+  outline-offset: 2px;
+}
+[data-chart][data-chart-input="pointer"] .recharts-surface:focus {
+  outline: none;
+}
+
 /* Reuse the theme menu primitives without a mobile native select sheet. */
 .nezha-sort-trigger {
   display: inline-flex;
@@ -49,4 +68,29 @@
 }
 @media (pointer: coarse) {
   .nezha-sort-item { min-height: 44px; }
+}
+
+.visitor-capsule {
+  bottom: max(20px, env(safe-area-inset-bottom));
+  max-width: calc(100vw - 24px);
+}
+.visitor-capsule .fi {
+  display: block;
+  flex: none;
+  width: 100%;
+  height: 100%;
+  line-height: 1;
+  background-size: cover;
+  background-position: center;
+}
+.visitor-capsule .fi::before { content: none; }
+@media (max-width: 768px) {
+  .visitor-capsule {
+    scale: 1;
+    font-size: 11px;
+    gap: 6px;
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  .visitor-capsule { transition: none; }
 }

@@ -1,3 +1,4 @@
+// MMWX adaptation: explicit expiry, optional billing dates/cycle; see licenses/NezhaDash-NOTICE.md.
 import { useTranslation } from "react-i18next";
 import {
 	cn,
@@ -35,6 +36,10 @@ export default function BillingInfo({
 				daysLeftObject = getDaysBetweenDatesWithAutoRenewal(
 					parsedData.billingDataMod,
 				);
+				const remainingMs = Date.parse(parsedData.billingDataMod.endDate) - Date.now();
+				daysLeftObject.days = remainingMs < 0
+					? Math.floor(remainingMs / 86400000)
+					: Math.ceil(remainingMs / 86400000);
 			} catch (error) {
 				console.error(error);
 				return (
@@ -52,8 +57,8 @@ export default function BillingInfo({
 			parsedData.billingDataMod.amount !== "0" &&
 			parsedData.billingDataMod.amount !== "-1" ? (
 				<p className={cn("text-[10px] text-muted-foreground ")}>
-					{t("billingInfo.price")}: {parsedData.billingDataMod.amount}/
-					{parsedData.billingDataMod.cycle}
+					{t("billingInfo.price")}: {parsedData.billingDataMod.amount}
+					{parsedData.billingDataMod.cycle && `/${parsedData.billingDataMod.cycle}`}
 				</p>
 			) : parsedData.billingDataMod.amount === "0" ? (
 				<p className={cn("text-[10px] text-green-600 ")}>
@@ -72,10 +77,10 @@ export default function BillingInfo({
 						: `${daysLeftObject.days} ${t("billingInfo.days")}`}
 				</div>
 			)}
-			{hasBillingDates && !isNeverExpire && (
+			{hasBillingDates && !isNeverExpire && !!parsedData.billingDataMod.startDate && Number.isFinite(daysLeftObject.remainingPercentage) && (
 				<RemainPercentBar
 					className="mt-0.5"
-					value={daysLeftObject.remainingPercentage * 100}
+					value={Math.max(0, Math.min(100, daysLeftObject.remainingPercentage * 100))}
 				/>
 			)}
 		</>
@@ -85,8 +90,8 @@ export default function BillingInfo({
 			parsedData.billingDataMod.amount !== "0" &&
 			parsedData.billingDataMod.amount !== "-1" ? (
 				<p className={cn("text-[10px] text-muted-foreground ")}>
-					{t("billingInfo.price")}: {parsedData.billingDataMod.amount}/
-					{parsedData.billingDataMod.cycle}
+					{t("billingInfo.price")}: {parsedData.billingDataMod.amount}
+					{parsedData.billingDataMod.cycle && `/${parsedData.billingDataMod.cycle}`}
 				</p>
 			) : parsedData.billingDataMod.amount === "0" ? (
 				<p className={cn("text-[10px] text-green-600 ")}>

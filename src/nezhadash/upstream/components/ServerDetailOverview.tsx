@@ -2,7 +2,6 @@
 import { getProbe } from "../../bridge";
 import countries from "i18n-iso-countries";
 import enLocale from "i18n-iso-countries/langs/en.json";
-import { useEffect, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { useNavigate } from "react-router-dom";
 import { BackIcon } from "@/components/Icon";
@@ -36,21 +35,6 @@ export default function ServerDetailOverview({
 	const probe = getProbe().servers?.[Number(server_id)];
 	const navigate = useNavigate();
 
-	const [hasHistory, setHasHistory] = useState(false);
-
-	useEffect(() => {
-		const previousPath = sessionStorage.getItem("fromMainPage");
-		if (previousPath) {
-			setHasHistory(true);
-		}
-
-		return () => {
-			if (previousPath) {
-				sessionStorage.removeItem("fromMainPage");
-			}
-		};
-	}, []);
-
 	const { lastData, connected } = useWebSocketContext();
 
 	if (!connected && !lastData) {
@@ -58,11 +42,9 @@ export default function ServerDetailOverview({
 	}
 
 	const linkClick = () => {
-		if (hasHistory) {
-			navigate(-1);
-		} else {
-			navigate("/");
-		}
+		// Embedded routes share browser history with the host; return explicitly
+		// to the list, including after a refresh or a direct detail link.
+		navigate("/", { replace: true });
 	};
 
 	const nezhaWsData = lastData;
@@ -112,13 +94,15 @@ export default function ServerDetailOverview({
 				"bg-card/70 p-4 rounded-[10px]": customBackgroundImage,
 			})}
 		>
-			<div
+			<button
+				type="button"
+				aria-label="返回服务器列表"
 				onClick={linkClick}
-				className="flex flex-none cursor-pointer font-semibold leading-none items-center break-all tracking-tight gap-1 text-xl server-name"
+				className="flex min-h-11 flex-none cursor-pointer font-semibold leading-none items-center break-all tracking-tight gap-1 text-xl text-left rounded-sm focus-visible:outline-2 focus-visible:outline-offset-4 focus-visible:outline-ring server-name"
 			>
 				<BackIcon />
 				{name}
-			</div>
+			</button>
 			<section className="flex flex-wrap gap-2 mt-3">
 				<Card className="rounded-[10px] bg-transparent border-none shadow-none ring-0">
 					<CardContent className="px-1.5 py-1">

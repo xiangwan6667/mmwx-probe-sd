@@ -2,7 +2,7 @@
 
 基于 [mmwx-group/mmwx-probe](https://github.com/mmwx-group/mmwx-probe) 的**非官方独立探针前端**，由 [xiangwan6667](https://github.com/xiangwan6667) 维护。依赖妙妙屋 X 主控提供数据，不包含采集 Agent，也不替代主控。
 
-支持服务器状态、实时网速与历史曲线；提供扁平、像素、二次元、高级黑金和 **Nezha** 主题，明暗可跟随系统。访客切换主题只影响当前浏览器，也可跟随主控指定的主题。Nezha 复用 NezhaDash 页面源码，融合 BITJEBE 卡片样式；数据能力与付费权限取决于主控。
+支持服务器状态、实时网速与历史曲线；提供扁平、像素、二次元、高级黑金和 **Nezha** 主题，明暗默认跟随系统，也会记住当前浏览器手动选择的浅色或深色。访客切换主题只影响当前浏览器，也可跟随主控指定的主题。Nezha 复用 NezhaDash 页面源码，融合 BITJEBE 卡片样式；数据能力与付费权限取决于主控。
 
 ## 部署
 
@@ -11,15 +11,40 @@
 1. 在主控 **系统设置 → 探针** 中启用探针、选择服务器，生成独立探针访问密钥。
 2. **推荐先 [Fork 本仓库](https://github.com/xiangwan6667/mmwx-probe-sd/fork)**，再在 Cloudflare Workers 导入自己的 Fork。
 3. 生产分支填 `main`，构建命令填 `npm run build`，部署命令填 `npx wrangler deploy`。Worker 名称与 `wrangler.jsonc` 中的 `name` 保持一致。
-4. 在 Worker **Settings → Variables and Secrets** 配置以下运行时变量，保存并重新部署：
+4. 在 Worker **Settings → Variables and Secrets** 配置下面的运行时变量，保存并重新部署。
 
-| 变量 | 类型 | 说明 |
-| --- | --- | --- |
-| `MMWX_ORIGIN` | Text | 主控 HTTPS 地址，如 `https://panel.example.com`，不带路径 |
-| `PROBE_TOKEN` | Secret | 主控生成的独立探针访问密钥 |
-| `ENABLE_MASTER_LOGIN` | Text，可选 | 默认关闭；设为 `true` 开启主控登录入口与跳转 |
+## 配置变量
 
-这些是 Worker **运行时变量**，不是构建变量。密钥不要提交到仓库。启用 Passkey 登录还需在主控注册 Passkey，并按主控要求配置探针的 related origins。
+### Worker 运行时变量
+
+| 变量 | 必填 | 类型 | 默认值 | 用途与填写示例 |
+| --- | --- | --- | --- | --- |
+| `MMWX_ORIGIN` | 是 | Text | 无 | 妙妙屋 X 主控的 HTTPS 地址，如 `https://panel.example.com`，不带路径 |
+| `PROBE_TOKEN` | 是 | Secret | 无 | 主控 **系统设置 → 探针** 生成的独立探针访问密钥，不是账号密码或登录 Token |
+| `ENABLE_MASTER_LOGIN` | 否 | Text | 关闭 | 仅填写小写 `true` 时开启主控快捷登录、跳转和 Passkey 登录接口；不填或填 `false` 均关闭 |
+
+这些变量在 Worker 运行时读取，不能只填到构建环境中。`PROBE_TOKEN` 使用 **Secret** 保存，不要提交到仓库。启用 Passkey 登录还需在主控注册 Passkey，并按主控要求配置探针的 related origins。
+
+本地复制 [`.dev.vars.example`](.dev.vars.example) 为 `.dev.vars`，填写：
+
+```dotenv
+MMWX_ORIGIN=https://panel.example.com
+PROBE_TOKEN=替换为主控生成的探针访问密钥
+ENABLE_MASTER_LOGIN=false
+```
+
+### 其他配置的来源
+
+| 配置 | 设置位置 / 数据来源 |
+| --- | --- |
+| 站点名称、图标、展示服务器、历史范围 | 妙妙屋 X 主控的探针设置 |
+| 默认主题 | 主控自定义主题名称，见下表 |
+| 浅色 / 深色 / 跟随系统 | 页面右上角主题菜单；默认跟随系统，手动选择保存在当前浏览器 |
+| 续费价格、到期时间、流量额度 | 主控下发的服务器信息 |
+| 三网回程标签 | 主控公开探针接口的 `return_routes`，按电信、联通、移动展示探测结果 |
+| 访客 IP、地区、网络组织 | Cloudflare 请求信息自动提供，无需配置查询密钥；本地开发可能不可用 |
+
+`ASSETS` 是 `wrangler.jsonc` 自动创建的静态资源绑定，无需手动添加。正常部署不需要设置 `VITE_*` 构建变量；上游保留的 `VITE_GIT_HASH` 仅用于 Nezha 页脚版本链接，不控制探针功能。上游源码中的 `window.Custom*`、`window.Hide*` 等也不是 Cloudflare 环境变量，本版未提供对应的部署配置入口。
 
 ## 主控指定主题
 
@@ -35,6 +60,8 @@
 
 外置探针选择 **跟随主控** 后生效；若浏览器已手动选过主题，需先切回“跟随主控”。`server` 是浏览器的“跟随主控”选项，不是主控主题名称。旧值 `nezhadash` 兼容映射到 `nezha`，新配置统一用 `nezha`。这些名称对应本项目的外置探针，主控内置探针对未知主题仍使用默认样式。
 
+Nezha 卡片缺失的数据不补造，续费进度按到期日和续费周期估算。首页访客胶囊约 12 秒后隐藏，不调用第三方 IP 查询服务。
+
 ## 更新
 
 Fork 连接 Cloudflare Workers Builds 后，`main` 分支收到更新即可自动构建部署。
@@ -45,7 +72,7 @@ Fork 连接 Cloudflare Workers Builds 后，`main` 分支收到更新即可自�
 
 ## 本地开发
 
-需要 Node.js 22+。复制 `.dev.vars.example` 为 `.dev.vars` 并填写变量，然后执行：
+需要 Node.js 22+。按上面的示例配置 `.dev.vars`，然后执行：
 
 ```bash
 npm ci

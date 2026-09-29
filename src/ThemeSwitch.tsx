@@ -1,4 +1,4 @@
-import { useEffect, useId, useLayoutEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useId, useLayoutEffect, useRef, useState } from "react";
 import { createPortal } from "react-dom";
 import { Check, Palette, Sun, Moon, SunMoon } from "lucide-react";
 import type { ProbeAppearance } from "./types";
@@ -8,6 +8,7 @@ import {
   saveThemePreference,
   useColorModePreference,
   useThemePreference,
+  systemColorScheme,
 } from "./theme-settings";
 import { applyAppearance } from "./use-probe";
 import "./theme-switch.css";
@@ -26,7 +27,7 @@ export function ThemeSwitch({
   className?: string;
 }) {
   const theme = useThemePreference();
-  const mode = useColorModePreference(appearance?.color_mode);
+  const mode = useColorModePreference();
   const [open, setOpen] = useState(false);
   const menu = useRef<HTMLDivElement>(null);
   const trigger = useRef<HTMLButtonElement>(null);
@@ -38,27 +39,30 @@ export function ThemeSwitch({
 
   useEffect(() => {
     if (mode !== "system") return;
-    const media = matchMedia("(prefers-color-scheme: dark)");
+    const media = systemColorScheme();
     const sync = () => applyAppearance(appearance);
     media.addEventListener("change", sync);
     return () => media.removeEventListener("change", sync);
   }, [appearance, mode]);
 
+  const position = useCallback(() => {
+    if (!trigger.current || !menu.current) return;
+    const anchor = trigger.current.getBoundingClientRect();
+    const panel = menu.current;
+    // beforetoggle runs while the popover is hidden, so its layout width is zero.
+    const width = panel.getBoundingClientRect().width || parseFloat(getComputedStyle(panel).width);
+    const gap = 8;
+    const top = Math.max(
+      gap,
+      Math.min(anchor.bottom + gap, window.innerHeight - 80),
+    );
+    panel.style.left = `${Math.max(gap, Math.min(anchor.right - width, window.innerWidth - width - gap))}px`;
+    panel.style.top = `${top}px`;
+    panel.style.maxHeight = `${window.innerHeight - top - gap}px`;
+  }, []);
+
   useLayoutEffect(() => {
     if (!open) return;
-    const position = () => {
-      if (!trigger.current || !menu.current) return;
-      const anchor = trigger.current.getBoundingClientRect();
-      const panel = menu.current;
-      const gap = 8;
-      const top = Math.max(
-        gap,
-        Math.min(anchor.bottom + gap, window.innerHeight - 80),
-      );
-      panel.style.left = `${Math.max(gap, Math.min(anchor.right - panel.offsetWidth, window.innerWidth - panel.offsetWidth - gap))}px`;
-      panel.style.top = `${top}px`;
-      panel.style.maxHeight = `${window.innerHeight - top - gap}px`;
-    };
     position();
     window.addEventListener("resize", position);
     window.addEventListener("scroll", position, true);
@@ -66,7 +70,7 @@ export function ThemeSwitch({
       window.removeEventListener("resize", position);
       window.removeEventListener("scroll", position, true);
     };
-  }, [open]);
+  }, [open, position]);
 
   return (
     <>
@@ -92,6 +96,9 @@ export function ThemeSwitch({
           role="dialog"
           className="probe-theme-dropdown"
           aria-label="外观设置"
+          onBeforeToggle={(event) => {
+            if (event.newState === "open") position();
+          }}
           onToggle={(event) => setOpen(event.newState === "open")}
         >
           <div className="probe-theme-panel">

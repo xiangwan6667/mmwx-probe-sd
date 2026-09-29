@@ -1,4 +1,5 @@
 "use client";
+// MMWX adaptation: distinguish pointer and keyboard focus; see licenses/NezhaDash-NOTICE.md.
 
 import * as React from "react";
 import * as RechartsPrimitive from "recharts";
@@ -68,7 +69,7 @@ const ChartContainer = React.forwardRef<
 			typeof RechartsPrimitive.ResponsiveContainer
 		>["children"];
 	}
->(({ id, className, children, config, ...props }, ref) => {
+>(({ id, className, children, config, onPointerDownCapture, onKeyDownCapture, onBlurCapture, ...props }, ref) => {
 	const uniqueId = React.useId();
 	const chartId = `chart-${id || uniqueId.replace(/:/g, "")}`;
 	const useResponsiveContainer = shouldUseResponsiveContainer(children);
@@ -83,6 +84,20 @@ const ChartContainer = React.forwardRef<
 					className,
 				)}
 				{...props}
+				onPointerDownCapture={(event) => {
+					event.currentTarget.dataset.chartInput = "pointer";
+					onPointerDownCapture?.(event);
+				}}
+				onKeyDownCapture={(event) => {
+					event.currentTarget.dataset.chartInput = "keyboard";
+					onKeyDownCapture?.(event);
+				}}
+				onBlurCapture={(event) => {
+					if (!event.currentTarget.contains(event.relatedTarget)) {
+						delete event.currentTarget.dataset.chartInput;
+					}
+					onBlurCapture?.(event);
+				}}
 			>
 				<ChartStyle id={chartId} config={config} />
 				{useResponsiveContainer ? (
