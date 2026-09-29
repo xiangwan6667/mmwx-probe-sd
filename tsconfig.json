@@ -16,6 +16,7 @@
     "module": "ESNext",
     "moduleResolution": "Bundler",
     "paths": {
+      "@lumina/*": ["./src/lumina/upstream/*"],
       "@/*": [
         "./src/nezhadash/upstream/*"
       ],

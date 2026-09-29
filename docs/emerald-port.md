@@ -12,6 +12,6 @@
 
 主题标识：`emerald`，可在主控配置或前台主题菜单中选择。
 
-源码校验清单：`src/emerald/upstream-manifest.json` 记录上游原始 SHA-256。主要适配：后端 transport 替换为主站数据桥接；路由改用 hash；主题设置同步主站；资源缺失时保持未知；原币种费用汇总；国旗与系统图标改用本地资源（许可见 public/emerald-assets/NOTICE.md）。
+源码校验清单：`src/emerald/upstream-manifest.json` 记录上游原始 SHA-256。主要适配：后端 transport 替换为主站数据桥接；路由改用 hash；主题设置同步主站；资源缺失时保持未知；费用按每日汇率折算，默认美元并保留原币种小计；国旗与系统图标改用本地资源（许可见 public/emerald-assets/NOTICE.md）。费用折算修复见提交 `8a21f08`，汇率采用每日更新的在线数据。
 
 验证：43 项自动测试通过，React/Worker 与 Vue 类型检查及生产构建通过；模拟数据覆盖正常、真实零值、离线、缺失字段与多币种。浏览器检查手机 390px 无横向溢出、主题下拉框、图片加载与历史范围切换。图标沿用上游 Iconify 加载方式，地图沿用上游公共地图资源回退。

@@ -148,3 +148,5 @@
 }
 
 .swatch-emerald { background: linear-gradient(135deg, #10b981, #064e3b); }
+
+.swatch-lumina { background: linear-gradient(135deg, #fafafa 50%, #000 50%); border: 1px solid #a1a1aa; }

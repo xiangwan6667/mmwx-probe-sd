@@ -140,6 +140,7 @@ const PremiumProbePage = lazy(() =>
     default: module.PremiumProbePage,
   })),
 );
+const LuminaPage = lazy(() => import("./lumina/LuminaPage"));
 const EmeraldPage = lazy(() => import("./emerald/EmeraldPage"));
 const NezhaDashPage = lazy(() => import("./nezhadash/NezhaDashPage"));
 // 曲线弹窗可选的时间范围随主控的保留天数（history_days）变，由 App 注入。
@@ -2275,6 +2276,9 @@ export function App() {
       </main>
     );
   if (!data?.enabled) return <main className="center">探针尚未启用</main>;
+  if (resolveTheme(themePreference, data.appearance?.theme) === "lumina") {
+    return <Suspense fallback={<main className="center">正在加载 LuminaPlus 主题…</main>}><LuminaPage data={data} error={error} /></Suspense>;
+  }
   if (resolveTheme(themePreference, data.appearance?.theme) === "emerald") {
     return <Suspense fallback={<main className="center">正在加载 Emerald 主题…</main>}><EmeraldPage data={data} error={error} /></Suspense>;
   }

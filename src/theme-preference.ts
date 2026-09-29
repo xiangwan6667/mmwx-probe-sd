@@ -14,6 +14,7 @@ export const themeOptions = [
   },
   { value: "nezha", label: "Nezha", description: "哪吒风格 · 简洁监控" },
   { value: "emerald", label: "Emerald", description: "翡翠风格 · 地球与监控" },
+  { value: "lumina", label: "LuminaPlus", description: "轻透面板 · 完整监控" },
 ] as const;
 
 export type ProbeThemePreference = (typeof themeOptions)[number]["value"];
