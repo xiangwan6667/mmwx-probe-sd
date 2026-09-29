@@ -1461,10 +1461,23 @@ footer a:hover {
   --radius: 12px;
   --page-bg: #f8f5ff;
   --shadow: 0 8px 28px rgba(139, 92, 246, 0.12);
+  --anime-checker-base: #fff;
+  --anime-checker-tile: #e5defb;
+  --anime-stat-bg: rgba(250, 247, 255, 0.78);
+  --anime-divider: #eadffc;
+  --anime-table-divider: #e6dcfa;
+  --anime-ping-text: #2f2350;
+  --anime-ping-empty: #f6f2fc;
+  --anime-ocean-light: #f1eaff;
+  --anime-ocean-dark: #ddd0fa;
+  --anime-land: #f9f6ff;
+  --anime-land-border: #ad91d1;
 }
 :root.theme-anime .app-shell {
-  background-color: #fff;
-  background-image: repeating-conic-gradient(#e5defb 0% 25%, #fff 0% 50%);
+  background-color: var(--anime-checker-base);
+  background-image: repeating-conic-gradient(
+    var(--anime-checker-tile) 0% 25%, var(--anime-checker-base) 0% 50%
+  );
   background-size: 72px 72px;
   background-attachment: fixed;
 }
@@ -1501,7 +1514,7 @@ footer a:hover {
 :root.theme-anime .speed-summary {
   border: 0;
   border-radius: 0;
-  background: rgba(250, 247, 255, 0.78);
+  background: var(--anime-stat-bg);
 }
 :root.theme-anime .probe-toolbar {
   border: 0;
@@ -1528,10 +1541,10 @@ footer a:hover {
 .theme-anime .ping-grid,
 .theme-anime .return-route-badges {
   margin-inline: 0;
-  border-color: #eadffc;
+  border-color: var(--anime-divider);
 }
 .theme-anime .ping-grid strong {
-  color: #2f2350;
+  color: var(--anime-ping-text);
 }
 :root.theme-anime .server-card > :not(.modal-backdrop) {
   position: relative;
@@ -1556,7 +1569,7 @@ footer a:hover {
   z-index: 1;
 }
 .theme-anime .server-table td {
-  border-color: #e6dcfa;
+  border-color: var(--anime-table-divider);
 }
 
 :root.dark {
@@ -1567,11 +1580,37 @@ footer a:hover {
   --page-bg: #0f172a;
   --shadow: 0 8px 30px rgba(0, 0, 0, 0.35);
 }
+:root.theme-anime.dark {
+  color: #f1ebfc;
+  --foreground: #f1ebfc;
+  --surface: #181426;
+  --card: var(--surface);
+  --border: #493a60;
+  --muted: #bdafd3;
+  --page-bg: #120f1c;
+  --anime-checker-base: #120f1c;
+  --anime-checker-tile: #1b152a;
+  --anime-stat-bg: #251d35;
+  --anime-divider: #493a60;
+  --anime-table-divider: #493a60;
+  --anime-ping-text: #f1ebfc;
+  --anime-ping-empty: #493a60;
+  --anime-ocean-light: #302443;
+  --anime-ocean-dark: #181426;
+  --anime-land: #635078;
+  --anime-land-border: #a58bbb;
+}
+:root.theme-anime.dark .node-stats .online strong {
+  color: #34d399;
+}
+:root.theme-anime.dark .node-stats .offline strong {
+  color: #fb7185;
+}
 :root.dark .ping-head strong {
   color: #f8fafc;
 }
 :root.theme-anime .ping-blocks i {
-  background: #f6f2fc;
+  background: var(--anime-ping-empty);
 }
 :root.theme-anime .ping-blocks i.good {
   background: #22c55e;
@@ -1762,8 +1801,8 @@ footer a:hover {
   border-radius: 0;
   padding: 15px 18px 20px;
   box-shadow: 0 4px 18px -6px rgba(139, 92, 246, 0.28);
-  --globe-ocean-light: #f1eaff;
-  --globe-ocean-dark: #ddd0fa;
+  --globe-ocean-light: var(--anime-ocean-light);
+  --globe-ocean-dark: var(--anime-ocean-dark);
 }
 :root.theme-anime .globe-card::after {
   content: "";
@@ -1778,8 +1817,8 @@ footer a:hover {
   z-index: 2;
 }
 :root.theme-anime .globe-country {
-  fill: #f9f6ff;
-  stroke: #ad91d1;
+  fill: var(--anime-land);
+  stroke: var(--anime-land-border);
 }
 :root.theme-anime .globe-country.active {
   fill: #9b6df2;
@@ -1836,7 +1875,7 @@ footer a:hover {
 :root.theme-anime .server-meta {
   margin-inline: 0;
   padding-bottom: 0;
-  border-color: #eadffc;
+  border-color: var(--anime-divider);
 }
 @media (max-width: 900px) {
   .dashboard-summary {
