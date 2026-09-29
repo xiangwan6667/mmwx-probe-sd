@@ -1,5 +1,7 @@
 // MMWX adaptation (2026-09-29): host data/theme/router integration; see licenses/NezhaDash-NOTICE.md.
 import { getProbe } from "../../bridge";
+import { billableTraffic, trafficModeLabel } from "../../../traffic-display";
+import TrafficBar from "./TrafficBar";
 import { memo } from "react";
 import { useTranslation } from "react-i18next";
 import { useNavigate } from "react-router-dom";
@@ -67,7 +69,7 @@ function ServerCard({
 	return online ? (
 		<Card
 			className={cn(
-				"flex cursor-pointer flex-col items-center justify-start gap-3 p-3 transition-all hover:shadow-sm hover:ring-stone-300 md:px-5 dark:hover:ring-stone-700",
+				"flex flex-col items-center justify-start gap-3 p-3 md:px-5 cursor-pointer hover:bg-accent/50 transition-colors",
 				{
 					"flex-col": fixedTopServerName,
 					"lg:flex-row": !fixedTopServerName,
@@ -201,6 +203,9 @@ function ServerCard({
 						</div>
 					</div>
 				</section>
+				{probe && (window as unknown as Record<string, unknown>).ShowTrafficBar !== false && (
+					<TrafficBar used={billableTraffic(probe)} limit={probe.traffic_limit ?? 0} periodEnd={probe.period_end} billingMode={trafficModeLabel(probe)} now={now} />
+				)}
 				{showNetTransfer && (
 					<section className={"flex items-center w-full justify-between gap-1"}>
 						<Badge

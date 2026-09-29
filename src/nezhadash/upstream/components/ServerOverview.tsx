@@ -39,12 +39,6 @@ export default function ServerOverview({
 	const hasUpSpeed = servers.length > 0 && servers.every(server => !server.online || server.upload_speed !== undefined);
 	const hasDownSpeed = servers.length > 0 && servers.every(server => !server.online || server.download_speed !== undefined);
 
-	// @ts-expect-error DisableAnimatedMan is a global variable
-	const disableAnimatedMan = window.DisableAnimatedMan as boolean;
-
-	// @ts-expect-error CustomIllustration is a global variable
-	const customIllustration = window.CustomIllustration || "/nezhadash/animated-man.webp";
-
 	const customBackgroundImage =
 		(window.CustomBackgroundImage as string) !== ""
 			? window.CustomBackgroundImage
@@ -57,7 +51,7 @@ export default function ServerOverview({
 					setStatus("all");
 				}}
 				className={cn(
-					"group cursor-pointer transition-all hover:ring-blue-500 dark:hover:ring-blue-600",
+					"hover:border-blue-500 cursor-pointer transition-all",
 					{
 						"bg-card/70": customBackgroundImage,
 					},
@@ -82,12 +76,12 @@ export default function ServerOverview({
 					setStatus("online");
 				}}
 				className={cn(
-					"cursor-pointer ring-1 transition-all hover:ring-green-500 dark:hover:ring-green-600",
+					"cursor-pointer hover:ring-green-500 ring-1 ring-transparent transition-all",
 					{
 						"bg-card/70": customBackgroundImage,
 					},
 					{
-						"border-transparent ring-2 ring-green-500 dark:ring-green-600":
+						"border-transparent ring-2 ring-green-500":
 							status === "online",
 					},
 				)}
@@ -112,12 +106,12 @@ export default function ServerOverview({
 					setStatus("offline");
 				}}
 				className={cn(
-					"cursor-pointer ring-1 transition-all hover:ring-red-500 dark:hover:ring-red-600",
+					"cursor-pointer hover:ring-red-500 ring-1 ring-transparent transition-all",
 					{
 						"bg-card/70": customBackgroundImage,
 					},
 					{
-						"border-transparent ring-2 ring-red-500 dark:ring-red-600":
+						"border-transparent ring-2 ring-red-500":
 							status === "offline",
 					},
 				)}
@@ -139,7 +133,7 @@ export default function ServerOverview({
 			</Card>
 			<Card
 				className={cn(
-					"group ring-1 hover:ring-purple-500 dark:hover:ring-purple-600",
+					"hover:ring-purple-500 ring-1 ring-transparent transition-all",
 					{
 						"bg-card/70": customBackgroundImage,
 					},
@@ -173,14 +167,6 @@ export default function ServerOverview({
 							</p>
 						</section>
 					</section>
-					{!disableAnimatedMan && (
-						<img
-							className="absolute right-3 top-[-85px] z-50 w-20 scale-90 group-hover:opacity-50 md:scale-100 transition-all"
-							alt={"animated-man"}
-							src={customIllustration}
-							loading="eager"
-						/>
-					)}
 				</CardContent>
 			</Card>
 		</section>

@@ -1,6 +1,7 @@
 import { useState } from "react";
 import { startAuthentication } from "@simplewebauthn/browser";
 import { KeyRound } from "lucide-react";
+import { useSiteSettings } from "./site-settings";
 
 // 外置探针的 passkey 登录。
 //
@@ -40,11 +41,12 @@ interface FinishPayload {
 }
 
 export function PasskeyLogin() {
+  const { master_login_enabled } = useSiteSettings();
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
   // 非安全上下文下浏览器根本没有 navigator.credentials,直接不渲染入口。
-  if (!isSecure()) return null;
+  if (!master_login_enabled || !isSecure()) return null;
 
   const login = async () => {
     setBusy(true);

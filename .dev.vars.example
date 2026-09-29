@@ -1,3 +1,5 @@
 # 复制为 .dev.vars 后填写。不要把 .dev.vars 提交到 Git。
 MMWX_ORIGIN=https://panel.example.com
 PROBE_TOKEN=replace-with-the-generated-probe-token
+# 默认隐藏主控登录入口；需要时显式设为 true。
+ENABLE_MASTER_LOGIN=false

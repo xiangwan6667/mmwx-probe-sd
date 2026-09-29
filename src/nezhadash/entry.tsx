@@ -16,6 +16,7 @@ import 'flag-icons/css/flag-icons.min.css';
 import 'font-logos/assets/font-logos.css';
 import './upstream/index.css';
 import './integration.css';
+import '../touch-controls.css';
 
 const queryClient = new QueryClient();
 // This entry receives data from the host; direct visits return to its public URL.

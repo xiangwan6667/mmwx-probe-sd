@@ -2,6 +2,7 @@ interface Env {
   ASSETS: Fetcher;
   MMWX_ORIGIN: string;
   PROBE_TOKEN: string;
+  ENABLE_MASTER_LOGIN?: string;
 }
 
 const routes: Record<string, string> = {
@@ -98,6 +99,21 @@ async function proxyAuth(
 export default {
   async fetch(request: Request, env: Env): Promise<Response> {
     const incoming = new URL(request.url);
+    const masterLoginEnabled = env.ENABLE_MASTER_LOGIN === "true";
+    if (incoming.pathname === "/api/site-config") {
+      if (request.method !== "GET")
+        return new Response("Method not allowed", { status: 405 });
+      return Response.json(
+        { master_login_enabled: masterLoginEnabled },
+        { headers: { "Cache-Control": "no-store" } },
+      );
+    }
+    if (
+      !masterLoginEnabled &&
+      (incoming.pathname === "/login" || incoming.pathname.startsWith("/api/login/passkey/"))
+    ) {
+      return new Response("Not found", { status: 404, headers: { "Cache-Control": "no-store" } });
+    }
     if (incoming.pathname === "/login") {
       return Response.redirect(
         new URL("/login", env.MMWX_ORIGIN).toString(),

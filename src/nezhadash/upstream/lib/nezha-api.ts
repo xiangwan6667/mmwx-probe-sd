@@ -7,7 +7,7 @@ import { effectiveProbeRange, probeRangeOptions } from '../../../probe-ranges';
 export const fetchServerGroup = async () => toNezhaGroups(getProbe());
 export const fetchLoginUser = async () => ({ success: true, data: { id: 0, username: '', password: '', created_at: '', updated_at: '' } });
 export const fetchService = async (): Promise<ServiceResponse> => ({ success: true, data: { services: {}, cycle_transfer_stats: {} } });
-export const fetchSetting = async () => ({ success: true, data: { config: { debug: false, language: 'zh-CN', site_name: getProbe().title || '服务器状态', user_template: 'NezhaDash', admin_template: '', custom_code: '' }, version: '', tsdb_enabled: true } });
+export const fetchSetting = async () => ({ success: true, data: { config: { debug: false, language: 'zh-CN', site_name: getProbe().title || '服务器状态', user_template: 'Nezha', admin_template: '', custom_code: '' }, version: '', tsdb_enabled: true } });
 export type MonitorPeriod = MetricPeriod;
 const requests = new Map<string, { at: number; request: Promise<any> }>();
 async function series(id: number, period: string, system = false) {

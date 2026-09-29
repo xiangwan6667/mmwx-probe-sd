@@ -1,0 +1,8 @@
+/* Touch browsers otherwise paint a native blue tap overlay over clickable
+   ancestors. Keep keyboard focus indicators; only suppress that tap flash. */
+html {
+  -webkit-tap-highlight-color: transparent;
+}
+button, a, [role="button"], [role="tab"] {
+  touch-action: manipulation;
+}

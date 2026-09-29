@@ -44,7 +44,7 @@ const Footer: React.FC = () => {
 								target="_blank"
 								rel="noopener"
 							>
-								NezhaDash
+								Nezha
 							</a>
 							{import.meta.env.VITE_GIT_HASH && (
 								<a

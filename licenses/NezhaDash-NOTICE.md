@@ -8,6 +8,15 @@ The original Apache License 2.0 is included in `NezhaDash-Apache-2.0.txt`.
 `NezhaDash-upstream-files.json` records the upstream SHA-256 of every copied source.
 The original animated illustration and icon are also copied to `public/nezhadash/`.
 
+Card surface, hover, overview border styles and `components/TrafficBar.tsx` are adapted from
+[BITJEBE/nezha-BITJEBE](https://github.com/BITJEBE/nezha-BITJEBE), revision
+`88a9a07d5f60441b01440062474d0cc5339bc08a`, under the same Apache License 2.0.
+The existing MMWX data adapters and missing-measurement handling are retained;
+the overview illustration is no longer rendered. The traffic bar uses MMWX billable
+usage, quota, billing mode and explicit period end rather than boot counters or an
+assumed monthly reset. Missing usage stays unknown and expired periods are not
+silently rolled forward. BITJEBE's original traffic bar layout and colors are retained.
+
 Modifications by xiangwan6667, September 2026:
 
 - Mount the original application in a same-origin document to isolate its Tailwind
@@ -37,6 +46,8 @@ Modified upstream files (each also carries a modification notice):
 - `components/ServerDetailChart.tsx`
 - `components/ServerDetailOverview.tsx`
 - `components/ServerOverview.tsx`
+- `components/TrafficBar.tsx`
+- `components/ui/card.tsx`
 - `components/ThemeProvider.tsx`
 - `components/ThemeSwitcher.tsx`
 - `lib/nezha-api.ts`

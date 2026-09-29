@@ -90,15 +90,15 @@ check(
   "theme must persist across visits",
 );
 
-saveThemePreference("nezhadash");
+saveThemePreference("nezha");
 saveColorModePreference("system");
 systemDark = false;
 applyAppearance({ theme: "pixel", color_mode: "dark" });
-check(classes.has("theme-nezhadash") && classes.has("light"), "NezhaDash follows system light and overrides server theme");
+check(classes.has("theme-nezha") && classes.has("light"), "Nezha follows system light and overrides server theme");
 systemDark = true;
 applyAppearance({ theme: "anime", color_mode: "light" });
-check(classes.has("theme-nezhadash") && classes.has("dark"), "NezhaDash survives probe refresh and follows system dark");
-check(!classes.has("theme-premium"), "switching to NezhaDash clears prior theme");
+check(classes.has("theme-nezha") && classes.has("dark"), "Nezha survives probe refresh and follows system dark");
+check(!classes.has("theme-premium"), "switching to Nezha clears prior theme");
 
 Object.defineProperty(globalThis, "localStorage", {
   configurable: true,

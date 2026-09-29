@@ -2274,12 +2274,11 @@ export function App() {
       </main>
     );
   if (!data?.enabled) return <main className="center">探针尚未启用</main>;
-  if (resolveTheme(themePreference, data.appearance?.theme) === "nezhadash") {
+  if (resolveTheme(themePreference, data.appearance?.theme) === "nezha") {
     return (
       <HistoryDaysContext.Provider value={data.history_days ?? 1}>
-        <Suspense fallback={<main className="center">正在加载 NezhaDash 主题…</main>}>
+        <Suspense fallback={<main className="center">正在加载 Nezha 主题…</main>}>
           <NezhaDashPage data={data} error={error}
-            licenseBadge={data.license_badge && <div className="probe-license-footer"><ProbeLicenseNameplate name={data.license_badge.name} displayName={data.license_badge.display_name} /></div>}
           />
         </Suspense>
       </HistoryDaysContext.Provider>

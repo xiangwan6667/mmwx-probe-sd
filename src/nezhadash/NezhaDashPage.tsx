@@ -1,9 +1,9 @@
-import { useEffect, useRef, useState, type ReactNode } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import type { ProbePayload } from '../types';
 
 /** Own document preserves upstream Tailwind/preflight without changing other themes. */
-export default function NezhaDashPage({ data, error, licenseBadge }: {
-  data: ProbePayload; error?: string | null; licenseBadge?: ReactNode;
+export default function NezhaDashPage({ data, error }: {
+  data: ProbePayload; error?: string | null;
 }) {
   const frame = useRef<HTMLIFrameElement>(null);
   const [source] = useState(() => `/nezhadash/index.html${/^#\/server\/\d+$/.test(window.location.hash) ? window.location.hash : '#/'}`);
@@ -24,5 +24,5 @@ export default function NezhaDashPage({ data, error, licenseBadge }: {
     window.addEventListener('hashchange', route);
     return () => { window.removeEventListener('message', receive); window.removeEventListener('hashchange', route); };
   }, []);
-  return <><iframe ref={frame} title="NezhaDash 服务器监控" src={source} onLoad={send} style={{ display: 'block', width: '100%', height: '100dvh', border: 0 }} />{licenseBadge}</>;
+  return <iframe ref={frame} title="Nezha 服务器监控" src={source} onLoad={send} style={{ display: 'block', width: '100%', height: '100dvh', border: 0 }} />;
 }

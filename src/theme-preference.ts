@@ -7,17 +7,18 @@ export const themeOptions = [
   { value: "flat", label: "扁平", description: "扁平设计 · 清爽柔和" },
   { value: "pixel", label: "像素", description: "像素边框 · 复古简洁" },
   { value: "anime", label: "二次元", description: "动漫配色 · 轻盈活泼" },
-  { value: "nezhadash", label: "NezhaDash", description: "哪吒风格 · 简洁监控" },
   {
     value: "premium",
     label: "高级黑金（付费许可证）",
     description: "精致面板 · 全景布局",
   },
+  { value: "nezha", label: "Nezha", description: "哪吒风格 · 简洁监控" },
 ] as const;
 
 export type ProbeThemePreference = (typeof themeOptions)[number]["value"];
 
 export function normalizeThemePreference(value: unknown): ProbeThemePreference {
+  if (value === "nezhadash") return "nezha";
   return (
     themeOptions.find((option) => option.value === value)?.value ?? "server"
   );
@@ -29,6 +30,7 @@ export function resolveTheme(
 ): string {
   if (preference !== "server") return preference;
   const theme = typeof serverTheme === "string" ? serverTheme.trim() : "";
+  if (theme === "nezhadash") return "nezha";
   return /^[A-Za-z0-9_-]{1,64}$/.test(theme) ? theme : "pixel";
 }
 
