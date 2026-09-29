@@ -140,6 +140,7 @@ const PremiumProbePage = lazy(() =>
     default: module.PremiumProbePage,
   })),
 );
+const NezhaDashPage = lazy(() => import("./nezhadash/NezhaDashPage"));
 // 曲线弹窗可选的时间范围随主控的保留天数（history_days）变，由 App 注入。
 const HistoryDaysContext = createContext(1);
 
@@ -1540,7 +1541,11 @@ function ServerCard({
           <Meter
             icon={<MemoryStick size={14} />}
             label="内存"
-            value={`${pct(server.mem_used, server.mem_total).toFixed(1)}%`}
+            value={
+              server.mem_used === undefined || server.mem_total <= 0
+                ? "—"
+                : `${pct(server.mem_used, server.mem_total).toFixed(1)}%`
+            }
             percent={pct(server.mem_used, server.mem_total)}
           />
         )}
@@ -1548,7 +1553,11 @@ function ServerCard({
           <Meter
             icon={<HardDrive size={14} />}
             label="硬盘"
-            value={`${pct(server.disk_used, server.disk_total).toFixed(1)}%`}
+            value={
+              server.disk_used === undefined || server.disk_total <= 0
+                ? "—"
+                : `${pct(server.disk_used, server.disk_total).toFixed(1)}%`
+            }
             percent={pct(server.disk_used, server.disk_total)}
           />
         )}
@@ -2265,6 +2274,18 @@ export function App() {
       </main>
     );
   if (!data?.enabled) return <main className="center">探针尚未启用</main>;
+  if (resolveTheme(themePreference, data.appearance?.theme) === "nezhadash") {
+    return (
+      <HistoryDaysContext.Provider value={data.history_days ?? 1}>
+        <Suspense fallback={<main className="center">正在加载 NezhaDash 主题…</main>}>
+          <NezhaDashPage data={data} error={error}
+            renderDetail={(server, index) => <ServerCard server={server} index={index} triISP={data.tri_isp} />}
+            licenseBadge={data.license_badge && <div className="probe-license-footer"><ProbeLicenseNameplate name={data.license_badge.name} displayName={data.license_badge.display_name} /></div>}
+          />
+        </Suspense>
+      </HistoryDaysContext.Provider>
+    );
+  }
   if (resolveTheme(themePreference, data.appearance?.theme) === "premium") {
     return (
       <Suspense

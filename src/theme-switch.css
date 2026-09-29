@@ -119,6 +119,10 @@
 .swatch-anime {
   background: #8b5cf6;
 }
+.swatch-nezhadash {
+  background: linear-gradient(135deg, #fafafa 50%, #171411 50%);
+  border: 1px solid #a8a29e;
+}
 .swatch-premium {
   background: #d8b46a;
 }
