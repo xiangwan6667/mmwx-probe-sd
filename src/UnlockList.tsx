@@ -44,7 +44,6 @@ export function UnlockTabbedList({
 }) {
   const [tab, setTab] = useState<UnlockCategory>("streaming");
   const groups = groupUnlocks(unlocks);
-  const rows = groups[tab];
   return (
     <div className={className ? `unlock-list ${className}` : "unlock-list"}>
       <div className="unlock-tabs">
@@ -66,11 +65,13 @@ export function UnlockTabbedList({
           );
         })}
       </div>
-      {rows.length === 0 ? (
+      <div className="unlock-category-panels">
+      {UNLOCK_CATEGORIES.map(category => <div key={category.key} className="unlock-category-panel" style={{ visibility: tab === category.key ? 'visible' : 'hidden' }} aria-hidden={tab !== category.key} inert={tab !== category.key}>
+      {groups[category.key].length === 0 ? (
         <p className="unlock-empty">—</p>
       ) : (
         <ul>
-          {rows.map((u) => {
+          {groups[category.key].map((u) => {
             const meta = unlockServiceMeta(u.service);
             const st = unlockStatusMeta(u.status);
             return (
@@ -89,6 +90,8 @@ export function UnlockTabbedList({
           })}
         </ul>
       )}
+      </div>)}
+      </div>
     </div>
   );
 }

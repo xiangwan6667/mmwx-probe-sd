@@ -1,6 +1,10 @@
 import type { ProbePayload, ProbeUnlock } from './types';
 import { groupUnlocks, isUnlocked, UNLOCK_CATEGORIES, unlockServiceMeta, unlockStatusMeta, unlockStatusText, unlockTitle } from './unlock-services';
 
+export function allUnlocked(unlocks: ProbeUnlock[]): boolean {
+  return unlocks.length > 0 && unlocks.every(item => item.status === 'yes');
+}
+
 /** Presentation-neutral data; each theme owns its components and appearance. */
 export function unlockSections(unlocks: ProbeUnlock[]) {
   const groups = groupUnlocks(unlocks);

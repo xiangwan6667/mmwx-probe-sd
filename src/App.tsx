@@ -72,6 +72,7 @@ import {
 } from "recharts";
 import { triISPRows } from "./tri-isp";
 import { isUnlocked } from "./unlock-services";
+import { allUnlocked } from "./probe-unlocks";
 import type {
   ProbeBucket,
   ProbePingSeries,
@@ -1318,9 +1319,9 @@ function ReturnRouteBadges({
   );
 }
 
-function UnlockHoverIcon({ unlocks }: { unlocks: ProbeUnlock[] }) {
+export function UnlockHoverIcon({ unlocks }: { unlocks: ProbeUnlock[] }) {
   const [open, setOpen] = useState(false);
-  const [pos, setPos] = useState<{ top: number; right: number }>();
+  const [pos, setPos] = useState<{ top?: number; bottom?: number; right: number; maxHeight: number }>();
   const anchor = useRef<HTMLButtonElement>(null);
   const closeTimer = useRef<number | undefined>(undefined);
   const unlocked = unlocks.filter((u) => isUnlocked(u.status)).length;
@@ -1329,9 +1330,13 @@ function UnlockHoverIcon({ unlocks }: { unlocks: ProbeUnlock[] }) {
     window.clearTimeout(closeTimer.current);
     const r = anchor.current?.getBoundingClientRect();
     if (r) {
+      const below = window.innerHeight - r.bottom - 14;
+      const above = r.top - 14;
+      const up = below < 240 && above > below;
       setPos({
-        top: r.bottom + 6,
-        right: Math.max(8, window.innerWidth - r.right),
+        ...(up ? { bottom: window.innerHeight - r.top + 6 } : { top: r.bottom + 6 }),
+        right: Math.max(8, Math.min(window.innerWidth - r.right, window.innerWidth - Math.min(288, window.innerWidth - 16) - 8)),
+        maxHeight: Math.max(80, up ? above : below),
       });
     }
     setOpen(true);
@@ -1342,7 +1347,10 @@ function UnlockHoverIcon({ unlocks }: { unlocks: ProbeUnlock[] }) {
   };
   useEffect(() => {
     if (!open) return;
-    const close = () => setOpen(false);
+    const close = (event: Event) => {
+      if (event.target instanceof Element && event.target.closest('.unlock-popover')) return;
+      setOpen(false);
+    };
     window.addEventListener("scroll", close, true);
     window.addEventListener("resize", close);
     return () => {
@@ -1359,12 +1367,13 @@ function UnlockHoverIcon({ unlocks }: { unlocks: ProbeUnlock[] }) {
         ref={anchor}
         type="button"
         className="unlock-hover-trigger"
-        data-unlocked={unlocked > 0 || undefined}
+        data-complete={allUnlocked(unlocks)}
         aria-label={label}
         aria-expanded={open}
         onMouseEnter={show}
         onMouseLeave={hide}
-        onClick={() => (open ? setOpen(false) : show())}
+        onClick={event => { event.stopPropagation(); open ? setOpen(false) : show(); }}
+        onKeyDown={event => { event.stopPropagation(); if (event.key === 'Escape') setOpen(false); }}
       >
         {unlocked > 0 ? (
           <LockKeyholeOpen aria-hidden="true" />
@@ -1379,9 +1388,11 @@ function UnlockHoverIcon({ unlocks }: { unlocks: ProbeUnlock[] }) {
             role="dialog"
             aria-label={label}
             className="unlock-popover"
-            style={{ top: pos.top, right: pos.right }}
+            style={pos}
             onMouseEnter={() => window.clearTimeout(closeTimer.current)}
             onMouseLeave={hide}
+            onClick={event => event.stopPropagation()}
+            onKeyDown={event => { event.stopPropagation(); if (event.key === 'Escape') setOpen(false); }}
           >
             <div className="unlock-popover-head">
               <span>解锁检测</span>

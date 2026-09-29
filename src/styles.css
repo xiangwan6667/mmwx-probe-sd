@@ -2038,22 +2038,26 @@ footer a:hover {
   width: 16px;
   height: 16px;
 }
-.unlock-hover-trigger[data-unlocked] {
+.unlock-hover-trigger {
   color: #059669;
 }
-:root.dark .unlock-hover-trigger[data-unlocked] {
+:root.dark .unlock-hover-trigger {
   color: #34d399;
 }
+.unlock-hover-trigger[data-complete="true"] { color: #b7791f; }
+:root.dark .unlock-hover-trigger[data-complete="true"] { color: #fcd34d; }
 .unlock-popover {
   position: fixed;
   z-index: 60;
   width: 288px;
   max-width: calc(100vw - 16px);
+  overflow-y: auto;
+  overscroll-behavior: contain;
   padding: 8px;
   border: 1px solid var(--border);
   border-radius: 8px;
-  background: var(--card, #fff);
-  color: var(--foreground, #0f172a);
+  background: var(--surface);
+  color: inherit;
   box-shadow: 0 8px 24px rgba(15, 23, 42, 0.16);
   font-size: 12px;
 }
@@ -2102,7 +2106,7 @@ footer a:hover {
 }
 .unlock-tabs button[data-active] {
   opacity: 1;
-  background: var(--card, #fff);
+  background: var(--surface);
   box-shadow: 0 1px 2px rgba(15, 23, 42, 0.12);
 }
 :root.dark .unlock-tabs button[data-active] {
@@ -2113,6 +2117,8 @@ footer a:hover {
   padding: 0;
   list-style: none;
 }
+.unlock-category-panels { display: grid; }
+.unlock-category-panel { grid-area: 1 / 1; }
 .unlock-list li {
   display: flex;
   align-items: center;

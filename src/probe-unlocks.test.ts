@@ -1,7 +1,15 @@
 import assert from 'node:assert/strict';
 import test from 'node:test';
-import { serverUnlocks, unlockSections } from './probe-unlocks';
+import { allUnlocked, serverUnlocks, unlockSections } from './probe-unlocks';
 import { groupUnlocks, isUnlocked, unlockStatusText } from './unlock-services';
+
+test('gold unlock indicator requires every reported check to be fully unlocked', () => {
+ assert.equal(allUnlocked([]), false);
+ assert.equal(allUnlocked([{service:'netflix',status:'yes'},{service:'openai',status:'yes'}]), true);
+ for (const status of ['originals_only','no','banned','failed','unknown']) {
+  assert.equal(allUnlocked([{service:'netflix',status:'yes'},{service:'openai',status}]), false);
+ }
+});
 
 test('unlock results stay associated with API IDs even with duplicate names', () => {
  const first={service:'netflix',status:'yes',region:'HK'};

@@ -1,5 +1,11 @@
 /* Only integration controls: upstream page styles live unmodified in index.css. */
 .nezha-unlocks-trigger { width: 28px; height: 28px; padding: 0; border-radius: 999px; flex: none; }
+.nezha-unlocks-trigger svg { color: #047857; }
+.nezha-unlocks-trigger[data-complete="true"] svg { color: #b7791f; }
+.dark .nezha-unlocks-trigger svg { color: #6ee7b7; }
+.dark .nezha-unlocks-trigger[data-complete="true"] svg { color: #fcd34d; }
+.nezha-unlocks-panels { display: grid; }
+.nezha-unlocks-section { grid-area: 1 / 1; }
 .nezha-server-card { position: relative; }
 .nezha-server-card:has(.nezha-unlocks-corner) > section:first-of-type { margin-left: 30px; max-width: calc(100% - 30px); }
 .nezha-unlocks-corner { position: absolute; top: 10px; left: 10px; }

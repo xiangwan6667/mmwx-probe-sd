@@ -45,6 +45,16 @@
   }
 }
 
+/* Mobile cards use the full viewport; a desktop scrollbar must not reserve
+   a strip down the right edge. Scrolling itself remains enabled. */
+@media (max-width: 767px) and (forced-colors: none) {
+  :root, body, #root, #app {
+    scrollbar-gutter: auto !important;
+  }
+  * { scrollbar-width: none; }
+  ::-webkit-scrollbar { display: none; width: 0; height: 0; }
+}
+
 /* Let the OS provide accessible scrollbars in forced-colors mode. */
 @media (forced-colors: active) {
   :where(*) {

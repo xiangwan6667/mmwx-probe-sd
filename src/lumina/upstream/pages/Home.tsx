@@ -14,7 +14,7 @@ const ThemeManage = lazy(() =>
 let homeHeaderHiddenForDocument = false;
 
 function HomeDashboard() {
-  const [controlsExpanded, setControlsExpanded] = useState(false);
+  const [controlsExpanded, setControlsExpanded] = useState(true);
   const [headerHiddenForDocument, setHeaderHiddenForDocument] = useState(
     () => homeHeaderHiddenForDocument,
   );

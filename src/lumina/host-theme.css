@@ -27,6 +27,10 @@
 .node-traffic-trigger.lumina-unlocks-trigger { display: inline-flex; flex: none; width: 28px; height: 28px; align-items: center; justify-content: center; padding: 0; border: 1px solid var(--border); background: var(--fill-tertiary); color: var(--text-secondary); }
 .lumina-unlocks-panel { margin: 0; width: min(320px, calc(100vw - 16px)); box-sizing: border-box; overflow: auto; overscroll-behavior: contain; font-family: inherit; }
 .lumina-unlocks-panel::backdrop { background: transparent; pointer-events: none; }
+.lumina-unlocks-trigger svg { color: var(--status-success); }
+.lumina-unlocks-trigger[data-complete="true"] svg { color: var(--status-warning); }
+.lumina-unlocks-panels { display: grid; }
+.lumina-unlocks-section { grid-area: 1 / 1; }
 .lumina-unlocks-tabs { display: flex; gap: 4px; margin: 10px 0 6px; padding-bottom: 6px; border-bottom: 1px solid var(--hairline); }
 .lumina-unlocks-tabs button { flex: 1; min-height: 32px; border: 0; border-radius: 7px; background: transparent; color: var(--text-tertiary); font: inherit; cursor: pointer; }
 .lumina-unlocks-tabs button[aria-pressed="true"] { background: var(--fill-tertiary); color: var(--progress-cpu); }

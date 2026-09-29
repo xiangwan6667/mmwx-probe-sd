@@ -37,7 +37,7 @@ export function FloatingControls({
   const adminEntryPath = useAdminEntryPath();
   const themeSettings = useThemeSettings();
   const { failureStreak } = useNodeStoreStatus();
-  const [collapsed, setCollapsed] = useState(true);
+  const [collapsed, setCollapsed] = useState(false);
   const [colorsOpen, setColorsOpen] = useState(false);
   const [colorsMounted, setColorsMounted] = useState(false);
   const settingsReady = themeSettings.isReady;
@@ -54,7 +54,7 @@ export function FloatingControls({
   // 只要不在最宽松的大卡默认态,就视为"已切换"，按钮保持高亮。
   const isReducedView = mode !== "large";
   useEffect(() => {
-    onExpandedChange?.(false);
+    onExpandedChange?.(true);
     return () => onExpandedChange?.(false);
   }, [onExpandedChange]);
 

@@ -4,12 +4,13 @@ import { Icon } from '@iconify/vue'
 import { PopoverRoot, PopoverTrigger, PopoverPortal, PopoverContent } from 'reka-ui'
 import { Badge } from './ui/badge'
 import { Tabs, TabsList, TabsTrigger, TabsContent } from './ui/tabs'
-import { serverUnlocks, unlockSections } from '../../../probe-unlocks'
+import { allUnlocked, serverUnlocks, unlockSections } from '../../../probe-unlocks'
 import { getPayload, subscribePayload } from '../../bridge'
 import { useBackgroundSurface } from '@emerald/composables/useBackgroundSurface'
 
 const props = defineProps<{ uuid: string }>()
 const open = ref(false)
+const tab = ref('streaming')
 const payload = shallowRef(getPayload())
 const unsubscribe = subscribePayload(() => { payload.value = getPayload() })
 onBeforeUnmount(unsubscribe)
@@ -27,6 +28,7 @@ function stopCardKey(event: KeyboardEvent) {
   <PopoverRoot v-if="unlocks.length" v-model:open="open">
     <PopoverTrigger as-child>
       <Badge as="button" type="button" variant="outline" class="emerald-unlocks-trigger cursor-pointer hover:bg-accent"
+        :data-complete="allUnlocked(unlocks)"
         :aria-label="`解锁检测 ${count}/${unlocks.length}`" :title="`解锁检测 ${count}/${unlocks.length}`" @click.stop @keydown="stopCardKey">
         <Icon icon="lucide:lock-keyhole" />
       </Badge>
@@ -38,13 +40,15 @@ function stopCardKey(event: KeyboardEvent) {
         <div class="mb-3 flex items-center justify-between gap-2 text-sm font-semibold">
           <span>解锁检测</span><span className="text-muted-foreground font-normal">{{ count }}/{{ unlocks.length }}</span>
         </div>
-        <Tabs default-value="streaming" class="flex-col">
+        <Tabs v-model="tab" class="flex-col">
           <TabsList class="w-full">
             <TabsTrigger v-for="section in sections" :key="section.key" :value="section.key" class="text-xs">
               {{ section.zh }}<small>{{ section.count }}/{{ section.rows.length }}</small>
             </TabsTrigger>
           </TabsList>
-          <TabsContent v-for="section in sections" :key="section.key" :value="section.key">
+          <div class="emerald-unlocks-panels">
+          <TabsContent v-for="section in sections" :key="section.key" :value="section.key" force-mount
+            class="emerald-unlocks-section" :style="{ visibility: tab === section.key ? 'visible' : 'hidden' }" :aria-hidden="tab !== section.key" :inert="tab !== section.key">
             <ul class="emerald-unlocks-list">
               <li v-for="row in section.rows" :key="row.key" :title="row.title">
                 <svg v-if="row.meta.icon" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path :d="row.meta.icon.path" /></svg>
@@ -57,6 +61,7 @@ function stopCardKey(event: KeyboardEvent) {
             </ul>
             <p v-if="!section.rows.length" class="py-3 text-center text-xs text-muted-foreground">暂无检测结果</p>
           </TabsContent>
+          </div>
         </Tabs>
       </PopoverContent>
     </PopoverPortal>
@@ -65,6 +70,12 @@ function stopCardKey(event: KeyboardEvent) {
 
 <style>
 .emerald-unlocks-trigger { display: inline-flex; justify-content: center; align-items: center; width: 28px; height: 28px; padding: 0; flex: none; }
+.emerald-unlocks-trigger svg { color: var(--color-emerald-700); }
+.emerald-unlocks-trigger[data-complete="true"] svg { color: var(--color-amber-600); }
+.dark .emerald-unlocks-trigger svg { color: var(--color-emerald-300); }
+.dark .emerald-unlocks-trigger[data-complete="true"] svg { color: var(--color-amber-300); }
+.emerald-unlocks-panels { display: grid; }
+.emerald-unlocks-section { grid-area: 1 / 1; display: block; }
 .emerald-unlocks-panel { width: min(340px, calc(100vw - 16px)); max-height: var(--reka-popover-content-available-height); overflow: auto; overscroll-behavior: contain; }
 .emerald-unlocks-list { margin: 0; padding: 0; list-style: none; font-size: 12px; }
 .emerald-unlocks-list li { display: flex; align-items: center; gap: 8px; padding: 4px 0; }

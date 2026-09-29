@@ -15,7 +15,7 @@ import {
   XCircle,
 } from "lucide-react";
 import { triISPRows } from "./tri-isp";
-import { CONN_COUNT_HINT, connCount, UnlockTabbedList } from "./App";
+import { CONN_COUNT_HINT, connCount, UnlockHoverIcon, UnlockTabbedList } from "./App";
 import { ConnLegendDot, ConnSparkline } from "./ConnSparkline";
 import { connHistoryFromSeries, type ProbeMetricPoint } from "./conn-sparkline";
 import {
@@ -2498,6 +2498,7 @@ function PremiumServerCard({
       }}
     >
       <header>
+        {!!server.unlocks?.length && <UnlockHoverIcon unlocks={server.unlocks} />}
         <h3>
           <Twemoji>
             {displayServerName(server.name, `#${index + 1}`, flag)}

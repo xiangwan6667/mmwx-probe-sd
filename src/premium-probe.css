@@ -2661,6 +2661,11 @@
   border-bottom: 1px solid rgba(216, 180, 106, 0.16);
 }
 
+.premium-probe-server-card .unlock-hover-trigger { flex: none; width: 28px; height: 28px; justify-content: center; border: 1px solid rgba(216, 180, 106, 0.24); border-radius: 8px; background: rgba(216, 180, 106, 0.07); }
+:root.theme-premium .unlock-popover { background: #151510; color: #f3ecdc; border-color: rgba(216, 180, 106, 0.3); box-shadow: 0 16px 40px #0006; }
+:root.theme-premium.light .unlock-popover { background: #fffaf0; color: #493b23; border-color: #d8c49b; }
+:root.theme-premium .unlock-popover .unlock-tabs button[data-active] { background: rgba(216, 180, 106, 0.16); }
+
 .premium-probe-server-card h3 {
   overflow: hidden;
   font-size: 1.08rem;

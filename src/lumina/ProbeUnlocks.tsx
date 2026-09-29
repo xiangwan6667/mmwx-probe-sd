@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useId, useRef, useState, useSyncExternalStore } from 'react';
 import { createPortal } from 'react-dom';
 import { CircleHelp, LockKeyhole, LockKeyholeOpen } from 'lucide-react';
-import { serverUnlocks, unlockSections } from '../probe-unlocks';
+import { allUnlocked, serverUnlocks, unlockSections } from '../probe-unlocks';
 import { getPayload, subscribePayload } from './bridge';
 
 export function LuminaUnlocks({ uuid }: { uuid: string }) {
@@ -41,6 +41,7 @@ export function LuminaUnlocks({ uuid }: { uuid: string }) {
   if (!unlocks.length) return null;
   return <>
     <button ref={trigger} type="button" className="node-traffic-trigger lumina-unlocks-trigger" popoverTarget={id}
+      data-complete={allUnlocked(unlocks)}
       aria-label={`解锁检测 ${count}/${unlocks.length}`} title={`解锁检测 ${count}/${unlocks.length}`} aria-expanded={open} aria-haspopup="dialog"
       onClick={event => { event.preventDefault(); event.stopPropagation(); panel.current?.togglePopover(); }}
       onKeyDown={event => event.stopPropagation()}>
@@ -57,8 +58,10 @@ export function LuminaUnlocks({ uuid }: { uuid: string }) {
           {section.zh}<small>{section.count}/{section.rows.length}</small>
         </button>)}
       </div>
+      <div className="lumina-unlocks-panels">
+      {sections.map(section => <div key={section.key} className="lumina-unlocks-section" style={{ visibility: tab === section.key ? 'visible' : 'hidden' }} aria-hidden={tab !== section.key} inert={tab !== section.key}>
       <ul className="node-traffic-popover-rows lumina-unlocks-list">
-        {sections.find(section => section.key === tab)?.rows.map(row => <li className="node-traffic-popover-row" key={row.key} title={row.title}>
+        {section.rows.map(row => <li className="node-traffic-popover-row" key={row.key} title={row.title}>
           <span className="node-traffic-popover-label lumina-unlocks-label">
             {row.meta.icon ? <svg viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d={row.meta.icon.path} /></svg> : <span className="lumina-unlocks-letter">{row.meta.short}</span>}
             <span>{row.meta.label}</span>
@@ -68,7 +71,9 @@ export function LuminaUnlocks({ uuid }: { uuid: string }) {
           </span>
         </li>)}
       </ul>
-      {!sections.find(section => section.key === tab)?.rows.length && <p className="lumina-unlocks-empty">暂无检测结果</p>}
+      {!section.rows.length && <p className="lumina-unlocks-empty">暂无检测结果</p>}
+      </div>)}
+      </div>
     </div>, document.body)}
   </>;
 }
