@@ -140,6 +140,7 @@ const PremiumProbePage = lazy(() =>
     default: module.PremiumProbePage,
   })),
 );
+const EmeraldPage = lazy(() => import("./emerald/EmeraldPage"));
 const NezhaDashPage = lazy(() => import("./nezhadash/NezhaDashPage"));
 // 曲线弹窗可选的时间范围随主控的保留天数（history_days）变，由 App 注入。
 const HistoryDaysContext = createContext(1);
@@ -1255,7 +1256,7 @@ const routeCarrierLabels = {
   unicom: "联通",
   mobile: "移动",
 } as const;
-const goldRoutes = new Set(["CN2GIA", "CTGGIA", "9929", "10099", "CMIN2", "163PP"]);
+const goldRoutes = new Set(["CN2GIA", "CTGGIA", "9929", "CMIN2", "163PP"]);
 function displayReturnRoute(route: string): string {
   return route.toUpperCase().replace(/[^A-Z0-9]/g, "") === "CMIN"
     ? "CMI"
@@ -2274,6 +2275,9 @@ export function App() {
       </main>
     );
   if (!data?.enabled) return <main className="center">探针尚未启用</main>;
+  if (resolveTheme(themePreference, data.appearance?.theme) === "emerald") {
+    return <Suspense fallback={<main className="center">正在加载 Emerald 主题…</main>}><EmeraldPage data={data} error={error} /></Suspense>;
+  }
   if (resolveTheme(themePreference, data.appearance?.theme) === "nezha") {
     return (
       <HistoryDaysContext.Provider value={data.history_days ?? 1}>

@@ -13,6 +13,7 @@ export const themeOptions = [
     description: "精致面板 · 全景布局",
   },
   { value: "nezha", label: "Nezha", description: "哪吒风格 · 简洁监控" },
+  { value: "emerald", label: "Emerald", description: "翡翠风格 · 地球与监控" },
 ] as const;
 
 export type ProbeThemePreference = (typeof themeOptions)[number]["value"];

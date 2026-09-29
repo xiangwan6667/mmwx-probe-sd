@@ -1,0 +1,187 @@
+[
+  {
+    "title": "Alibaba Cloud",
+    "slug": "alibabacloud",
+    "hex": "FF6A00",
+    "source": "https://www.alibabagroup.com/en/ir/reports"
+  },
+  {
+    "title": "AlmaLinux",
+    "slug": "almalinux",
+    "hex": "000000",
+    "source": "https://almalinux.org",
+    "guidelines": "https://almalinux.org/p/the-almalinux-os-trademark-usage-policy/"
+  },
+  {
+    "title": "Alpine Linux",
+    "slug": "alpinelinux",
+    "hex": "0D597F",
+    "source": "https://alpinelinux.org"
+  },
+  {
+    "title": "Arch Linux",
+    "slug": "archlinux",
+    "hex": "1793D1",
+    "source": "https://www.archlinux.org/art",
+    "guidelines": "https://wiki.archlinux.org/index.php/DeveloperWiki:TrademarkPolicy#Logo_Usage_Guidelines"
+  },
+  {
+    "title": "CentOS",
+    "slug": "centos",
+    "hex": "262577",
+    "source": "https://wiki.centos.org/ArtWork/Brand/Logo"
+  },
+  {
+    "title": "Debian",
+    "slug": "debian",
+    "hex": "A81D33",
+    "source": "https://www.debian.org/logos",
+    "guidelines": "https://www.debian.org/logos/",
+    "license": {
+      "type": "CC-BY-SA-3.0"
+    }
+  },
+  {
+    "title": "Fedora",
+    "slug": "fedora",
+    "hex": "51A2DA",
+    "source": "https://docs.fedoraproject.org/en-US/project/brand/",
+    "guidelines": "https://fedoraproject.org/wiki/Legal:Trademark_guidelines",
+    "license": {
+      "type": "custom",
+      "url": "https://docs.fedoraproject.org/en-US/project/brand/"
+    }
+  },
+  {
+    "title": "FreeBSD",
+    "slug": "freebsd",
+    "hex": "AB2B28",
+    "source": "https://www.freebsdfoundation.org/about/project/"
+  },
+  {
+    "title": "Gentoo",
+    "slug": "gentoo",
+    "hex": "54487A",
+    "source": "https://wiki.gentoo.org/wiki/Project:Artwork/Artwork#Variations_of_the_.22g.22_logo",
+    "guidelines": "https://www.gentoo.org/inside-gentoo/foundation/name-logo-guidelines.html",
+    "license": {
+      "type": "CC-BY-SA-2.5"
+    }
+  },
+  {
+    "title": "Huawei",
+    "slug": "huawei",
+    "hex": "FF0000",
+    "source": "https://e.huawei.com/ph/material/partner/0a72728b864949c48b22106454352483",
+    "guidelines": "https://e.huawei.com/ph/material/partner/0a72728b864949c48b22106454352483"
+  },
+  {
+    "title": "Kali Linux",
+    "slug": "kalilinux",
+    "hex": "557C94",
+    "source": "https://www.kali.org/docs/policy/trademark/",
+    "guidelines": "https://www.kali.org/docs/policy/trademark/"
+  },
+  {
+    "title": "Linux",
+    "slug": "linux",
+    "hex": "FCC624",
+    "source": "https://www.linuxfoundation.org/the-linux-mark/"
+  },
+  {
+    "title": "Linux Mint",
+    "slug": "linuxmint",
+    "hex": "86BE43",
+    "source": "https://github.com/linuxmint/brand-logo/blob/540ac3b08e987866d77a340f557f994c988ac2ae/ring-mono-green.svg"
+  },
+  {
+    "title": "macOS",
+    "slug": "macos",
+    "hex": "000000",
+    "source": "https://commons.wikimedia.org/wiki/File:MacOS_wordmark_(2017).svg"
+  },
+  {
+    "title": "Manjaro",
+    "slug": "manjaro",
+    "hex": "35BFA4",
+    "source": "https://manjaro.org"
+  },
+  {
+    "title": "NixOS",
+    "slug": "nixos",
+    "hex": "5277C3",
+    "source": "https://brand.nixos.org/logos/nixos-logomark-black-flat-minimal.svg",
+    "guidelines": "https://brand.nixos.org/documents/nixos-branding-guide.pdf",
+    "license": {
+      "type": "CC-BY-4.0"
+    }
+  },
+  {
+    "title": "openSUSE",
+    "slug": "opensuse",
+    "hex": "73BA25",
+    "source": "https://github.com/openSUSE/artwork/blob/33e94aa76837c09f03d1712705949b71a246a53b/logos/buttons/button-colour.svg",
+    "guidelines": "https://en.opensuse.org/Portal:Artwork"
+  },
+  {
+    "title": "OpenWrt",
+    "slug": "openwrt",
+    "hex": "00B5E2",
+    "source": "https://openwrt.org/docs/guide-graphic-designer/openwrt-logo",
+    "guidelines": "https://openwrt.org/docs/guide-graphic-designer/openwrt-logo"
+  },
+  {
+    "title": "Proxmox",
+    "slug": "proxmox",
+    "hex": "E57000",
+    "source": "https://www.proxmox.com/en/news/media-kit",
+    "guidelines": "https://www.proxmox.com/en/news/media-kit"
+  },
+  {
+    "title": "QNAP",
+    "slug": "qnap",
+    "hex": "0C2E82",
+    "source": "https://marketing.qnap.com/resource/qnap-logo-k100",
+    "guidelines": "https://marketing.qnap.com/resource/qnap-brand-logo-guideline",
+    "aliases": {
+      "aka": [
+        "Quality Network Appliance Provider"
+      ]
+    }
+  },
+  {
+    "title": "Red Hat",
+    "slug": "redhat",
+    "hex": "EE0000",
+    "source": "https://www.redhat.com/en/about/brand/new-brand/details"
+  },
+  {
+    "title": "Rocky Linux",
+    "slug": "rockylinux",
+    "hex": "10B981",
+    "source": "https://github.com/rocky-linux/branding/blob/94e97dd30b87d909cc4f6a6838a2926f77f9ac47/logo/src/icon-black.svg",
+    "license": {
+      "type": "CC-BY-SA-4.0"
+    }
+  },
+  {
+    "title": "Synology",
+    "slug": "synology",
+    "hex": "B5B5B6",
+    "source": "https://www.synology.com/en-global/company/branding",
+    "guidelines": "https://www.synology.com/en-global/company/branding"
+  },
+  {
+    "title": "Ubuntu",
+    "slug": "ubuntu",
+    "hex": "E95420",
+    "source": "https://design.ubuntu.com/resources",
+    "guidelines": "https://design.ubuntu.com/brand"
+  },
+  {
+    "title": "Unraid",
+    "slug": "unraid",
+    "hex": "F15A2C",
+    "source": "https://unraid.net"
+  }
+]

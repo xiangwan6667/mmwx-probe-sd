@@ -1,0 +1,13 @@
+{
+  "extends": "./tsconfig.json",
+  "compilerOptions": {
+    "jsx": "preserve"
+  },
+  "include": [
+    "src/emerald/**/*.ts",
+    "src/emerald/**/*.vue"
+  ],
+  "exclude": [
+    "src/emerald/EmeraldPage.tsx"
+  ]
+}

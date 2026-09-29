@@ -2,7 +2,7 @@
 
 基于 [mmwx-group/mmwx-probe](https://github.com/mmwx-group/mmwx-probe) 的**非官方独立探针前端**，由 [xiangwan6667](https://github.com/xiangwan6667) 维护。依赖妙妙屋 X 主控提供数据，不包含采集 Agent，也不替代主控。
 
-支持服务器状态、实时网速与历史曲线；提供扁平、像素、二次元、高级黑金和 **Nezha** 主题，明暗默认跟随系统，也会记住当前浏览器手动选择的浅色或深色。访客切换主题只影响当前浏览器，也可跟随主控指定的主题。Nezha 复用 NezhaDash 页面源码，融合 BITJEBE 卡片样式；数据能力与付费权限取决于主控。
+支持服务器状态、实时网速与历史曲线；提供扁平、像素、二次元、高级黑金、**Nezha** 和 **Emerald** 主题，明暗默认跟随系统，也会记住当前浏览器手动选择的浅色或深色。访客切换主题只影响当前浏览器，也可跟随主控指定的主题。Nezha 复用 NezhaDash 页面源码，融合 BITJEBE 卡片样式；数据能力与付费权限取决于主控。
 
 ## 部署
 
@@ -55,6 +55,7 @@
 | 二次元 | `anime` |
 | 高级黑金（付费许可证） | `premium` |
 | Nezha | `nezha` |
+| Emerald | `emerald` |
 
 外置探针选择 **跟随主控** 后生效；若浏览器已手动选过主题，需先切回“跟随主控”。`server` 是浏览器的“跟随主控”选项，不是主控主题名称。旧值 `nezhadash` 兼容映射到 `nezha`，新配置统一用 `nezha`。这些名称对应本项目的外置探针，主控内置探针对未知主题仍使用默认样式。
 
@@ -87,5 +88,7 @@ npm run dev
 
 - 主项目：[mmwx-group/mmwx-probe](https://github.com/mmwx-group/mmwx-probe)，Copyright © 2026 Jim Lee，遵循 [MSAL-1.0](LICENSE)。仅允许许可证规定的非商业使用，商业使用需取得原版权方授权；这是源码可用项目，不是 OSI 开源许可。
 - Nezha 主题：[nezha-dash-v2](https://github.com/hamster1963/nezha-dash-v2) 页面 + [nezha-BITJEBE](https://github.com/BITJEBE/nezha-BITJEBE) 卡片，来源与修改记录见 [主题声明](licenses/NezhaDash-NOTICE.md)。第三方部分保留 Apache-2.0 许可。
+
+- Emerald 主题：复用 [komari-theme-emerald](https://github.com/Tokinx/komari-theme-emerald) 的 Vue 页面、卡片、地球与图表源码，保留 [MIT 许可](src/emerald/LICENSE)，适配说明见 [移植记录](docs/emerald-port.md)。费用按原币种展示，缺失字段显示 `—`；三网目标按主控配置匹配。
 
 本版独立维护，不代表原作者或官方项目。问题请提交至 [Issues](https://github.com/xiangwan6667/mmwx-probe-sd/issues)。

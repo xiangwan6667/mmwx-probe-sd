@@ -146,3 +146,5 @@
   width: 14px;
   height: 14px;
 }
+
+.swatch-emerald { background: linear-gradient(135deg, #10b981, #064e3b); }
