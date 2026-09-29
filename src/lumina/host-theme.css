@@ -1,4 +1,5 @@
 /* Shared switch uses Lumina's original palette, including its body portal. */
+:root { --probe-scrollbar-color: var(--text-tertiary); }
 :root .probe-theme-dropdown {
   --menu-surface: var(--surface);
   --menu-border: var(--border);

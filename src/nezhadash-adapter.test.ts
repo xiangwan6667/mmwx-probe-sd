@@ -11,7 +11,7 @@ check(mapped.servers[1].state.net_out_speed === 2048, 'byte speeds are not conve
 check(mapped.servers[1].state.net_out_transfer === 0, 'boot traffic preserves zero and does not use billed traffic');
 check(mapped.servers[1].state.mem_used === 0, 'zero usage survives');
 check(mapped.servers[0].last_active.startsWith('000'), 'offline stays offline');
-check(toNezhaGroups(data).data.find(group => group.group.name === '香港')?.servers[0] === 1, 'group uses original indices');
+check(toNezhaGroups(data).data.length === 0, 'geography does not create groups');
 const monitor = toMonitor(1, '在线', { generated_at: 1800, bucket_sec: 300, all_series: [{ label: '线路', current_ms: 12, loss_pct: 0, buckets: [{ ms: 0, loss: 0 }, { ms: -1, loss: 100 }, { ms: 12, loss: 0 }] }] });
 check(monitor.data[0].created_at[0] === 1200000, 'probe seconds convert to Nezha milliseconds at original bucket boundaries');
 check(monitor.data[0].avg_delay[0] === 0, 'zero latency is retained');

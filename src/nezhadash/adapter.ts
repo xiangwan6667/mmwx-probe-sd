@@ -26,13 +26,9 @@ export function toNezhaData(data: ProbePayload, now = Date.now()): NezhaWebsocke
     }),
   };
 }
-export function toNezhaGroups(data: ProbePayload): ServerGroupResponse {
-  const groups = new Map<string, number[]>();
-  data.servers?.forEach((server, index) => {
-    const region = server.region?.trim() || server.region_name || server.region_country;
-    if (region) groups.set(region, [...(groups.get(region) || []), index]);
-  });
-  return { success: true, data: [...groups].map(([name, servers], id) => ({ group: { id, name, created_at: '', updated_at: '' }, servers })) };
+export function toNezhaGroups(_data: ProbePayload): ServerGroupResponse {
+  // Geography remains on servers/flags; the master supplies no user groups.
+  return { success: true, data: [] };
 }
 export interface ProbeSeriesResponse {
   success?: boolean; generated_at?: number; bucket_sec?: number; all_series?: ProbePingSeries[];

@@ -1,0 +1,5 @@
+/* Match transparent scrollbar tracks and overscroll to the theme canvas. */
+:root {
+  --probe-scrollbar-color: var(--muted-foreground);
+  background-color: var(--background);
+}

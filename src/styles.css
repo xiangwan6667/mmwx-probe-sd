@@ -28,6 +28,20 @@ body,
   min-height: 100%;
   margin: 0;
 }
+/* Embedded themes own scrolling. Their transparent tracks must never expose
+   the default light host canvas, including during iframe loading/resizing. */
+:root.theme-nezha { background: hsl(0 0% 98%); }
+:root.theme-nezha.dark { background: hsl(30 15% 8%); }
+:root.theme-emerald { background: #fff; }
+:root.theme-emerald.dark { background: oklch(0.141 0.005 285.823); }
+:root.theme-lumina { background: #f4f4f5; }
+:root.theme-lumina.dark { background: #000; }
+:root:has(#root > iframe),
+:root:has(#root > iframe) body,
+:root:has(#root > iframe) #root {
+  height: 100%;
+  overflow: hidden;
+}
 button {
   font: inherit;
 }

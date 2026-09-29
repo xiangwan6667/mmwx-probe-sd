@@ -1,4 +1,5 @@
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useState } from "react";
+import { startProbeTransport } from './probe-transport';
 import type { ProbeAppearance, ProbePayload } from "./types";
 import { applyProbeDocumentBranding } from "./document-branding";
 import { resolveTheme } from "./theme-preference";
@@ -67,11 +68,9 @@ export function watchAppearance() {
 export function useProbe(): { data?: ProbePayload; error?: string } {
   const [data, setData] = useState<ProbePayload>();
   const [error, setError] = useState<string>();
-  const timer = useRef<number | undefined>(undefined);
 
   useEffect(() => {
     let stopped = false;
-    let ws: WebSocket | undefined;
 
     const accept = (payload: ProbePayload) => {
       if (stopped) return;
@@ -80,49 +79,13 @@ export function useProbe(): { data?: ProbePayload; error?: string } {
       setError(undefined);
       applyProbeDocumentBranding(payload.title, payload.icon);
     };
-    const poll = async () => {
-      try {
-        const response = await fetch("/api/probe", { cache: "no-store" });
-        if (!response.ok) throw new Error(`HTTP ${response.status}`);
-        accept((await response.json()) as ProbePayload);
-      } catch (cause) {
-        if (!stopped)
-          setError(cause instanceof Error ? cause.message : String(cause));
-      }
-    };
-    const startPolling = () => {
-      if (timer.current) return;
-      void poll();
-      timer.current = window.setInterval(poll, 5000);
-    };
-
     const stopAppearanceSync = watchAppearance();
-    // Keep polling as a fallback even when the WebSocket handshake succeeds.
-    // Some proxies leave an idle WebSocket open without forwarding later frames,
-    // which otherwise freezes realtime speed at the first snapshot.
-    startPolling();
-    try {
-      const protocol = location.protocol === "https:" ? "wss:" : "ws:";
-      ws = new WebSocket(`${protocol}//${location.host}/api/stream`);
-      ws.onmessage = (event) => {
-        try {
-          accept(JSON.parse(event.data) as ProbePayload);
-        } catch {
-          /* wait for next frame */
-        }
-      };
-      ws.onerror = startPolling;
-      ws.onclose = startPolling;
-    } catch {
-      startPolling();
-    }
+    const stopTransport = startProbeTransport(accept, message => { if (!stopped) setError(message); });
 
     return () => {
       stopped = true;
       stopAppearanceSync();
-      ws?.close();
-      if (timer.current) window.clearInterval(timer.current);
-      timer.current = undefined;
+      stopTransport();
     };
   }, []);
 

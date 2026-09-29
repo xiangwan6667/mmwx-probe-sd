@@ -85,6 +85,11 @@
     "world-atlas": "^2.0.2",
     "zod": "^3.25.76"
   },
+  "overrides": {
+    "miniflare": {
+      "undici": "7.29.1"
+    }
+  },
   "devDependencies": {
     "@cloudflare/workers-types": "^5.20260731.1",
     "@tailwindcss/postcss": "^4.3.3",
@@ -99,6 +104,6 @@
     "tsx": "^4.23.15",
     "typescript": "~5.9.3",
     "vue-tsc": "^3.3.11",
-    "wrangler": "^4.116.0"
+    "wrangler": "^4.143.0"
   }
 }

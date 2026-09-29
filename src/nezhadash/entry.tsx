@@ -9,6 +9,7 @@ import { SortProvider } from './upstream/context/sort-provider';
 import { TooltipProvider } from './upstream/context/tooltip-provider';
 import { WebSocketContext } from './upstream/context/websocket-context';
 import { toNezhaData } from './adapter';
+import { nezhaConfigSignatures } from './config-signature';
 import { receiveProbe, useProbeBridge } from './bridge';
 import type { NezhaWebsocketResponse } from './upstream/types/nezha-api';
 import { loadSiteSettings } from '../site-settings';
@@ -21,6 +22,7 @@ import './integration.css';
 import '../touch-controls.css';
 
 const queryClient = new QueryClient();
+let configSignatures: ReturnType<typeof nezhaConfigSignatures> | undefined;
 // This entry receives data from the host; direct visits return to its public URL.
 if (window.parent === window) window.location.replace(`/${window.location.hash}`);
 window.addEventListener('message', event => {
@@ -31,8 +33,10 @@ window.addEventListener('message', event => {
       document.documentElement.style.setProperty('--nezha-viewport-height', `${height}px`);
     }
     receiveProbe(event.data.data, event.data.error);
-    queryClient.invalidateQueries({ queryKey: ['setting'] });
-    queryClient.invalidateQueries({ queryKey: ['server-group'] });
+    const nextSignatures = nezhaConfigSignatures(event.data.data);
+    if (nextSignatures.setting !== configSignatures?.setting) void queryClient.invalidateQueries({ queryKey: ['setting'] });
+    if (nextSignatures.groups !== configSignatures?.groups) void queryClient.invalidateQueries({ queryKey: ['server-group'] });
+    configSignatures = nextSignatures;
   }
   if (event.data?.type === 'mmwx-probe-route' && typeof event.data.hash === 'string' && /^#\/(server\/\d+)?$/.test(event.data.hash) && window.location.hash !== event.data.hash) window.location.hash = event.data.hash;
 });

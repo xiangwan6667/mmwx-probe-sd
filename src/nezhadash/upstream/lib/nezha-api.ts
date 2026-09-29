@@ -1,6 +1,7 @@
 // MMWX adaptation (2026-09-29): host data/theme/router integration; see licenses/NezhaDash-NOTICE.md.
 import type { MetricPeriod, MetricType, ServerMetricsResponse, ServiceResponse } from '../types/nezha-api';
 import { getProbe } from '../../bridge';
+import { createRequestCache } from '../../request-cache';
 import { toMonitor, toNezhaGroups, type ProbeSeriesResponse } from '../../adapter';
 import { effectiveProbeRange, probeRangeOptions } from '../../../probe-ranges';
 
@@ -9,22 +10,20 @@ export const fetchLoginUser = async () => ({ success: true, data: { id: 0, usern
 export const fetchService = async (): Promise<ServiceResponse> => ({ success: true, data: { services: {}, cycle_transfer_stats: {} } });
 export const fetchSetting = async () => ({ success: true, data: { config: { debug: false, language: 'zh-CN', site_name: getProbe().title || '服务器状态', user_template: 'Nezha', admin_template: '', custom_code: '' }, version: '', tsdb_enabled: true } });
 export type MonitorPeriod = MetricPeriod;
-const requests = new Map<string, { at: number; request: Promise<any> }>();
+type SeriesBody = ProbeSeriesResponse & { series?: Record<string, {t:number;value:number}[]> };
+const cachedRequest = createRequestCache<SeriesBody>();
 async function series(id: number, period: string, system = false) {
   const data = getProbe();
   if (!Number.isSafeInteger(id) || !data.servers?.[id]) throw new Error('服务器不存在');
   const range = effectiveProbeRange(period, probeRangeOptions(data.history_days));
   const url = `/api/series?server=${id}&range=${range}${system ? '&metric=system' : '&all=1'}`;
-  const cached = requests.get(url);
-  if (cached && Date.now() - cached.at < 5000) return cached.request;
-  const request = fetch(url).then(async response => {
+  return cachedRequest(url, async () => {
+    const response = await fetch(url, { signal: AbortSignal.timeout(15_000) });
     if (!response.ok) throw new Error(`HTTP ${response.status}`);
-    const body = await response.json() as ProbeSeriesResponse & { series?: Record<string, {t:number;value:number}[]> };
+    const body = await response.json() as SeriesBody;
     if (!body.success) throw new Error('历史数据暂不可用');
     return body;
-  }).catch(error => { requests.delete(url); throw error; });
-  requests.set(url, { at: Date.now(), request });
-  return request;
+  });
 }
 export const fetchMonitor = async (id: number, period: MonitorPeriod = '24h') => {
   const result: ProbeSeriesResponse = await series(id, period);

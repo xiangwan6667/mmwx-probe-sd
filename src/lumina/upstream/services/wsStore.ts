@@ -54,8 +54,6 @@ interface NodeTrafficTrend {
   };
 }
 
-const LIVE_STATUS_REFRESH_INTERVAL_MS = 2_000;
-const NODE_INFO_REFRESH_INTERVAL_MS = 30_000;
 // 较短超时可让 half-open 连接尽快重试。
 const LIVE_STATUS_REQUEST_TIMEOUT_MS = 8_000;
 const SCROLL_IDLE_DELAY_MS = 160;
@@ -197,65 +195,65 @@ function mergeRealtime(
   };
 }
 
-function shallowEqualMetrics(a: NodeMetrics, b: NodeMetrics) {
+export function shallowEqualMetrics(a: NodeMetrics, b: NodeMetrics) {
   return (
-    a.online === b.online &&
-    a.cpuPct === b.cpuPct &&
-    a.ramUsed === b.ramUsed &&
-    a.ramTotal === b.ramTotal &&
-    a.ramPct === b.ramPct &&
-    a.swapUsed === b.swapUsed &&
-    a.swapTotal === b.swapTotal &&
-    a.diskUsed === b.diskUsed &&
-    a.diskTotal === b.diskTotal &&
-    a.diskPct === b.diskPct &&
-    a.netUp === b.netUp &&
-    a.netDown === b.netDown &&
-    a.trafficUp === b.trafficUp &&
-    a.trafficDown === b.trafficDown &&
-    a.uptime === b.uptime &&
-    a.load1 === b.load1 &&
-    a.load5 === b.load5 &&
-    a.load15 === b.load15 &&
-    a.process === b.process &&
-    a.connectionsTcp === b.connectionsTcp &&
-    a.connectionsUdp === b.connectionsUdp &&
-    a.updatedAt === b.updatedAt
+    Object.is(a.online, b.online) &&
+    Object.is(a.cpuPct, b.cpuPct) &&
+    Object.is(a.ramUsed, b.ramUsed) &&
+    Object.is(a.ramTotal, b.ramTotal) &&
+    Object.is(a.ramPct, b.ramPct) &&
+    Object.is(a.swapUsed, b.swapUsed) &&
+    Object.is(a.swapTotal, b.swapTotal) &&
+    Object.is(a.diskUsed, b.diskUsed) &&
+    Object.is(a.diskTotal, b.diskTotal) &&
+    Object.is(a.diskPct, b.diskPct) &&
+    Object.is(a.netUp, b.netUp) &&
+    Object.is(a.netDown, b.netDown) &&
+    Object.is(a.trafficUp, b.trafficUp) &&
+    Object.is(a.trafficDown, b.trafficDown) &&
+    Object.is(a.uptime, b.uptime) &&
+    Object.is(a.load1, b.load1) &&
+    Object.is(a.load5, b.load5) &&
+    Object.is(a.load15, b.load15) &&
+    Object.is(a.process, b.process) &&
+    Object.is(a.connectionsTcp, b.connectionsTcp) &&
+    Object.is(a.connectionsUdp, b.connectionsUdp) &&
+    Object.is(a.updatedAt, b.updatedAt)
   );
 }
 
-function shallowEqualNodeInfo(a: NodeInfo, b: NodeInfo) {
+export function shallowEqualNodeInfo(a: NodeInfo, b: NodeInfo) {
   return (
-    a.uuid === b.uuid &&
-    a.name === b.name &&
-    a.group === b.group &&
-    a.region === b.region &&
-    a.hidden === b.hidden &&
-    a.ipv4 === b.ipv4 &&
-    a.ipv6 === b.ipv6 &&
-    a.cpu_name === b.cpu_name &&
-    a.cpu_cores === b.cpu_cores &&
-    a.arch === b.arch &&
-    a.virtualization === b.virtualization &&
-    a.os === b.os &&
-    a.kernel_version === b.kernel_version &&
-    a.gpu_name === b.gpu_name &&
-    a.mem_total === b.mem_total &&
-    a.swap_total === b.swap_total &&
-    a.disk_total === b.disk_total &&
-    a.weight === b.weight &&
-    a.price === b.price &&
-    a.billing_cycle === b.billing_cycle &&
-    a.auto_renewal === b.auto_renewal &&
-    a.currency === b.currency &&
-    a.expired_at === b.expired_at &&
-    a.tags === b.tags &&
-    a.public_remark === b.public_remark &&
+    Object.is(a.uuid, b.uuid) &&
+    Object.is(a.name, b.name) &&
+    Object.is(a.group, b.group) &&
+    Object.is(a.region, b.region) &&
+    Object.is(a.hidden, b.hidden) &&
+    Object.is(a.ipv4, b.ipv4) &&
+    Object.is(a.ipv6, b.ipv6) &&
+    Object.is(a.cpu_name, b.cpu_name) &&
+    Object.is(a.cpu_cores, b.cpu_cores) &&
+    Object.is(a.arch, b.arch) &&
+    Object.is(a.virtualization, b.virtualization) &&
+    Object.is(a.os, b.os) &&
+    Object.is(a.kernel_version, b.kernel_version) &&
+    Object.is(a.gpu_name, b.gpu_name) &&
+    Object.is(a.mem_total, b.mem_total) &&
+    Object.is(a.swap_total, b.swap_total) &&
+    Object.is(a.disk_total, b.disk_total) &&
+    Object.is(a.weight, b.weight) &&
+    Object.is(a.price, b.price) &&
+    Object.is(a.billing_cycle, b.billing_cycle) &&
+    Object.is(a.auto_renewal, b.auto_renewal) &&
+    Object.is(a.currency, b.currency) &&
+    Object.is(a.expired_at, b.expired_at) &&
+    Object.is(a.tags, b.tags) &&
+    Object.is(a.public_remark, b.public_remark) &&
     Object.is(a.billable_traffic_used, b.billable_traffic_used) &&
-    a.traffic_period_end === b.traffic_period_end &&
-    a.traffic_limit === b.traffic_limit &&
-    a.traffic_limit_type === b.traffic_limit_type &&
-    a.created_at === b.created_at
+    Object.is(a.traffic_period_end, b.traffic_period_end) &&
+    Object.is(a.traffic_limit, b.traffic_limit) &&
+    Object.is(a.traffic_limit_type, b.traffic_limit_type) &&
+    Object.is(a.created_at, b.created_at)
     // updated_at 是未展示的心跳字段，不应触发整个节点列表重渲染。
   );
 }
@@ -830,57 +828,33 @@ async function refreshLatestStatus() {
   }
 }
 
-// 连续失败时按 tick 数指数退避(2s→4s→…→30s),避免后端不可用期间每 2 秒打注定失败的请求。
-const BOOTSTRAP_MAX_BACKOFF_TICKS = 15;
-let bootstrapBackoffTicks = 0;
-let bootstrapSkipTicks = 0;
-
-async function bootstrap() {
-  try {
-    await syncNodeInfo();
-    await refreshLatestStatus();
-    bootstrapBackoffTicks = 0;
-    bootstrapSkipTicks = 0;
-  } catch {
-    bootstrapBackoffTicks = Math.min(
-      bootstrapBackoffTicks > 0 ? bootstrapBackoffTicks * 2 : 1,
-      BOOTSTRAP_MAX_BACKOFF_TICKS,
-    );
-    bootstrapSkipTicks = bootstrapBackoffTicks;
-  }
-}
-
 let releasePayload: (() => void) | null = null;
 let started = false;
 let retainCount = 0;
 let stopTimer: number | null = null;
-let liveStatusTimer: number | null = null;
-let nodeInfoTimer: number | null = null;
+let syncPending = false;
+let syncRunning = false;
+
+// Bridge snapshots are immutable and authoritative. Serialize bursts so the
+// latest snapshot is not lost behind an in-flight metadata/status refresh.
+async function syncHostSnapshot() {
+  syncPending = true;
+  if (syncRunning) return;
+  syncRunning = true;
+  try {
+    while (started && syncPending) {
+      syncPending = false;
+      try { await syncNodeInfo(); await refreshLatestStatus(); } catch { /* Next host update retries. */ }
+    }
+  } finally { syncRunning = false; }
+}
 
 function ensureStarted() {
   if (started) return;
   started = true;
-
-  releasePayload = subscribePayload(() => {
-    void syncNodeInfo().then(() => refreshLatestStatus()).catch(() => {});
-  });
+  releasePayload = subscribePayload(() => { void syncHostSnapshot(); });
   ensureScrollTrackingStarted();
-  void bootstrap();
-  // 实时指标与节点信息使用独立轮询节奏。
-  liveStatusTimer = window.setInterval(() => {
-    if (!hydrated) {
-      if (bootstrapSkipTicks > 0) {
-        bootstrapSkipTicks -= 1;
-        return;
-      }
-      void bootstrap();
-      return;
-    }
-    void refreshLatestStatus();
-  }, LIVE_STATUS_REFRESH_INTERVAL_MS);
-  nodeInfoTimer = window.setInterval(() => {
-    void syncNodeInfo().catch(() => {});
-  }, NODE_INFO_REFRESH_INTERVAL_MS);
+  void syncHostSnapshot();
 }
 
 export function retainStore() {
@@ -915,14 +889,6 @@ function stopStore() {
   liveStatusController = null;
   nodeInfoController?.abort();
   nodeInfoController = null;
-  if (liveStatusTimer != null) {
-    window.clearInterval(liveStatusTimer);
-    liveStatusTimer = null;
-  }
-  if (nodeInfoTimer != null) {
-    window.clearInterval(nodeInfoTimer);
-    nodeInfoTimer = null;
-  }
   if (scrollIdleTimer != null) {
     window.clearTimeout(scrollIdleTimer);
     scrollIdleTimer = null;
@@ -936,8 +902,7 @@ function stopStore() {
   hydrated = false;
   nodeInfoError = false;
   started = false;
-  bootstrapBackoffTicks = 0;
-  bootstrapSkipTicks = 0;
+  syncPending = false;
 }
 
 function subscribeSet(listeners: Set<Listener>, listener: Listener): () => void {

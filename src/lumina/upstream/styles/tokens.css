@@ -100,10 +100,10 @@
   --surface-elev: #000000;
   --surface-sunken: #000000;
 
-  --border: #292929;
-  --border-subtle: rgba(255, 255, 255, 0.10);
-  --border-strong: #454545;
-  --hairline: rgba(255, 255, 255, 0.10);
+  --border: #2d333b;
+  --border-subtle: rgba(45, 51, 59, 0.72);
+  --border-strong: #555b64;
+  --hairline: rgba(45, 51, 59, 0.72);
 
   --text-primary: #d1d7e0;
   --text-secondary: #b7bdc8;

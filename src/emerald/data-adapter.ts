@@ -22,7 +22,7 @@ export function payloadToNodes(payload: ProbePayload): NodeData[] {
       weight: index, price: measurement(server.renewal_price ?? server.renewal_price_cny),
       billing_cycle: server.renewal_cycle ? billingDays[server.renewal_cycle] : NaN,
       auto_renewal: false, currency: server.renewal_price !== undefined ? (server.renewal_currency || 'CNY') : 'CNY',
-      expired_at: server.expires_at || '', group: server.region || server.region_name || server.region_country || '',
+      expired_at: server.expires_at || '', group: '',
       tags: '', hidden: false, billable_traffic_used: measurement(billableTraffic(server)), traffic_limit: measurement(server.traffic_limit),
       traffic_limit_type: server.traffic_stats_mode === 'upload' ? 'up' : server.traffic_stats_mode === 'download' ? 'down' : server.traffic_stats_mode === 'max' ? 'max' : 'sum',
       created_at: '', updated_at: '', online: server.online, time: '',

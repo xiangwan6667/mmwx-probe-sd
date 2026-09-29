@@ -28,22 +28,20 @@ const authRoutes = new Set([
   "/api/login/passkey/finish",
 ]);
 
-function upstreamURL(request: Request, env: Env): URL | null {
-  const incoming = new URL(request.url);
-  const path = routes[incoming.pathname];
-  if (!path) return null;
-
-  const origin = new URL(env.MMWX_ORIGIN);
-  if (
-    origin.protocol !== "https:" &&
-    origin.hostname !== "127.0.0.1" &&
-    origin.hostname !== "localhost"
-  ) {
-    throw new Error("MMWX_ORIGIN must use HTTPS");
+function upstreamOrigin(env: Env): URL | null {
+  try {
+    const origin = new URL(env.MMWX_ORIGIN);
+    const loopback = ["127.0.0.1", "localhost", "[::1]"].includes(origin.hostname);
+    if (origin.username || origin.password ||
+      (origin.protocol !== "https:" && !(origin.protocol === "http:" && loopback))) return null;
+    return new URL(origin.origin);
+  } catch {
+    return null;
   }
-  origin.pathname = path;
-  origin.search = incoming.search;
-  return origin;
+}
+
+function badGateway(): Response {
+  return new Response("Bad upstream response", { status: 502, headers: { "Cache-Control": "no-store" } });
 }
 
 /**
@@ -75,24 +73,34 @@ async function proxyAuth(
   if (request.method !== "POST")
     return new Response("Method not allowed", { status: 405 });
 
-  const origin = new URL(env.MMWX_ORIGIN);
+  const origin = upstreamOrigin(env);
+  if (!origin) return badGateway();
   origin.pathname = incoming.pathname;
   origin.search = incoming.search;
 
   const headers = new Headers(request.headers);
   headers.delete("cookie");
+  headers.delete("authorization");
+  headers.delete("X-MMwx-Probe-Token");
   // 主控用 X-Forwarded-Host / -Proto 推导 WebAuthn 的 RP 与 origin。少了 Proto,
   // 主控会认为不是 HTTPS,直接判成非 secure context 并拒发 challenge。
   headers.set("X-Forwarded-Host", incoming.host);
   headers.set("X-Forwarded-Proto", "https");
 
-  const upstream = await fetch(
-    new Request(origin.toString(), {
-      method: "POST",
-      headers,
-      body: request.body,
-    }),
-  );
+  let upstream: Response;
+  try {
+    upstream = await fetch(
+      new Request(origin.toString(), {
+        method: "POST",
+        headers,
+        body: request.body,
+        redirect: "manual",
+      }),
+    );
+  } catch {
+    return badGateway();
+  }
+  if (upstream.status >= 300 && upstream.status < 400) return badGateway();
   const responseHeaders = new Headers(upstream.headers);
   responseHeaders.set("Cache-Control", "no-store");
   responseHeaders.set("X-Content-Type-Options", "nosniff");
@@ -105,12 +113,16 @@ async function proxyAuth(
     try {
       const payload = (await upstream.json()) as Record<string, unknown>;
       payload.master_origin = env.MMWX_ORIGIN;
+      for (const header of ["content-length", "content-encoding", "etag", "content-md5", "digest", "content-digest", "repr-digest"]) {
+        responseHeaders.delete(header);
+      }
+      responseHeaders.set("Content-Type", "application/json; charset=utf-8");
       return new Response(JSON.stringify(payload), {
         status: upstream.status,
         headers: responseHeaders,
       });
     } catch {
-      return new Response("Bad upstream response", { status: 502 });
+      return badGateway();
     }
   }
 
@@ -158,8 +170,10 @@ export default {
       return new Response("Not found", { status: 404, headers: { "Cache-Control": "no-store" } });
     }
     if (incoming.pathname === "/login") {
+      const origin = upstreamOrigin(env);
+      if (!origin) return badGateway();
       return Response.redirect(
-        new URL("/login", env.MMWX_ORIGIN).toString(),
+        new URL("/login", origin).toString(),
         302,
       );
     }
@@ -167,8 +181,8 @@ export default {
       return proxyAuth(request, incoming, env);
     }
 
-    const target = upstreamURL(request, env);
-    if (!target) return env.ASSETS.fetch(request);
+    const path = routes[incoming.pathname];
+    if (!path) return env.ASSETS.fetch(request);
     if (request.method !== "GET")
       return new Response("Method not allowed", { status: 405 });
     if (!isProbeRequestAllowed(request, incoming)) {
@@ -179,6 +193,10 @@ export default {
         status: 503,
       });
     }
+    const target = upstreamOrigin(env);
+    if (!target) return badGateway();
+    target.pathname = path;
+    target.search = incoming.search;
 
     const headers = new Headers(request.headers);
     headers.delete("cookie");
@@ -186,9 +204,12 @@ export default {
     headers.set("X-Forwarded-Host", new URL(request.url).host);
     headers.set("X-MMwx-Probe-Token", env.PROBE_TOKEN);
 
-    const upstream = await fetch(
-      new Request(target, { method: "GET", headers, redirect: "manual" }),
-    );
+    let upstream: Response;
+    try {
+      upstream = await fetch(new Request(target, { method: "GET", headers, redirect: "manual" }));
+    } catch {
+      return badGateway();
+    }
     // WebSocket 的 101 Response 必须原样返回，不能重新构造 body/headers。
     if (upstream.status === 101 || upstream.webSocket) return upstream;
 

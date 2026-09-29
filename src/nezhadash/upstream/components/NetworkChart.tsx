@@ -1,5 +1,6 @@
 // MMWX adaptation (2026-09-29): host data/theme/router integration; see licenses/NezhaDash-NOTICE.md.
 import { getProbe } from "../../bridge";
+import { monitorDictionary } from "../../monitor-dictionary";
 import { probeRangeOptions } from "../../../probe-ranges";
 "use client";
 
@@ -210,7 +211,7 @@ export function NetworkChart({
 				label: key,
 			};
 			return acc;
-		}, {} as ChartConfig),
+		}, monitorDictionary<ChartConfig[string]>()),
 	} satisfies ChartConfig;
 
 	return (
@@ -818,7 +819,7 @@ export const NetworkChartClient = React.memo(function NetworkChart({
 });
 
 const transformData = (data: NezhaMonitor[]) => {
-	const monitorData: ServerMonitorChart = {};
+	const monitorData = monitorDictionary<ServerMonitorChart[string]>();
 
 	data.forEach((item) => {
 		const monitorName = item.monitor_name;
@@ -862,7 +863,7 @@ const formatData = (rawData: NezhaMonitor[]) => {
 
 		allTimeArray.forEach((time) => {
 			if (!result[time]) {
-				result[time] = { created_at: time };
+				result[time] = Object.assign(monitorDictionary<number | null>(), { created_at: time });
 			}
 
 			const timeIndex = created_at.indexOf(time);
