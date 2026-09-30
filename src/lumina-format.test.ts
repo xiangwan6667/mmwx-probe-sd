@@ -3,6 +3,27 @@ import test from 'node:test';
 import { formatBytes, formatFixed, formatByteRateLabel, formatTrafficRateLabel } from './lumina/upstream/utils/format';
 import { computeTrafficUsed, resolveTrafficUsage } from './lumina/upstream/utils/traffic';
 
+test('Lumina overview displays billed usage as the main total without depending on raw directions',async()=>{
+ const {createElement}=await import('react'); const {renderToStaticMarkup}=await import('react-dom/server');
+ const {MemoryRouter}=await import('react-router-dom');
+ const {HomeOverviewCards}=await import('./lumina/upstream/components/node/NodeGrid');
+ const render=(billableTraffic:number)=>renderToStaticMarkup(createElement(MemoryRouter,null,createElement(HomeOverviewCards,{
+  overview:{totalNodes:2,onlineNodes:1,offlineNodes:1,billableTraffic,trafficLimit:42.48*1024**4,remainingTraffic:40.55*1024**4,netUp:0,netDown:0},
+  costSummary:null,costLoading:false,showOverviewRatings:false,showTrafficRating:false,showBandwidthRating:false,showAssetRating:false,
+  trafficRatingLabels:'',bandwidthRatingLabels:'',assetRatingLabels:'',showCosts:false,showDetailButton:false,renewalNodes:[],dense:false,onWarmTraffic:()=>{},
+ })));
+ {
+  const html=render(1.93*1024**4);
+  const card=html.match(/<article[^>]*data-metric="traffic"[\s\S]*?<\/article>/)?.[0];
+  assert.ok(card,'usage remains visible when the master supplies billed usage');
+  assert.match(card, /overview-card-value">1\.93<span/);
+  assert.doesNotMatch(card, /配额|剩余/);
+  assert.doesNotMatch(card, /周期上行|周期下行|—/);
+ }
+ assert.match(render(0), /overview-card-value">0<span/);
+ assert.doesNotMatch(render(NaN), /data-metric="traffic"/);
+});
+
 test('Lumina distinguishes missing measurements from real zero', () => {
   for (const missing of [NaN, Infinity, -Infinity]) {
     assert.equal(formatBytes(missing), '—');

@@ -11,6 +11,7 @@ import { useNodesStore } from '@emerald/stores/nodes'
 import * as financeHelper from '@emerald/utils/financeHelper'
 import { formatBytesPerSecondSplit as originalSpeedSplit, formatBytesSplit as originalBytesSplit } from '@emerald/utils/helper'
 import { sumNodeMetric as sumMetric } from '@emerald/utils/nodeHelpers'
+import { summarizeBillingTraffic } from '../../../traffic-display'
 
 const props = defineProps<{
   nodes?: NodeData[]
@@ -59,12 +60,9 @@ const totalSpeed = computed(() => {
   const onlineNodes = summaryNodes.value.filter(node => node.online)
   return { up: sumMetric(onlineNodes, 'net_out'), down: sumMetric(onlineNodes, 'net_in') }
 })
-const totalTraffic = computed(() => ({ up: sumMetric(summaryNodes.value, 'period_traffic_up'), down: sumMetric(summaryNodes.value, 'period_traffic_down') }))
-const formattedBillableTraffic = computed(() => formatBytesSplit(sumMetric(summaryNodes.value, 'billable_traffic_used'), appStore.byteDecimals))
-
-const formattedTrafficUp = computed(() => formatBytesSplit(totalTraffic.value.up, appStore.byteDecimals))
-const formattedTrafficDown = computed(() => formatBytesSplit(totalTraffic.value.down, appStore.byteDecimals))
-const totalTrafficTooltip = computed(() => formatBytesSplit(totalTraffic.value.up + totalTraffic.value.down, appStore.byteDecimals))
+const billingTraffic = computed(() => summarizeBillingTraffic(summaryNodes.value))
+const formattedBillableTraffic = computed(() => formatBytesSplit(billingTraffic.value.used, appStore.byteDecimals))
+const trafficTooltip = computed(() => `已用流量 ${formattedBillableTraffic.value.value} ${formattedBillableTraffic.value.unit}`)
 
 const formattedSpeedUp = computed(() => formatBytesPerSecondSplit(totalSpeed.value.up, appStore.byteDecimals))
 const formattedSpeedDown = computed(() => formatBytesPerSecondSplit(totalSpeed.value.down, appStore.byteDecimals))
@@ -278,7 +276,7 @@ onMounted(() => {
           </div>
         </CardX>
       </div>
-      <CardX v-if="Number.isFinite(totalTraffic.up) && Number.isFinite(totalTraffic.down)"
+      <CardX v-if="Number.isFinite(billingTraffic.used)"
         hoverable
         class="group h-full border-none rounded-md transition-all"
         :class="[
@@ -289,7 +287,7 @@ onMounted(() => {
       >
         <div class="flex h-full flex-col justify-between gap-1">
           <div class="flex items-start justify-between">
-            <span class="text-xs font-medium tracking-wider text-muted-foreground">周期流量</span>
+            <span class="text-xs font-medium tracking-wider text-muted-foreground">已用流量</span>
             <Icon
               icon="tabler:download" :width="20" :height="20"
               class="text-slate-500/20 group-hover:text-slate-500 transition-colors"
@@ -297,7 +295,7 @@ onMounted(() => {
           </div>
           <DataTooltip
             as="span" placement="top"
-            :content="`周期原始上行 ↑ ${formattedTrafficUp.value} ${formattedTrafficUp.unit}\n周期原始下行 ↓ ${formattedTrafficDown.value} ${formattedTrafficDown.unit}${formattedBillableTraffic.value !== '—' ? '\n计费用量 ' + formattedBillableTraffic.value + ' ' + formattedBillableTraffic.unit : ''}\n主数字为原始上行 + 下行；计费用量按主控规则及调整计算`"
+            :content="trafficTooltip"
             class="min-w-0" content-class="whitespace-pre px-2 py-1 left-0 -translate-x-0 leading-normal"
           >
             <Transition v-bind="metricSwitchTransitionProps">
@@ -306,10 +304,10 @@ onMounted(() => {
                 :style="getMetricSwitchStyle(3)"
               >
                 <span class="inline-block text-md md:text-2xl font-bold leading-none tracking-tight">
-                  {{ totalTrafficTooltip.value }}
+                  {{ formattedBillableTraffic.value }}
                 </span>
                 <span class="inline-block text-[11px] md:text-xs font-medium text-muted-foreground">
-                  {{ totalTrafficTooltip.unit }}
+                  {{ formattedBillableTraffic.unit }}
                 </span>
               </div>
             </Transition>

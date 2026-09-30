@@ -1,2107 +1,835 @@
-// MMWX adaptation (2026-09-29): host data/theme/router integration; see licenses/NezhaDash-NOTICE.md.
-import { joinMetricSeries } from "../../measurements";
-import { getProbe } from "../../bridge";
-import { probeRangeOptions } from "../../../probe-ranges";
-import { useQuery } from "@tanstack/react-query";
-import { useEffect, useMemo, useRef, useState } from "react";
-import { useTranslation } from "react-i18next";
-import {
-	Area,
-	AreaChart,
-	CartesianGrid,
-	Line,
-	LineChart,
-	XAxis,
-	YAxis,
-} from "recharts";
-import { Card, CardContent } from "@/components/ui/card";
-import {
-	type ChartConfig,
-	ChartContainer,
-	ChartTooltip,
-	ChartTooltipContent,
-} from "@/components/ui/chart";
-import {
-	Tooltip,
-	TooltipContent,
-	TooltipProvider,
-	TooltipTrigger,
-} from "@/components/ui/tooltip";
-import { useActiveIndicator } from "@/hooks/use-active-indicator";
-import { useWebSocketContext } from "@/hooks/use-websocket-context";
-import { formatBytes } from "@/lib/format";
-import {
-	fetchLoginUser,
-	fetchServerMetrics,
-	fetchSetting,
-} from "@/lib/nezha-api";
-import {
-	cn,
-	formatNezhaInfo,
-	formatRelativeTime,
-	formatTime,
-} from "@/lib/utils";
-import type {
-	MetricPeriod,
-	NezhaServer,
-	NezhaWebsocketResponse,
-} from "@/types/nezha-api";
+// MMWX adaptation (2026-09-30): host integration; see licenses/NezhaDash-NOTICE.md.
+import { useQuery } from "@tanstack/react-query"
+import { resourceHistory } from "../../resource-history"
+import { getProbe } from "../../bridge"
+import { probeRangeOptions } from "../../../probe-ranges"
+import type { MetricPeriod } from "@/types/nezha-api"
+import { Card, CardContent } from "@/components/ui/card"
+import { ChartConfig, ChartContainer } from "@/components/ui/chart"
+import { useWebSocketContext } from "@/hooks/use-websocket-context"
+import { formatBytes } from "@/lib/format"
+import { cn, formatNezhaInfo, formatRelativeTime } from "@/lib/utils"
+import { NezhaServer, NezhaWebsocketResponse } from "@/types/nezha-api"
+import { useEffect, useRef, useState } from "react"
+import { useTranslation } from "react-i18next"
+import { Area, AreaChart, CartesianGrid, Line, LineChart, XAxis, YAxis } from "recharts"
 
-import ChartSkeleton from "./loading/ChartSkeleton";
-import { ServerDetailChartLoading } from "./loading/ServerDetailLoading";
-import AnimatedCircularProgressBar from "./ui/animated-circular-progress-bar";
-
-type ChartPeriod = "realtime" | MetricPeriod;
-
-type gpuChartData = {
-	timeStamp: string;
-	gpu: number;
-};
+import { ServerDetailChartLoading } from "./loading/ServerDetailLoading"
+import AnimatedCircularProgressBar from "./ui/animated-circular-progress-bar"
 
 type cpuChartData = {
-	timeStamp: string;
-	cpu: number;
-};
+  timeStamp: string
+  cpu: number
+}
 
 type processChartData = {
-	timeStamp: string;
-	process: number;
-};
+  timeStamp: string
+  process: number
+}
 
 type diskChartData = {
-	timeStamp: string;
-	disk: number;
-};
+  timeStamp: string
+  disk: number
+}
 
 type memChartData = {
-	timeStamp: string;
-	mem: number;
-	swap: number;
-};
+  timeStamp: string
+  mem: number
+  swap: number
+}
 
 type networkChartData = {
-	timeStamp: string;
-	upload: number;
-	download: number;
-};
+  timeStamp: string
+  upload: number
+  download: number
+}
 
 type connectChartData = {
-	timeStamp: string;
-	tcp: number;
-	udp: number;
-};
-
-const MIN_HISTORY_LOADING_MS = 300;
-const sleep = (ms: number) =>
-	new Promise<void>((resolve) => {
-		setTimeout(resolve, ms);
-	});
-
-function PeriodSelector({
-	selectedPeriod,
-	onPeriodChange,
-	isLogin,
-	isTsdbEnabled,
-}: {
-	selectedPeriod: ChartPeriod;
-	onPeriodChange: (period: ChartPeriod) => void;
-	isLogin: boolean;
-	isTsdbEnabled: boolean;
-}) {
-	const { t } = useTranslation();
-
-	const historyDays = getProbe().history_days;
-	const periods = useMemo<{ value: ChartPeriod; label: string }[]>(() => [
-		{ value: "realtime", label: t("serverDetailChart.realtime") },
-		...probeRangeOptions(historyDays).map(option => ({ value: option.key as MetricPeriod, label: option.label })),
-	], [t, historyDays]);
-	const periodValues = useMemo(
-		() => periods.map((period) => period.value),
-		[periods],
-	);
-	const { containerRef, enableIndicatorAnimation, indicator, setItemRef } =
-		useActiveIndicator(periodValues, selectedPeriod);
-
-	return (
-		<TooltipProvider delayDuration={120}>
-			<div
-				ref={containerRef}
-				className="nezha-glass-control nezha-segmented relative flex gap-0.5 mb-3 flex-wrap sm:-mt-5 -mt-3 p-0.5 bg-muted dark:bg-muted rounded-full w-fit"
-			>
-				{indicator && (
-					<div
-						className="nezha-segmented-indicator active-indicator-fade-in pointer-events-none absolute left-0 top-0 z-10 bg-white dark:bg-stone-700 rounded-full"
-						style={{
-							height: indicator.height,
-							transform: `translate(${indicator.x}px, ${indicator.y}px)`,
-							transition: indicator.shouldAnimate
-								? "transform 0.5s var(--timing), width 0.5s var(--timing), height 0.5s var(--timing)"
-								: "none",
-							width: indicator.width,
-						}}
-					/>
-				)}
-				{periods.map((period, index) => {
-					const isHistoryPeriod = period.value !== "realtime";
-					const isLockedByTsdb = !isTsdbEnabled && isHistoryPeriod;
-					// Only realtime and 1d are available for non-logged-in users
-					const isLockedByLogin = false; // Public probe history follows history_days, not Nezha authentication.
-					const isLocked = isLockedByTsdb || isLockedByLogin;
-
-					const periodItem = (
-						<div
-							ref={setItemRef(index)}
-							onClick={() => {
-								if (!isLocked) {
-									if (selectedPeriod !== period.value) {
-										enableIndicatorAnimation();
-									}
-									onPeriodChange(period.value);
-								}
-							}}
-							className={cn(
-								"relative cursor-pointer rounded-full px-3 py-1.5 text-xs font-medium transition-colors duration-300",
-								selectedPeriod === period.value
-									? "text-foreground"
-									: "text-muted-foreground hover:text-foreground",
-								isLocked && "cursor-not-allowed opacity-40 grayscale",
-							)}
-						>
-							<div className="relative z-20 flex items-center gap-1.5">
-								{period.value === "realtime" && (
-									<span className="inline-flex rounded-full h-1.5 w-1.5 bg-emerald-500 dark:bg-emerald-400"></span>
-								)}
-								{period.label}
-							</div>
-						</div>
-					);
-
-					if (isLockedByTsdb || isLockedByLogin) {
-						return (
-							<Tooltip key={period.value}>
-								<TooltipTrigger asChild>{periodItem}</TooltipTrigger>
-								<TooltipContent>
-									{isLockedByTsdb
-										? t(
-												"serverDetailChart.tsdbRequired",
-												"Enable TSDB to use historical data",
-											)
-										: t(
-												"serverDetailChart.loginRequired",
-												"Please login to view",
-											)}
-								</TooltipContent>
-							</Tooltip>
-						);
-					}
-
-					return <div key={period.value}>{periodItem}</div>;
-				})}
-			</div>
-		</TooltipProvider>
-	);
+  timeStamp: string
+  tcp: number
+  udp: number
 }
 
-export default function ServerDetailChart({
-	server_id,
-}: {
-	server_id: string;
-}) {
-	const { lastData, connected, messageHistory } = useWebSocketContext();
-	const [selectedPeriod, setSelectedPeriod] = useState<ChartPeriod>("realtime");
+export default function ServerDetailChart({ server_id }: { server_id: string }) {
+ const [range, setRange] = useState<string>("realtime")
+ const {data: savedHistory, isLoading, error} = useQuery({queryKey:["bitjebe-resource-history",server_id,range],queryFn:()=>resourceHistory(Number(server_id),range as MetricPeriod),enabled:range !== "realtime"})
+ return <div>
+ <select aria-label="资源图表时间范围" value={range} onChange={event=>setRange(event.target.value)} className="mb-3 rounded-full bg-muted px-3 py-1 text-xs"><option value="realtime">实时</option>{probeRangeOptions(getProbe().history_days).map(option=><option key={option.key} value={option.key}>{option.label}</option>)}</select>
+ {error ? <p className="text-sm text-muted-foreground">历史数据暂不可用</p> : isLoading ? <ServerDetailChartLoading /> : <ResourceCharts key={range} server_id={server_id} savedHistory={range === "realtime" ? undefined : savedHistory || []} />}
+ </div>
+}
+function ResourceCharts({server_id,savedHistory}:{server_id:string;savedHistory?:{data:string}[]}) {
+  const { lastMessage, connected, messageHistory: liveHistory } = useWebSocketContext()
+ const messageHistory = savedHistory ?? liveHistory
+ const chartMessage = savedHistory ? savedHistory[0] : lastMessage
 
-	// Check if user is logged in
-	const { data: userData, isError: isLoginError } = useQuery({
-		queryKey: ["login-user"],
-		queryFn: () => fetchLoginUser(),
-		refetchOnMount: false,
-		refetchOnWindowFocus: true,
-		refetchIntervalInBackground: true,
-		refetchInterval: 1000 * 30,
-		retry: 0,
-	});
-	const isLogin = isLoginError
-		? false
-		: userData
-			? !!userData?.data?.id && !!document.cookie
-			: false;
+  if (!connected && !lastMessage) {
+    return <ServerDetailChartLoading />
+  }
 
-	const { data: settingData } = useQuery({
-		queryKey: ["setting"],
-		queryFn: () => fetchSetting(),
-		refetchOnMount: true,
-		refetchOnWindowFocus: true,
-	});
-	const isTsdbEnabled = settingData?.data?.tsdb_enabled ?? true;
+  const nezhaWsData = chartMessage ? (JSON.parse(chartMessage.data) as NezhaWebsocketResponse) : null
 
-	useEffect(() => {
-		if (!isTsdbEnabled && selectedPeriod !== "realtime") {
-			setSelectedPeriod("realtime");
-		}
-	}, [isTsdbEnabled, selectedPeriod]);
+  if (!nezhaWsData) {
+    return <ServerDetailChartLoading />
+  }
 
-	useEffect(() => {
-		if (selectedPeriod !== "realtime" && !probeRangeOptions(getProbe().history_days).some(option => option.key === selectedPeriod)) setSelectedPeriod("1h");
-	}, [selectedPeriod, lastData]);
+  const server = nezhaWsData.servers.find((s) => s.id === Number(server_id))
+  if (server && savedHistory) {
+    for (const row of savedHistory) {
+      const sample = (JSON.parse(row.data) as NezhaWebsocketResponse).servers.find(item => item.id === server.id)
+      if (!sample) continue
+      for (const key of Object.keys(sample.state) as (keyof typeof sample.state)[]) {
+        if (typeof server.state[key] !== "number" && typeof sample.state[key] === "number" && Number.isFinite(sample.state[key])) (server.state as unknown as Record<string, unknown>)[key] = sample.state[key]
+      }
+    }
+  }
 
-	if (!connected && !lastData) {
-		return <ServerDetailChartLoading />;
-	}
+  if (!server) {
+    return <ServerDetailChartLoading />
+  }
 
-	const nezhaWsData = lastData;
-
-	if (!nezhaWsData) {
-		return <ServerDetailChartLoading />;
-	}
-
-	const server = nezhaWsData.servers.find((s) => s.id === Number(server_id));
-
-	if (!server) {
-		return <ServerDetailChartLoading />;
-	}
-
-	const probe = getProbe().servers?.[Number(server_id)];
-	const gpuStats = server.state.gpu || [];
-	const gpuList = server.host.gpu || [];
-	// Newer agents also report memory per card, index-aligned with the above.
-	const gpuDetails = server.state.gpus || [];
-
-	return (
-		<section className="flex flex-col">
-			<PeriodSelector
-				selectedPeriod={selectedPeriod}
-				onPeriodChange={setSelectedPeriod}
-				isLogin={isLogin}
-				isTsdbEnabled={isTsdbEnabled}
-			/>
-			<section className="grid md:grid-cols-2 lg:grid-cols-3 grid-cols-1 gap-3 server-charts">
-				{(selectedPeriod !== "realtime" || Number.isFinite(probe?.cpu_pct)) && (
-				<CpuChart
-					now={nezhaWsData.now}
-					data={server}
-					messageHistory={messageHistory}
-					period={selectedPeriod}
-				/>
-				)}
-				{gpuStats.length >= 1 && gpuList.length === gpuStats.length
-					? gpuList.map((gpu, index) => (
-							<GpuChart
-								index={index}
-								id={server.id}
-								now={nezhaWsData.now}
-								gpuStat={gpuStats[index]}
-								gpuName={gpu}
-								gpuMemory={gpuDetails[index]}
-								messageHistory={messageHistory}
-								period={selectedPeriod}
-								key={index}
-							/>
-						))
-					: gpuStats.length > 0
-						? gpuStats.map((gpu, index) => (
-								<GpuChart
-									index={index}
-									id={server.id}
-									now={nezhaWsData.now}
-									gpuStat={gpu}
-									gpuName={`#${index + 1}`}
-									gpuMemory={gpuDetails[index]}
-									messageHistory={messageHistory}
-									period={selectedPeriod}
-									key={index}
-								/>
-							))
-						: null}
-				{((probe?.mem_total ?? 0) > 0 && (selectedPeriod !== "realtime" || Number.isFinite(probe?.mem_used))) && (
-				<MemChart
-					now={nezhaWsData.now}
-					data={server}
-					messageHistory={messageHistory}
-					period={selectedPeriod}
-				/>
-				)}
-				{((probe?.disk_total ?? 0) > 0 && (selectedPeriod !== "realtime" || Number.isFinite(probe?.disk_used))) && (
-				<DiskChart
-					now={nezhaWsData.now}
-					data={server}
-					messageHistory={messageHistory}
-					period={selectedPeriod}
-				/>
-				)}
-
-				{(selectedPeriod !== "realtime" || Number.isFinite(probe?.upload_speed) || Number.isFinite(probe?.download_speed)) && (
-				<NetworkChart
-					now={nezhaWsData.now}
-					data={server}
-					messageHistory={messageHistory}
-					period={selectedPeriod}
-				/>
-				)}
-				{(selectedPeriod !== "realtime" || Number.isFinite(probe?.tcp_connections) || Number.isFinite(probe?.udp_connections)) && (
-				<ConnectChart
-					now={nezhaWsData.now}
-					data={server}
-					messageHistory={messageHistory}
-					period={selectedPeriod}
-				/>
-				)}
-			</section>
-		</section>
-	);
+  return (
+    <section className="grid md:grid-cols-2 lg:grid-cols-3 grid-cols-1 gap-3 server-charts">
+      {Number.isFinite(server.state.cpu) && <CpuChart now={nezhaWsData.now} data={server} messageHistory={messageHistory} />}
+      {Number.isFinite(server.state.process_count) && <ProcessChart now={nezhaWsData.now} data={server} messageHistory={messageHistory} />}
+      {Number.isFinite(server.state.disk_used) && Number.isFinite(server.host.disk_total) && server.host.disk_total > 0 && <DiskChart now={nezhaWsData.now} data={server} messageHistory={messageHistory} />}
+      {Number.isFinite(server.state.mem_used) && Number.isFinite(server.host.mem_total) && server.host.mem_total > 0 && <MemChart now={nezhaWsData.now} data={server} messageHistory={messageHistory} />}
+      {(Number.isFinite(server.state.net_out_speed) || Number.isFinite(server.state.net_in_speed)) && <NetworkChart now={nezhaWsData.now} data={server} messageHistory={messageHistory} />}
+      {(Number.isFinite(server.state.tcp_conn_count) || Number.isFinite(server.state.udp_conn_count)) && <ConnectChart now={nezhaWsData.now} data={server} messageHistory={messageHistory} />}
+    </section>
+  )
 }
 
-function useHistoricalData<T>(
-	serverId: number,
-	metricName: string,
-	period: ChartPeriod,
-	transformData: (timestamp: number, value: number) => T,
-) {
-	const [historicalData, setHistoricalData] = useState<T[]>([]);
-	const [isLoading, setIsLoading] = useState(false);
-	const [displayData, setDisplayData] = useState<T[]>([]);
-	const [loadedPeriod, setLoadedPeriod] = useState<ChartPeriod>("realtime");
+function CpuChart({ now, data, messageHistory }: { now: number; data: NezhaServer; messageHistory: { data: string }[] }) {
+  const [cpuChartData, setCpuChartData] = useState<cpuChartData[]>([])
+  const hasInitialized = useRef(false)
+  const [historyLoaded, setHistoryLoaded] = useState(false)
 
-	useEffect(() => {
-		let cancelled = false;
+  const { cpu } = formatNezhaInfo(now, data)
 
-		if (period === "realtime") {
-			setHistoricalData([]);
-			setDisplayData([]);
-			setIsLoading(false);
-			setLoadedPeriod("realtime");
-			return () => {
-				cancelled = true;
-			};
-		}
+  const customBackgroundImage = (window.CustomBackgroundImage as string) !== "" ? window.CustomBackgroundImage : undefined
 
-		const fetchData = async () => {
-			const loadingStartedAt = Date.now();
-			setIsLoading(true);
-			setDisplayData([]);
+  // 初始化历史数据
+  useEffect(() => {
+    if (!hasInitialized.current && messageHistory.length > 0) {
+      const historyData = messageHistory
+        .map((msg) => {
+          const wsData = JSON.parse(msg.data) as NezhaWebsocketResponse
+          const server = wsData.servers.find((s) => s.id === data.id)
+          if (!server) return null
+          const { cpu } = formatNezhaInfo(wsData.now, server)
+          return {
+            timeStamp: wsData.now.toString(),
+            cpu: cpu,
+          }
+        })
+        .filter((item): item is cpuChartData => item !== null)
+        .reverse() // 保持时间顺序
 
-			try {
-				const response = await fetchServerMetrics(
-					serverId,
-					metricName as Parameters<typeof fetchServerMetrics>[1],
-					period as MetricPeriod,
-				);
-				if (response.success && response.data?.data_points) {
-					const transformedData = response.data.data_points.filter(point => Number.isFinite(point.value)).map((point) =>
-						transformData(point.ts, point.value),
-					);
-					if (!cancelled) {
-						setHistoricalData(transformedData);
-						setDisplayData(transformedData);
-					}
-				}
-			} catch (error) {
-				console.error(`Failed to fetch ${metricName} metrics:`, error);
-			} finally {
-				const elapsed = Date.now() - loadingStartedAt;
-				if (elapsed < MIN_HISTORY_LOADING_MS) {
-					await sleep(MIN_HISTORY_LOADING_MS - elapsed);
-				}
-				if (!cancelled) {
-					setIsLoading(false);
-					setLoadedPeriod(period);
-				}
-			}
-		};
+      setCpuChartData(historyData)
+      hasInitialized.current = true
+      setHistoryLoaded(true)
+    }
+  }, [messageHistory])
 
-		fetchData();
-		return () => {
-			cancelled = true;
-		};
-	}, [serverId, metricName, period, transformData]);
+  // 更新实时数据
+  useEffect(() => {
+    if (data && historyLoaded) {
+      const timestamp = now.toString()
+      setCpuChartData((prevData) => {
+        let newData = [] as cpuChartData[]
+        if (prevData.length === 0) {
+          newData = [
+            { timeStamp: timestamp, cpu: cpu },
+            { timeStamp: timestamp, cpu: cpu },
+          ]
+        } else {
+          newData = [...prevData, { timeStamp: timestamp, cpu: cpu }]
+          if (messageHistory.length <= 120 && newData.length > 120) {
+            newData.shift()
+          }
+        }
+        return newData
+      })
+    }
+  }, [data, historyLoaded])
 
-	const isHistoricalLoading =
-		period !== "realtime" && (isLoading || loadedPeriod !== period);
+  const chartConfig = {
+    cpu: {
+      label: "CPU",
+    },
+  } satisfies ChartConfig
 
-	return { historicalData, displayData, isLoading: isHistoricalLoading };
+  return (
+    <Card
+      className={cn({
+        "bg-card/70": customBackgroundImage,
+      })}
+    >
+      <CardContent className="px-6 py-3">
+        <section className="flex flex-col gap-1">
+          <div className="flex items-center justify-between">
+            <p className="text-md font-medium">CPU</p>
+            <section className="flex items-center gap-2">
+              <p className="text-xs text-end w-10 font-medium">{cpu.toFixed(2)}%</p>
+              <AnimatedCircularProgressBar className="size-3 text-[0px]" max={100} min={0} value={cpu} primaryColor="hsl(var(--chart-1))" />
+            </section>
+          </div>
+          <ChartContainer config={chartConfig} className="aspect-auto h-[130px] w-full">
+            <AreaChart
+              accessibilityLayer
+              data={cpuChartData}
+              margin={{
+                top: 12,
+                left: 12,
+                right: 12,
+              }}
+            >
+              <CartesianGrid vertical={false} />
+              <XAxis
+                dataKey="timeStamp"
+                tickLine={false}
+                axisLine={false}
+                tickMargin={8}
+                minTickGap={200}
+                interval="preserveStartEnd"
+                tickFormatter={(value) => formatRelativeTime(value)}
+              />
+              <YAxis tickLine={false} axisLine={false} mirror={true} tickMargin={-15} domain={[0, 100]} tickFormatter={(value) => `${value}%`} />
+              <Area isAnimationActive={false} dataKey="cpu" type="step" fill="hsl(var(--chart-1))" fillOpacity={0.3} stroke="hsl(var(--chart-1))" />
+            </AreaChart>
+          </ChartContainer>
+        </section>
+      </CardContent>
+    </Card>
+  )
 }
 
-function GpuChart({
-	id,
-	index,
-	gpuStat,
-	gpuName,
-	gpuMemory,
-	messageHistory,
-	period,
-}: {
-	now: number;
-	id: number;
-	index: number;
-	gpuStat: number;
-	gpuName?: string;
-	gpuMemory?: { memory_used?: number; memory_total?: number };
-	messageHistory: NezhaWebsocketResponse[];
-	period: ChartPeriod;
-}) {
-	const [gpuChartData, setGpuChartData] = useState<gpuChartData[]>([]);
-	const hasInitialized = useRef(false);
-	const [historyLoaded, setHistoryLoaded] = useState(false);
+function ProcessChart({ now, data, messageHistory }: { now: number; data: NezhaServer; messageHistory: { data: string }[] }) {
+  const { t } = useTranslation()
+  const [processChartData, setProcessChartData] = useState([] as processChartData[])
+  const hasInitialized = useRef(false)
+  const [historyLoaded, setHistoryLoaded] = useState(false)
 
-	const customBackgroundImage =
-		(window.CustomBackgroundImage as string) !== ""
-			? window.CustomBackgroundImage
-			: undefined;
+  const customBackgroundImage = (window.CustomBackgroundImage as string) !== "" ? window.CustomBackgroundImage : undefined
 
-	const transformGpuData = useMemo(
-		() => (timestamp: number, value: number) => ({
-			timeStamp: timestamp.toString(),
-			gpu: value,
-		}),
-		[],
-	);
+  const { process } = formatNezhaInfo(now, data)
 
-	const { displayData: gpuHistoricalData, isLoading } =
-		useHistoricalData<gpuChartData>(id, "gpu", period, transformGpuData);
+  // 初始化历史数据
+  useEffect(() => {
+    if (!hasInitialized.current && messageHistory.length > 0) {
+      const historyData = messageHistory
+        .map((msg) => {
+          const wsData = JSON.parse(msg.data) as NezhaWebsocketResponse
+          const server = wsData.servers.find((s) => s.id === data.id)
+          if (!server) return null
+          const { process } = formatNezhaInfo(wsData.now, server)
+          return {
+            timeStamp: wsData.now.toString(),
+            process,
+          }
+        })
+        .filter((item): item is processChartData => item !== null)
+        .reverse()
 
-	// 初始化历史数据
-	useEffect(() => {
-		if (
-			period === "realtime" &&
-			!hasInitialized.current &&
-			messageHistory.length > 0
-		) {
-			const historyData = messageHistory
-				.map((wsData) => {
-					const server = wsData.servers.find((s) => s.id === id);
-					if (!server) return null;
-					const { gpu } = formatNezhaInfo(wsData.now, server);
-					return {
-						timeStamp: wsData.now.toString(),
-						gpu: gpu[index],
-					};
-				})
-				.filter((item): item is gpuChartData => item !== null)
-				.reverse();
+      setProcessChartData(historyData)
+      hasInitialized.current = true
+      setHistoryLoaded(true)
+    }
+  }, [messageHistory])
 
-			setGpuChartData(historyData);
-			hasInitialized.current = true;
-			setHistoryLoaded(true);
-		}
-	}, [messageHistory, id, index, period]);
+  // 修改实时数据更新逻辑
+  useEffect(() => {
+    if (data && historyLoaded) {
+      const timestamp = now.toString()
+      setProcessChartData((prevData) => {
+        let newData = [] as processChartData[]
+        if (prevData.length === 0) {
+          newData = [
+            { timeStamp: timestamp, process },
+            { timeStamp: timestamp, process },
+          ]
+        } else {
+          newData = [...prevData, { timeStamp: timestamp, process }]
+          if (messageHistory.length <= 120 && newData.length > 120) {
+            newData.shift()
+          }
+        }
+        return newData
+      })
+    }
+  }, [data, historyLoaded])
 
-	// Reset when switching to realtime
-	useEffect(() => {
-		if (period === "realtime") {
-			hasInitialized.current = false;
-			setHistoryLoaded(false);
-		}
-	}, [period]);
+  const chartConfig = {
+    process: {
+      label: "Process",
+    },
+  } satisfies ChartConfig
 
-	useEffect(() => {
-		if (gpuStat && historyLoaded && period === "realtime") {
-			const timestamp = Date.now().toString();
-			setGpuChartData((prevData) => {
-				let newData = [] as gpuChartData[];
-				if (prevData.length === 0) {
-					newData = [
-						{ timeStamp: timestamp, gpu: gpuStat },
-						{ timeStamp: timestamp, gpu: gpuStat },
-					];
-				} else {
-					newData = [...prevData, { timeStamp: timestamp, gpu: gpuStat }];
-					if (newData.length > 30) {
-						newData.shift();
-					}
-				}
-				return newData;
-			});
-		}
-	}, [gpuStat, historyLoaded, period]);
-
-	const chartConfig = {
-		gpu: {
-			label: "GPU",
-		},
-	} satisfies ChartConfig;
-
-	const displayData = period === "realtime" ? gpuChartData : gpuHistoricalData;
-
-	if (!isLoading && !displayData.some(point => Number.isFinite(point.gpu))) return null;
-
-	return (
-		<Card
-			className={cn({
-				"bg-card/70": customBackgroundImage,
-			})}
-		>
-			<CardContent className="px-6 py-3">
-				<section className="flex flex-col gap-1">
-					<div className="flex items-center justify-between">
-						<section className="flex flex-col items-center gap-2">
-							{!gpuName && <p className="text-md font-medium">GPU</p>}
-							{gpuName && <p className="text-xs mt-1 mb-1.5">GPU: {gpuName}</p>}
-							{gpuMemory?.memory_total ? (
-								<p className="text-xs text-muted-foreground">
-									{gpuMemory.memory_used != null
-										? formatBytes(gpuMemory.memory_used * 1024 * 1024)
-										: "—"}{" "}
-									/ {formatBytes(gpuMemory.memory_total * 1024 * 1024)}
-								</p>
-							) : null}
-						</section>
-						<section className="flex items-center gap-2">
-							<p className="text-xs text-end w-10 font-medium">
-								{gpuStat.toFixed(2)}%
-							</p>
-							<AnimatedCircularProgressBar
-								className="size-3 text-[0px]"
-								max={100}
-								min={0}
-								value={gpuStat}
-								primaryColor="hsl(var(--chart-3))"
-							/>
-						</section>
-					</div>
-					<ChartContainer
-						config={chartConfig}
-						className="aspect-auto h-[130px] w-full"
-					>
-						{isLoading ? (
-							<ChartSkeleton />
-						) : period !== "realtime" && displayData.length === 0 ? (
-							<p role="status" className="flex h-full items-center text-muted-foreground">暂无该时段的历史数据</p>
-						) : (
-							<AreaChart
-								accessibilityLayer
-								data={displayData}
-								margin={{
-									top: 12,
-									left: 12,
-									right: 12,
-								}}
-							>
-								<CartesianGrid vertical={false} />
-								<XAxis
-									dataKey="timeStamp"
-									tickLine={false}
-									axisLine={false}
-									tickMargin={8}
-									minTickGap={200}
-									interval="preserveStartEnd"
-									tickFormatter={(value) => formatRelativeTime(value)}
-								/>
-								<YAxis
-									tickLine={false}
-									axisLine={false}
-									mirror={true}
-									tickMargin={-15}
-									domain={[0, 100]}
-									tickFormatter={(value) => `${value}%`}
-								/>
-								<ChartTooltip
-									isAnimationActive={false}
-									content={
-										<ChartTooltipContent
-											indicator="dot"
-											labelFormatter={(_, payload) => {
-												return formatTime(
-													Number(payload[0]?.payload?.timeStamp),
-												);
-											}}
-											formatter={(value) => (
-												<div className="flex flex-1 items-center justify-between leading-none">
-													<span className="text-muted-foreground">GPU</span>
-													<span className="ml-2 font-medium text-foreground tabular-nums">
-														{Number(value).toFixed(1)}%
-													</span>
-												</div>
-											)}
-										/>
-									}
-								/>
-								<Area
-									isAnimationActive={false}
-									dataKey="gpu"
-									type="step"
-									fill="hsl(var(--chart-3))"
-									fillOpacity={0.3}
-									stroke="hsl(var(--chart-3))"
-								/>
-							</AreaChart>
-						)}
-					</ChartContainer>
-				</section>
-			</CardContent>
-		</Card>
-	);
+  return (
+    <Card
+      className={cn({
+        "bg-card/70": customBackgroundImage,
+      })}
+    >
+      <CardContent className="px-6 py-3">
+        <section className="flex flex-col gap-1">
+          <div className="flex items-center justify-between">
+            <p className="text-md font-medium">{t("serverDetailChart.process")}</p>
+            <section className="flex items-center gap-2">
+              <p className="text-xs text-end w-10 font-medium">{process}</p>
+            </section>
+          </div>
+          <ChartContainer config={chartConfig} className="aspect-auto h-[130px] w-full">
+            <AreaChart
+              accessibilityLayer
+              data={processChartData}
+              margin={{
+                top: 12,
+                left: 12,
+                right: 12,
+              }}
+            >
+              <CartesianGrid vertical={false} />
+              <XAxis
+                dataKey="timeStamp"
+                tickLine={false}
+                axisLine={false}
+                tickMargin={8}
+                minTickGap={200}
+                interval="preserveStartEnd"
+                tickFormatter={(value) => formatRelativeTime(value)}
+              />
+              <YAxis tickLine={false} axisLine={false} mirror={true} tickMargin={-15} />
+              <Area
+                isAnimationActive={false}
+                dataKey="process"
+                type="step"
+                fill="hsl(var(--chart-2))"
+                fillOpacity={0.3}
+                stroke="hsl(var(--chart-2))"
+              />
+            </AreaChart>
+          </ChartContainer>
+        </section>
+      </CardContent>
+    </Card>
+  )
 }
 
-function CpuChart({
-	now,
-	data,
-	messageHistory,
-	period,
-}: {
-	now: number;
-	data: NezhaServer;
-	messageHistory: NezhaWebsocketResponse[];
-	period: ChartPeriod;
-}) {
-	const [cpuChartData, setCpuChartData] = useState<cpuChartData[]>([]);
-	const hasInitialized = useRef(false);
-	const [historyLoaded, setHistoryLoaded] = useState(false);
+function MemChart({ now, data, messageHistory }: { now: number; data: NezhaServer; messageHistory: { data: string }[] }) {
+  const { t } = useTranslation()
+  const [memChartData, setMemChartData] = useState([] as memChartData[])
+  const hasInitialized = useRef(false)
+  const [historyLoaded, setHistoryLoaded] = useState(false)
 
-	const { cpu } = formatNezhaInfo(now, data);
+  const customBackgroundImage = (window.CustomBackgroundImage as string) !== "" ? window.CustomBackgroundImage : undefined
 
-	const customBackgroundImage =
-		(window.CustomBackgroundImage as string) !== ""
-			? window.CustomBackgroundImage
-			: undefined;
+  const { mem, swap } = formatNezhaInfo(now, data)
 
-	const transformCpuData = useMemo(
-		() => (timestamp: number, value: number) => ({
-			timeStamp: timestamp.toString(),
-			cpu: value,
-		}),
-		[],
-	);
+  // 初始化历史数据
+  useEffect(() => {
+    if (!hasInitialized.current && messageHistory.length > 0) {
+      const historyData = messageHistory
+        .map((msg) => {
+          const wsData = JSON.parse(msg.data) as NezhaWebsocketResponse
+          const server = wsData.servers.find((s) => s.id === data.id)
+          if (!server) return null
+          const { mem, swap } = formatNezhaInfo(wsData.now, server)
+          return {
+            timeStamp: wsData.now.toString(),
+            mem,
+            swap,
+          }
+        })
+        .filter((item): item is memChartData => item !== null)
+        .reverse()
 
-	const { displayData: cpuHistoricalData, isLoading } =
-		useHistoricalData<cpuChartData>(data.id, "cpu", period, transformCpuData);
+      setMemChartData(historyData)
+      hasInitialized.current = true
+      setHistoryLoaded(true)
+    }
+  }, [messageHistory])
 
-	// 初始化历史数据
-	useEffect(() => {
-		if (
-			period === "realtime" &&
-			!hasInitialized.current &&
-			messageHistory.length > 0
-		) {
-			const historyData = messageHistory
-				.map((wsData) => {
-					const server = wsData.servers.find((s) => s.id === data.id);
-					if (!server) return null;
-					const { cpu } = formatNezhaInfo(wsData.now, server);
-					return {
-						timeStamp: wsData.now.toString(),
-						cpu: cpu,
-					};
-				})
-				.filter((item): item is cpuChartData => item !== null)
-				.reverse();
+  // 修改实时数据更新逻辑
+  useEffect(() => {
+    if (data && historyLoaded) {
+      const timestamp = now.toString()
+      setMemChartData((prevData) => {
+        let newData = [] as memChartData[]
+        if (prevData.length === 0) {
+          newData = [
+            { timeStamp: timestamp, mem, swap },
+            { timeStamp: timestamp, mem, swap },
+          ]
+        } else {
+          newData = [...prevData, { timeStamp: timestamp, mem, swap }]
+          if (messageHistory.length <= 120 && newData.length > 120) {
+            newData.shift()
+          }
+        }
+        return newData
+      })
+    }
+  }, [data, historyLoaded])
 
-			setCpuChartData(historyData);
-			hasInitialized.current = true;
-			setHistoryLoaded(true);
-		}
-	}, [messageHistory, data.id, period]);
+  const chartConfig = {
+    mem: {
+      label: "Mem",
+    },
+    swap: {
+      label: "Swap",
+    },
+  } satisfies ChartConfig
 
-	// Reset when switching to realtime
-	useEffect(() => {
-		if (period === "realtime") {
-			hasInitialized.current = false;
-			setHistoryLoaded(false);
-		}
-	}, [period]);
-
-	// 更新实时数据
-	useEffect(() => {
-		if (data && historyLoaded && period === "realtime") {
-			const timestamp = Date.now().toString();
-			setCpuChartData((prevData) => {
-				let newData = [] as cpuChartData[];
-				if (prevData.length === 0) {
-					newData = [
-						{ timeStamp: timestamp, cpu: cpu },
-						{ timeStamp: timestamp, cpu: cpu },
-					];
-				} else {
-					newData = [...prevData, { timeStamp: timestamp, cpu: cpu }];
-					if (newData.length > 30) {
-						newData.shift();
-					}
-				}
-				return newData;
-			});
-		}
-	}, [data, historyLoaded, cpu, period]);
-
-	const chartConfig = {
-		cpu: {
-			label: "CPU",
-		},
-	} satisfies ChartConfig;
-
-	const displayData = period === "realtime" ? cpuChartData : cpuHistoricalData;
-
-	if (!isLoading && !displayData.some(point => Number.isFinite(point.cpu))) return null;
-
-	return (
-		<Card
-			className={cn({
-				"bg-card/70": customBackgroundImage,
-			})}
-		>
-			<CardContent className="px-6 py-3">
-				<section className="flex flex-col gap-1">
-					<div className="flex items-center justify-between">
-						<p className="text-md font-medium">CPU</p>
-						{Number.isFinite(cpu) && (<section className="flex items-center gap-2">
-							<p className="text-xs text-end w-10 font-medium">
-								{cpu.toFixed(2)}%
-							</p>
-							<AnimatedCircularProgressBar
-								className="size-3 text-[0px]"
-								max={100}
-								min={0}
-								value={cpu}
-								primaryColor="hsl(var(--chart-1))"
-							/>
-						</section>)}
-					</div>
-					<ChartContainer
-						config={chartConfig}
-						className="aspect-auto h-[130px] w-full"
-					>
-						{isLoading ? (
-							<ChartSkeleton />
-						) : period !== "realtime" && displayData.length === 0 ? (
-							<p role="status" className="flex h-full items-center text-muted-foreground">暂无该时段的历史数据</p>
-						) : (
-							<AreaChart
-								accessibilityLayer
-								data={displayData}
-								margin={{
-									top: 12,
-									left: 12,
-									right: 12,
-								}}
-							>
-								<CartesianGrid vertical={false} />
-								<XAxis
-									dataKey="timeStamp"
-									tickLine={false}
-									axisLine={false}
-									tickMargin={8}
-									minTickGap={200}
-									interval="preserveStartEnd"
-									tickFormatter={(value) => formatRelativeTime(value)}
-								/>
-								<YAxis
-									tickLine={false}
-									axisLine={false}
-									mirror={true}
-									tickMargin={-15}
-									domain={[0, 100]}
-									tickFormatter={(value) => `${value}%`}
-								/>
-								<ChartTooltip
-									isAnimationActive={false}
-									content={
-										<ChartTooltipContent
-											indicator="dot"
-											labelFormatter={(_, payload) => {
-												return formatTime(
-													Number(payload[0]?.payload?.timeStamp),
-												);
-											}}
-											formatter={(value) => (
-												<div className="flex flex-1 items-center justify-between leading-none">
-													<span className="text-muted-foreground">CPU</span>
-													<span className="ml-2 font-medium text-foreground tabular-nums">
-														{Number(value).toFixed(1)}%
-													</span>
-												</div>
-											)}
-										/>
-									}
-								/>
-								{displayData.some(point => Number.isFinite(point.cpu)) && (<Area
-									isAnimationActive={false}
-									dataKey="cpu"
-									type="step"
-									fill="hsl(var(--chart-1))"
-									fillOpacity={0.3}
-									stroke="hsl(var(--chart-1))"
-								/>)}
-							</AreaChart>
-						)}
-					</ChartContainer>
-				</section>
-			</CardContent>
-		</Card>
-	);
+  return (
+    <Card
+      className={cn({
+        "bg-card/70": customBackgroundImage,
+      })}
+    >
+      <CardContent className="px-6 py-3">
+        <section className="flex flex-col gap-1">
+          <div className="flex items-center justify-between">
+            <section className="flex items-center gap-4">
+              <div className="flex flex-col">
+                <p className=" text-xs text-muted-foreground">{t("serverDetailChart.mem")}</p>
+                <div className="flex items-center gap-2">
+                  <AnimatedCircularProgressBar className="size-3 text-[0px]" max={100} min={0} value={mem} primaryColor="hsl(var(--chart-8))" />
+                  <p className="text-xs font-medium">{mem.toFixed(0)}%</p>
+                </div>
+              </div>
+              {Number.isFinite(swap) && (<div className="flex flex-col">
+                <p className=" text-xs text-muted-foreground">{t("serverDetailChart.swap")}</p>
+                <div className="flex items-center gap-2">
+                  <AnimatedCircularProgressBar className="size-3 text-[0px]" max={100} min={0} value={swap} primaryColor="hsl(var(--chart-10))" />
+                  <p className="text-xs font-medium">{swap.toFixed(0)}%</p>
+                </div>
+              </div>)}
+            </section>
+            <section className="flex flex-col items-end gap-0.5">
+              <div className="flex text-[11px] font-medium items-center gap-2">
+                {formatBytes(data.state.mem_used)} / {formatBytes(data.host.mem_total)}
+              </div>
+              <div className="flex text-[11px] font-medium items-center gap-2">
+                {Number.isFinite(data.host.swap_total) && data.host.swap_total > 0 && Number.isFinite(data.state.swap_used) ? (
+                  <>
+                    swap: {formatBytes(data.state.swap_used)} / {formatBytes(data.host.swap_total)}
+                  </>
+                ) : (
+                  <></>
+                )}
+              </div>
+            </section>
+          </div>
+          <ChartContainer config={chartConfig} className="aspect-auto h-[130px] w-full">
+            <AreaChart
+              accessibilityLayer
+              data={memChartData}
+              margin={{
+                top: 12,
+                left: 12,
+                right: 12,
+              }}
+            >
+              <CartesianGrid vertical={false} />
+              <XAxis
+                dataKey="timeStamp"
+                tickLine={false}
+                axisLine={false}
+                tickMargin={8}
+                minTickGap={200}
+                interval="preserveStartEnd"
+                tickFormatter={(value) => formatRelativeTime(value)}
+              />
+              <YAxis tickLine={false} axisLine={false} mirror={true} tickMargin={-15} domain={[0, 100]} tickFormatter={(value) => `${value}%`} />
+              <Area isAnimationActive={false} dataKey="mem" type="step" fill="hsl(var(--chart-8))" fillOpacity={0.3} stroke="hsl(var(--chart-8))" />
+              <Area
+                isAnimationActive={false}
+                dataKey="swap"
+                type="step"
+                fill="hsl(var(--chart-10))"
+                fillOpacity={0.3}
+                stroke="hsl(var(--chart-10))"
+              />
+            </AreaChart>
+          </ChartContainer>
+        </section>
+      </CardContent>
+    </Card>
+  )
 }
 
-function ProcessChart({
-	now,
-	data,
-	messageHistory,
-	period,
-}: {
-	now: number;
-	data: NezhaServer;
-	messageHistory: NezhaWebsocketResponse[];
-	period: ChartPeriod;
-}) {
-	const { t } = useTranslation();
-	const [processChartData, setProcessChartData] = useState(
-		[] as processChartData[],
-	);
-	const hasInitialized = useRef(false);
-	const [historyLoaded, setHistoryLoaded] = useState(false);
+function DiskChart({ now, data, messageHistory }: { now: number; data: NezhaServer; messageHistory: { data: string }[] }) {
+  const { t } = useTranslation()
+  const [diskChartData, setDiskChartData] = useState([] as diskChartData[])
+  const hasInitialized = useRef(false)
+  const [historyLoaded, setHistoryLoaded] = useState(false)
 
-	const customBackgroundImage =
-		(window.CustomBackgroundImage as string) !== ""
-			? window.CustomBackgroundImage
-			: undefined;
+  const customBackgroundImage = (window.CustomBackgroundImage as string) !== "" ? window.CustomBackgroundImage : undefined
 
-	const { process } = formatNezhaInfo(now, data);
+  const { disk } = formatNezhaInfo(now, data)
 
-	const transformProcessData = useMemo(
-		() => (timestamp: number, value: number) => ({
-			timeStamp: timestamp.toString(),
-			process: value,
-		}),
-		[],
-	);
+  // 初始化历史数据
+  useEffect(() => {
+    if (!hasInitialized.current && messageHistory.length > 0) {
+      const historyData = messageHistory
+        .map((msg) => {
+          const wsData = JSON.parse(msg.data) as NezhaWebsocketResponse
+          const server = wsData.servers.find((s) => s.id === data.id)
+          if (!server) return null
+          const { disk } = formatNezhaInfo(wsData.now, server)
+          return {
+            timeStamp: wsData.now.toString(),
+            disk,
+          }
+        })
+        .filter((item): item is diskChartData => item !== null)
+        .reverse()
 
-	const { displayData: processHistoricalData, isLoading } =
-		useHistoricalData<processChartData>(
-			data.id,
-			"process_count",
-			period,
-			transformProcessData,
-		);
+      setDiskChartData(historyData)
+      hasInitialized.current = true
+      setHistoryLoaded(true)
+    }
+  }, [messageHistory])
 
-	// 初始化历史数据
-	useEffect(() => {
-		if (
-			period === "realtime" &&
-			!hasInitialized.current &&
-			messageHistory.length > 0
-		) {
-			const historyData = messageHistory
-				.map((wsData) => {
-					const server = wsData.servers.find((s) => s.id === data.id);
-					if (!server) return null;
-					const { process } = formatNezhaInfo(wsData.now, server);
-					return {
-						timeStamp: wsData.now.toString(),
-						process,
-					};
-				})
-				.filter((item): item is processChartData => item !== null)
-				.reverse();
+  // 修改实时数据更新逻辑
+  useEffect(() => {
+    if (data && historyLoaded) {
+      const timestamp = now.toString()
+      setDiskChartData((prevData) => {
+        let newData = [] as diskChartData[]
+        if (prevData.length === 0) {
+          newData = [
+            { timeStamp: timestamp, disk },
+            { timeStamp: timestamp, disk },
+          ]
+        } else {
+          newData = [...prevData, { timeStamp: timestamp, disk }]
+          if (messageHistory.length <= 120 && newData.length > 120) {
+            newData.shift()
+          }
+        }
+        return newData
+      })
+    }
+  }, [data, historyLoaded])
 
-			setProcessChartData(historyData);
-			hasInitialized.current = true;
-			setHistoryLoaded(true);
-		}
-	}, [messageHistory, data.id, period]);
+  const chartConfig = {
+    disk: {
+      label: "Disk",
+    },
+  } satisfies ChartConfig
 
-	// Reset when switching to realtime
-	useEffect(() => {
-		if (period === "realtime") {
-			hasInitialized.current = false;
-			setHistoryLoaded(false);
-		}
-	}, [period]);
-
-	// 修改实时数据更新逻辑
-	useEffect(() => {
-		if (data && historyLoaded && period === "realtime") {
-			const timestamp = Date.now().toString();
-			setProcessChartData((prevData) => {
-				let newData = [] as processChartData[];
-				if (prevData.length === 0) {
-					newData = [
-						{ timeStamp: timestamp, process },
-						{ timeStamp: timestamp, process },
-					];
-				} else {
-					newData = [...prevData, { timeStamp: timestamp, process }];
-					if (newData.length > 30) {
-						newData.shift();
-					}
-				}
-				return newData;
-			});
-		}
-	}, [data, historyLoaded, process, period]);
-
-	const chartConfig = {
-		process: {
-			label: "Process",
-		},
-	} satisfies ChartConfig;
-
-	const displayData =
-		period === "realtime" ? processChartData : processHistoricalData;
-
-	if (!isLoading && !displayData.some(point => Number.isFinite(point.process))) return null;
-
-	return (
-		<Card
-			className={cn({
-				"bg-card/70": customBackgroundImage,
-			})}
-		>
-			<CardContent className="px-6 py-3">
-				<section className="flex flex-col gap-1">
-					<div className="flex items-center justify-between">
-						<p className="text-md font-medium">
-							{t("serverDetailChart.process")}
-						</p>
-						<section className="flex items-center gap-2">
-							<p className="text-xs text-end w-10 font-medium">{process}</p>
-						</section>
-					</div>
-					<ChartContainer
-						config={chartConfig}
-						className="aspect-auto h-[130px] w-full"
-					>
-						{isLoading ? (
-							<ChartSkeleton />
-						) : period !== "realtime" && displayData.length === 0 ? (
-							<p role="status" className="flex h-full items-center text-muted-foreground">暂无该时段的历史数据</p>
-						) : (
-							<AreaChart
-								accessibilityLayer
-								data={displayData}
-								margin={{
-									top: 12,
-									left: 12,
-									right: 12,
-								}}
-							>
-								<CartesianGrid vertical={false} />
-								<XAxis
-									dataKey="timeStamp"
-									tickLine={false}
-									axisLine={false}
-									tickMargin={8}
-									minTickGap={200}
-									interval="preserveStartEnd"
-									tickFormatter={(value) => formatRelativeTime(value)}
-								/>
-								<YAxis
-									tickLine={false}
-									axisLine={false}
-									mirror={true}
-									tickMargin={-15}
-								/>
-								<ChartTooltip
-									isAnimationActive={false}
-									content={
-										<ChartTooltipContent
-											indicator={"dot"}
-											labelFormatter={(_, payload) => {
-												return formatTime(
-													Number(payload[0]?.payload?.timeStamp),
-												);
-											}}
-											formatter={(value) => (
-												<div className="flex flex-1 items-center justify-between leading-none">
-													<span className="text-muted-foreground">
-														{t("serverDetailChart.process")}
-													</span>
-													<span className="ml-2 font-medium text-foreground tabular-nums">
-														{Number(value).toFixed(0)}
-													</span>
-												</div>
-											)}
-										/>
-									}
-								/>
-								<Area
-									isAnimationActive={false}
-									dataKey="process"
-									type="step"
-									fill="hsl(var(--chart-2))"
-									fillOpacity={0.3}
-									stroke="hsl(var(--chart-2))"
-								/>
-							</AreaChart>
-						)}
-					</ChartContainer>
-				</section>
-			</CardContent>
-		</Card>
-	);
+  return (
+    <Card
+      className={cn({
+        "bg-card/70": customBackgroundImage,
+      })}
+    >
+      <CardContent className="px-6 py-3">
+        <section className="flex flex-col gap-1">
+          <div className="flex items-center justify-between">
+            <p className="text-md font-medium">{t("serverDetailChart.disk")}</p>
+            <section className="flex flex-col items-end gap-0.5">
+              <section className="flex items-center gap-2">
+                <p className="text-xs text-end w-10 font-medium">{disk.toFixed(0)}%</p>
+                <AnimatedCircularProgressBar className="size-3 text-[0px]" max={100} min={0} value={disk} primaryColor="hsl(var(--chart-5))" />
+              </section>
+              <div className="flex text-[11px] font-medium items-center gap-2">
+                {formatBytes(data.state.disk_used)} / {formatBytes(data.host.disk_total)}
+              </div>
+            </section>
+          </div>
+          <ChartContainer config={chartConfig} className="aspect-auto h-[130px] w-full">
+            <AreaChart
+              accessibilityLayer
+              data={diskChartData}
+              margin={{
+                top: 12,
+                left: 12,
+                right: 12,
+              }}
+            >
+              <CartesianGrid vertical={false} />
+              <XAxis
+                dataKey="timeStamp"
+                tickLine={false}
+                axisLine={false}
+                tickMargin={8}
+                minTickGap={200}
+                interval="preserveStartEnd"
+                tickFormatter={(value) => formatRelativeTime(value)}
+              />
+              <YAxis tickLine={false} axisLine={false} mirror={true} tickMargin={-15} domain={[0, 100]} tickFormatter={(value) => `${value}%`} />
+              <Area isAnimationActive={false} dataKey="disk" type="step" fill="hsl(var(--chart-5))" fillOpacity={0.3} stroke="hsl(var(--chart-5))" />
+            </AreaChart>
+          </ChartContainer>
+        </section>
+      </CardContent>
+    </Card>
+  )
 }
 
-function MemChart({
-	now,
-	data,
-	messageHistory,
-	period,
-}: {
-	now: number;
-	data: NezhaServer;
-	messageHistory: NezhaWebsocketResponse[];
-	period: ChartPeriod;
-}) {
-	const { t } = useTranslation();
-	const [memChartData, setMemChartData] = useState([] as memChartData[]);
-	const hasInitialized = useRef(false);
-	const [historyLoaded, setHistoryLoaded] = useState(false);
+function NetworkChart({ now, data, messageHistory }: { now: number; data: NezhaServer; messageHistory: { data: string }[] }) {
+  const { t } = useTranslation()
+  const [networkChartData, setNetworkChartData] = useState([] as networkChartData[])
+  const hasInitialized = useRef(false)
+  const [historyLoaded, setHistoryLoaded] = useState(false)
 
-	const customBackgroundImage =
-		(window.CustomBackgroundImage as string) !== ""
-			? window.CustomBackgroundImage
-			: undefined;
+  const customBackgroundImage = (window.CustomBackgroundImage as string) !== "" ? window.CustomBackgroundImage : undefined
 
-	const { mem, swap } = formatNezhaInfo(now, data);
+  const { up, down } = formatNezhaInfo(now, data)
 
-	// For memory, we fetch memory and swap separately and combine them
-	const [memHistoricalData, setMemHistoricalData] = useState<memChartData[]>(
-		[],
-	);
-	const [isLoadingMem, setIsLoadingMem] = useState(false);
-	const [loadedPeriodMem, setLoadedPeriodMem] =
-		useState<ChartPeriod>("realtime");
+  // 初始化历史数据
+  useEffect(() => {
+    if (!hasInitialized.current && messageHistory.length > 0) {
+      const historyData = messageHistory
+        .map((msg) => {
+          const wsData = JSON.parse(msg.data) as NezhaWebsocketResponse
+          const server = wsData.servers.find((s) => s.id === data.id)
+          if (!server) return null
+          const { up, down } = formatNezhaInfo(wsData.now, server)
+          return {
+            timeStamp: wsData.now.toString(),
+            upload: up,
+            download: down,
+          }
+        })
+        .filter((item): item is networkChartData => item !== null)
+        .reverse()
 
-	useEffect(() => {
-		let cancelled = false;
+      setNetworkChartData(historyData)
+      hasInitialized.current = true
+      setHistoryLoaded(true)
+    }
+  }, [messageHistory])
 
-		if (period === "realtime") {
-			setMemHistoricalData([]);
-			setIsLoadingMem(false);
-			setLoadedPeriodMem("realtime");
-			return () => {
-				cancelled = true;
-			};
-		}
+  // 修改实时数据更新逻辑
+  useEffect(() => {
+    if (data && historyLoaded) {
+      const timestamp = now.toString()
+      setNetworkChartData((prevData) => {
+        let newData = [] as networkChartData[]
+        if (prevData.length === 0) {
+          newData = [
+            { timeStamp: timestamp, upload: up, download: down },
+            { timeStamp: timestamp, upload: up, download: down },
+          ]
+        } else {
+          newData = [...prevData, { timeStamp: timestamp, upload: up, download: down }]
+          if (messageHistory.length <= 120 && newData.length > 120) {
+            newData.shift()
+          }
+        }
+        return newData
+      })
+    }
+  }, [data, historyLoaded])
 
-		const fetchMemData = async () => {
-			const loadingStartedAt = Date.now();
-			setIsLoadingMem(true);
-			setMemHistoricalData([]);
-			try {
-				const [memResponse, swapResponse] = await Promise.all([
-					fetchServerMetrics(data.id, "memory", period as MetricPeriod),
-					fetchServerMetrics(data.id, "swap", period as MetricPeriod),
-				]);
+  let maxDownload = Math.max(...networkChartData.map((item) => item.download))
+  maxDownload = Math.ceil(maxDownload)
+  if (maxDownload < 1) {
+    maxDownload = 1
+  }
 
-				if (memResponse.success && memResponse.data?.data_points) {
-					const combinedData = joinMetricSeries(memResponse.data.data_points, swapResponse.data?.data_points ?? []).map(point => ({timeStamp: point.timeStamp, mem: data.host.mem_total > 0 ? point.left / data.host.mem_total * 100 : NaN, swap: data.host.swap_total > 0 ? point.right / data.host.swap_total * 100 : NaN}));
-					if (!cancelled) {
-						setMemHistoricalData(combinedData);
-					}
-				}
-			} catch (error) {
-				console.error("Failed to fetch memory metrics:", error);
-			} finally {
-				const elapsed = Date.now() - loadingStartedAt;
-				if (elapsed < MIN_HISTORY_LOADING_MS) {
-					await sleep(MIN_HISTORY_LOADING_MS - elapsed);
-				}
-				if (!cancelled) {
-					setIsLoadingMem(false);
-					setLoadedPeriodMem(period);
-				}
-			}
-		};
+  const chartConfig = {
+    upload: {
+      label: "Upload",
+    },
+    download: {
+      label: "Download",
+    },
+  } satisfies ChartConfig
 
-		fetchMemData();
-		return () => {
-			cancelled = true;
-		};
-	}, [data.id, period, data.host.mem_total, data.host.swap_total]);
-
-	// 初始化历史数据
-	useEffect(() => {
-		if (
-			period === "realtime" &&
-			!hasInitialized.current &&
-			messageHistory.length > 0
-		) {
-			const historyData = messageHistory
-				.map((wsData) => {
-					const server = wsData.servers.find((s) => s.id === data.id);
-					if (!server) return null;
-					const { mem, swap } = formatNezhaInfo(wsData.now, server);
-					return {
-						timeStamp: wsData.now.toString(),
-						mem,
-						swap,
-					};
-				})
-				.filter((item): item is memChartData => item !== null)
-				.reverse();
-
-			setMemChartData(historyData);
-			hasInitialized.current = true;
-			setHistoryLoaded(true);
-		}
-	}, [messageHistory, data.id, period]);
-
-	// Reset when switching to realtime
-	useEffect(() => {
-		if (period === "realtime") {
-			hasInitialized.current = false;
-			setHistoryLoaded(false);
-		}
-	}, [period]);
-
-	// 修改实时数据更新逻辑
-	useEffect(() => {
-		if (data && historyLoaded && period === "realtime") {
-			const timestamp = Date.now().toString();
-			setMemChartData((prevData) => {
-				let newData = [] as memChartData[];
-				if (prevData.length === 0) {
-					newData = [
-						{ timeStamp: timestamp, mem, swap },
-						{ timeStamp: timestamp, mem, swap },
-					];
-				} else {
-					newData = [...prevData, { timeStamp: timestamp, mem, swap }];
-					if (newData.length > 30) {
-						newData.shift();
-					}
-				}
-				return newData;
-			});
-		}
-	}, [data, historyLoaded, mem, swap, period]);
-
-	const chartConfig = {
-		mem: {
-			label: "Mem",
-		},
-		swap: {
-			label: "Swap",
-		},
-	} satisfies ChartConfig;
-
-	const displayData = period === "realtime" ? memChartData : memHistoricalData;
-	const isMemLoading =
-		period !== "realtime" && (isLoadingMem || loadedPeriodMem !== period);
-
-	if (!isMemLoading && !displayData.some(point => Number.isFinite(point.mem) || Number.isFinite(point.swap))) return null;
-
-	return (
-		<Card
-			className={cn({
-				"bg-card/70": customBackgroundImage,
-			})}
-		>
-			<CardContent className="px-6 py-3">
-				<section className="flex flex-col gap-1">
-					<div className="flex items-center justify-between">
-						<section className="flex items-center gap-4">
-							{Number.isFinite(mem) && (<div className="flex flex-col">
-								<p className=" text-xs text-muted-foreground">
-									{t("serverDetailChart.mem")}
-								</p>
-								<div className="flex items-center gap-2">
-									<AnimatedCircularProgressBar
-										className="size-3 text-[0px]"
-										max={100}
-										min={0}
-										value={mem}
-										primaryColor="hsl(var(--chart-8))"
-									/>
-									<p className="text-xs font-medium">{mem.toFixed(0)}%</p>
-								</div>
-							</div>)}
-							{Number.isFinite(swap) && (<div className="flex flex-col">
-								<p className=" text-xs text-muted-foreground">
-									{t("serverDetailChart.swap")}
-								</p>
-								<div className="flex items-center gap-2">
-									<AnimatedCircularProgressBar
-										className="size-3 text-[0px]"
-										max={100}
-										min={0}
-										value={swap}
-										primaryColor="hsl(var(--chart-10))"
-									/>
-									<p className="text-xs font-medium">{swap.toFixed(0)}%</p>
-								</div>
-							</div>)}
-						</section>
-						<section className="flex flex-col items-end gap-0.5">
-							<div className="flex text-[11px] font-medium items-center gap-2">
-								{formatBytes(data.state.mem_used)} /{" "}
-								{formatBytes(data.host.mem_total)}
-							</div>
-							{Number.isFinite(data.host.swap_total) && (<div className="flex text-[11px] font-medium items-center gap-2">
-								{data.host.swap_total ? (
-									<>
-										swap: {formatBytes(data.state.swap_used)} /{" "}
-										{formatBytes(data.host.swap_total)}
-									</>
-								) : (
-									<>no swap</>
-								)}
-							</div>)}
-						</section>
-					</div>
-					<ChartContainer
-						config={chartConfig}
-						className="aspect-auto h-[130px] w-full"
-					>
-						{isMemLoading ? (
-							<ChartSkeleton />
-						) : period !== "realtime" && displayData.length === 0 ? (
-							<p role="status" className="flex h-full items-center text-muted-foreground">暂无该时段的历史数据</p>
-						) : (
-							<AreaChart
-								accessibilityLayer
-								data={displayData}
-								margin={{
-									top: 12,
-									left: 12,
-									right: 12,
-								}}
-							>
-								<CartesianGrid vertical={false} />
-								<XAxis
-									dataKey="timeStamp"
-									tickLine={false}
-									axisLine={false}
-									tickMargin={8}
-									minTickGap={200}
-									interval="preserveStartEnd"
-									tickFormatter={(value) => formatRelativeTime(value)}
-								/>
-								<YAxis
-									tickLine={false}
-									axisLine={false}
-									mirror={true}
-									tickMargin={-15}
-									domain={[0, 100]}
-									tickFormatter={(value) => `${value}%`}
-								/>
-								<ChartTooltip
-									isAnimationActive={false}
-									content={
-										<ChartTooltipContent
-											indicator="dot"
-											labelFormatter={(_, payload) => {
-												return formatTime(
-													Number(payload[0]?.payload?.timeStamp),
-												);
-											}}
-											formatter={(value, name) => {
-												const label =
-													name === "mem"
-														? t("serverDetailChart.mem")
-														: t("serverDetailChart.swap");
-												return (
-													<div className="flex flex-1 items-center justify-between leading-none">
-														<span className="text-muted-foreground">
-															{label}
-														</span>
-														<span className="ml-2 font-medium text-foreground tabular-nums">
-															{Number(value).toFixed(1)}%
-														</span>
-													</div>
-												);
-											}}
-										/>
-									}
-								/>
-								{displayData.some(point => Number.isFinite(point.mem)) && (<Area
-									isAnimationActive={false}
-									dataKey="mem"
-									type="step"
-									fill="hsl(var(--chart-8))"
-									fillOpacity={0.3}
-									stroke="hsl(var(--chart-8))"
-								/>)}
-								{displayData.some(point => Number.isFinite(point.swap)) && (<Area
-									isAnimationActive={false}
-									dataKey="swap"
-									type="step"
-									fill="hsl(var(--chart-10))"
-									fillOpacity={0.3}
-									stroke="hsl(var(--chart-10))"
-								/>)}
-							</AreaChart>
-						)}
-					</ChartContainer>
-				</section>
-			</CardContent>
-		</Card>
-	);
+  return (
+    <Card
+      className={cn({
+        "bg-card/70": customBackgroundImage,
+      })}
+    >
+      <CardContent className="px-6 py-3">
+        <section className="flex flex-col gap-1">
+          <div className="flex items-center">
+            <section className="flex items-center gap-4">
+              <div className="flex flex-col w-20">
+                <p className="text-xs text-muted-foreground">{t("serverDetailChart.upload")}</p>
+                <div className="flex items-center gap-1">
+                  <span className="relative inline-flex  size-1.5 rounded-full bg-[hsl(var(--chart-1))]"></span>
+                  <p className="text-xs font-medium">
+                    {up >= 1024 ? `${(up / 1024).toFixed(2)}G/s` : up >= 1 ? `${up.toFixed(2)}M/s` : `${(up * 1024).toFixed(2)}K/s`}
+                  </p>
+                </div>
+              </div>
+              <div className="flex flex-col w-20">
+                <p className=" text-xs text-muted-foreground">{t("serverDetailChart.download")}</p>
+                <div className="flex items-center gap-1">
+                  <span className="relative inline-flex  size-1.5 rounded-full bg-[hsl(var(--chart-4))]"></span>
+                  <p className="text-xs font-medium">
+                    {down >= 1024 ? `${(down / 1024).toFixed(2)}G/s` : down >= 1 ? `${down.toFixed(2)}M/s` : `${(down * 1024).toFixed(2)}K/s`}
+                  </p>
+                </div>
+              </div>
+            </section>
+          </div>
+          <ChartContainer config={chartConfig} className="aspect-auto h-[130px] w-full">
+            <LineChart
+              accessibilityLayer
+              data={networkChartData}
+              margin={{
+                top: 12,
+                left: 12,
+                right: 12,
+              }}
+            >
+              <CartesianGrid vertical={false} />
+              <XAxis
+                dataKey="timeStamp"
+                tickLine={false}
+                axisLine={false}
+                tickMargin={8}
+                minTickGap={200}
+                interval="preserveStartEnd"
+                tickFormatter={(value) => formatRelativeTime(value)}
+              />
+              <YAxis
+                tickLine={false}
+                axisLine={false}
+                mirror={true}
+                tickMargin={-15}
+                type="number"
+                minTickGap={50}
+                interval="preserveStartEnd"
+                domain={[0, maxDownload]}
+                tickFormatter={(value) => `${value.toFixed(0)}M/s`}
+              />
+              <Line isAnimationActive={false} dataKey="upload" type="linear" stroke="hsl(var(--chart-1))" strokeWidth={1} dot={false} />
+              <Line isAnimationActive={false} dataKey="download" type="linear" stroke="hsl(var(--chart-4))" strokeWidth={1} dot={false} />
+            </LineChart>
+          </ChartContainer>
+        </section>
+      </CardContent>
+    </Card>
+  )
 }
 
-function DiskChart({
-	now,
-	data,
-	messageHistory,
-	period,
-}: {
-	now: number;
-	data: NezhaServer;
-	messageHistory: NezhaWebsocketResponse[];
-	period: ChartPeriod;
-}) {
-	const { t } = useTranslation();
-	const [diskChartData, setDiskChartData] = useState([] as diskChartData[]);
-	const hasInitialized = useRef(false);
-	const [historyLoaded, setHistoryLoaded] = useState(false);
+function ConnectChart({ now, data, messageHistory }: { now: number; data: NezhaServer; messageHistory: { data: string }[] }) {
+  const [connectChartData, setConnectChartData] = useState([] as connectChartData[])
+  const hasInitialized = useRef(false)
+  const [historyLoaded, setHistoryLoaded] = useState(false)
 
-	const customBackgroundImage =
-		(window.CustomBackgroundImage as string) !== ""
-			? window.CustomBackgroundImage
-			: undefined;
+  const customBackgroundImage = (window.CustomBackgroundImage as string) !== "" ? window.CustomBackgroundImage : undefined
 
-	const { disk } = formatNezhaInfo(now, data);
+  const { tcp, udp } = formatNezhaInfo(now, data)
 
-	const transformDiskData = useMemo(
-		() => (timestamp: number, value: number) => {
-			// Convert bytes to percentage
-			const diskPercent =
-				data.host.disk_total > 0 ? (value / data.host.disk_total) * 100 : NaN;
-			return {
-				timeStamp: timestamp.toString(),
-				disk: diskPercent,
-			};
-		},
-		[data.host.disk_total],
-	);
+  // 初始化历史数据
+  useEffect(() => {
+    if (!hasInitialized.current && messageHistory.length > 0) {
+      const historyData = messageHistory
+        .map((msg) => {
+          const wsData = JSON.parse(msg.data) as NezhaWebsocketResponse
+          const server = wsData.servers.find((s) => s.id === data.id)
+          if (!server) return null
+          const { tcp, udp } = formatNezhaInfo(wsData.now, server)
+          return {
+            timeStamp: wsData.now.toString(),
+            tcp,
+            udp,
+          }
+        })
+        .filter((item): item is connectChartData => item !== null)
+        .reverse()
 
-	const { displayData: diskHistoricalData, isLoading } =
-		useHistoricalData<diskChartData>(
-			data.id,
-			"disk",
-			period,
-			transformDiskData,
-		);
+      setConnectChartData(historyData)
+      hasInitialized.current = true
+      setHistoryLoaded(true)
+    }
+  }, [messageHistory])
 
-	// 初始化历史数据
-	useEffect(() => {
-		if (
-			period === "realtime" &&
-			!hasInitialized.current &&
-			messageHistory.length > 0
-		) {
-			const historyData = messageHistory
-				.map((wsData) => {
-					const server = wsData.servers.find((s) => s.id === data.id);
-					if (!server) return null;
-					const { disk } = formatNezhaInfo(wsData.now, server);
-					return {
-						timeStamp: wsData.now.toString(),
-						disk,
-					};
-				})
-				.filter((item): item is diskChartData => item !== null)
-				.reverse();
+  // 修改实时数据更新逻辑
+  useEffect(() => {
+    if (data && historyLoaded) {
+      const timestamp = now.toString()
+      setConnectChartData((prevData) => {
+        let newData = [] as connectChartData[]
+        if (prevData.length === 0) {
+          newData = [
+            { timeStamp: timestamp, tcp, udp },
+            { timeStamp: timestamp, tcp, udp },
+          ]
+        } else {
+          newData = [...prevData, { timeStamp: timestamp, tcp, udp }]
+          if (messageHistory.length <= 120 && newData.length > 120) {
+            newData.shift()
+          }
+        }
+        return newData
+      })
+    }
+  }, [data, historyLoaded])
 
-			setDiskChartData(historyData);
-			hasInitialized.current = true;
-			setHistoryLoaded(true);
-		}
-	}, [messageHistory, data.id, period]);
+  const chartConfig = {
+    tcp: {
+      label: "TCP",
+    },
+    udp: {
+      label: "UDP",
+    },
+  } satisfies ChartConfig
 
-	// Reset when switching to realtime
-	useEffect(() => {
-		if (period === "realtime") {
-			hasInitialized.current = false;
-			setHistoryLoaded(false);
-		}
-	}, [period]);
-
-	// 修改实时数据更新逻辑
-	useEffect(() => {
-		if (data && historyLoaded && period === "realtime") {
-			const timestamp = Date.now().toString();
-			setDiskChartData((prevData) => {
-				let newData = [] as diskChartData[];
-				if (prevData.length === 0) {
-					newData = [
-						{ timeStamp: timestamp, disk },
-						{ timeStamp: timestamp, disk },
-					];
-				} else {
-					newData = [...prevData, { timeStamp: timestamp, disk }];
-					if (newData.length > 30) {
-						newData.shift();
-					}
-				}
-				return newData;
-			});
-		}
-	}, [data, historyLoaded, disk, period]);
-
-	const chartConfig = {
-		disk: {
-			label: "Disk",
-		},
-	} satisfies ChartConfig;
-
-	const displayData =
-		period === "realtime" ? diskChartData : diskHistoricalData;
-
-	if (!isLoading && !displayData.some(point => Number.isFinite(point.disk))) return null;
-
-	return (
-		<Card
-			className={cn({
-				"bg-card/70": customBackgroundImage,
-			})}
-		>
-			<CardContent className="px-6 py-3">
-				<section className="flex flex-col gap-1">
-					<div className="flex items-center justify-between">
-						<p className="text-md font-medium">{t("serverDetailChart.disk")}</p>
-						<section className="flex flex-col items-end gap-0.5">
-							{Number.isFinite(disk) && (<section className="flex items-center gap-2">
-								<p className="text-xs text-end w-10 font-medium">
-									{disk.toFixed(0)}%
-								</p>
-								<AnimatedCircularProgressBar
-									className="size-3 text-[0px]"
-									max={100}
-									min={0}
-									value={disk}
-									primaryColor="hsl(var(--chart-5))"
-								/>
-							</section>)}
-							<div className="flex text-[11px] font-medium items-center gap-2">
-								{formatBytes(data.state.disk_used)} /{" "}
-								{formatBytes(data.host.disk_total)}
-							</div>
-						</section>
-					</div>
-					<ChartContainer
-						config={chartConfig}
-						className="aspect-auto h-[130px] w-full"
-					>
-						{isLoading ? (
-							<ChartSkeleton />
-						) : period !== "realtime" && displayData.length === 0 ? (
-							<p role="status" className="flex h-full items-center text-muted-foreground">暂无磁盘历史数据</p>
-						) : (
-							<AreaChart
-								accessibilityLayer
-								data={displayData}
-								margin={{
-									top: 12,
-									left: 12,
-									right: 12,
-								}}
-							>
-								<CartesianGrid vertical={false} />
-								<XAxis
-									dataKey="timeStamp"
-									tickLine={false}
-									axisLine={false}
-									tickMargin={8}
-									minTickGap={200}
-									interval="preserveStartEnd"
-									tickFormatter={(value) => formatRelativeTime(value)}
-								/>
-								<YAxis
-									tickLine={false}
-									axisLine={false}
-									mirror={true}
-									tickMargin={-15}
-									domain={[0, 100]}
-									tickFormatter={(value) => `${value}%`}
-								/>
-								<ChartTooltip
-									isAnimationActive={false}
-									content={
-										<ChartTooltipContent
-											indicator="dot"
-											labelFormatter={(_, payload) => {
-												return formatTime(
-													Number(payload[0]?.payload?.timeStamp),
-												);
-											}}
-											formatter={(value) => (
-												<div className="flex flex-1 items-center justify-between leading-none">
-													<span className="text-muted-foreground">
-														{t("serverDetailChart.disk")}
-													</span>
-													<span className="ml-2 font-medium text-foreground tabular-nums">
-														{Number(value).toFixed(1)}%
-													</span>
-												</div>
-											)}
-										/>
-									}
-								/>
-								{displayData.some(point => Number.isFinite(point.disk)) && (<Area
-									isAnimationActive={false}
-									dataKey="disk"
-									type="step"
-									fill="hsl(var(--chart-5))"
-									fillOpacity={0.3}
-									stroke="hsl(var(--chart-5))"
-								/>)}
-							</AreaChart>
-						)}
-					</ChartContainer>
-				</section>
-			</CardContent>
-		</Card>
-	);
-}
-
-function NetworkChart({
-	now,
-	data,
-	messageHistory,
-	period,
-}: {
-	now: number;
-	data: NezhaServer;
-	messageHistory: NezhaWebsocketResponse[];
-	period: ChartPeriod;
-}) {
-	const { t } = useTranslation();
-	const [networkChartData, setNetworkChartData] = useState(
-		[] as networkChartData[],
-	);
-	const hasInitialized = useRef(false);
-	const [historyLoaded, setHistoryLoaded] = useState(false);
-
-	const customBackgroundImage =
-		(window.CustomBackgroundImage as string) !== ""
-			? window.CustomBackgroundImage
-			: undefined;
-
-	const { up, down } = formatNezhaInfo(now, data);
-
-	// For network, we fetch upload and download separately and combine them
-	const [networkHistoricalData, setNetworkHistoricalData] = useState<
-		networkChartData[]
-	>([]);
-	const [isLoadingNetwork, setIsLoadingNetwork] = useState(false);
-	const [loadedPeriodNetwork, setLoadedPeriodNetwork] =
-		useState<ChartPeriod>("realtime");
-
-	useEffect(() => {
-		let cancelled = false;
-
-		if (period === "realtime") {
-			setNetworkHistoricalData([]);
-			setIsLoadingNetwork(false);
-			setLoadedPeriodNetwork("realtime");
-			return () => {
-				cancelled = true;
-			};
-		}
-
-		const fetchNetworkData = async () => {
-			const loadingStartedAt = Date.now();
-			setIsLoadingNetwork(true);
-			setNetworkHistoricalData([]);
-			try {
-				const [uploadResponse, downloadResponse] = await Promise.all([
-					fetchServerMetrics(data.id, "net_out_speed", period as MetricPeriod),
-					fetchServerMetrics(data.id, "net_in_speed", period as MetricPeriod),
-				]);
-
-				if (uploadResponse.success && uploadResponse.data?.data_points) {
-					const combinedData = joinMetricSeries(uploadResponse.data.data_points, downloadResponse.data?.data_points ?? []).map(point => ({timeStamp: point.timeStamp, upload: point.left / 1024 / 1024, download: point.right / 1024 / 1024}));
-					if (!cancelled) {
-						setNetworkHistoricalData(combinedData);
-					}
-				}
-			} catch (error) {
-				console.error("Failed to fetch network metrics:", error);
-			} finally {
-				const elapsed = Date.now() - loadingStartedAt;
-				if (elapsed < MIN_HISTORY_LOADING_MS) {
-					await sleep(MIN_HISTORY_LOADING_MS - elapsed);
-				}
-				if (!cancelled) {
-					setIsLoadingNetwork(false);
-					setLoadedPeriodNetwork(period);
-				}
-			}
-		};
-
-		fetchNetworkData();
-		return () => {
-			cancelled = true;
-		};
-	}, [data.id, period]);
-
-	// 初始化历史数据
-	useEffect(() => {
-		if (
-			period === "realtime" &&
-			!hasInitialized.current &&
-			messageHistory.length > 0
-		) {
-			const historyData = messageHistory
-				.map((wsData) => {
-					const server = wsData.servers.find((s) => s.id === data.id);
-					if (!server) return null;
-					const { up, down } = formatNezhaInfo(wsData.now, server);
-					return {
-						timeStamp: wsData.now.toString(),
-						upload: up,
-						download: down,
-					};
-				})
-				.filter((item): item is networkChartData => item !== null)
-				.reverse();
-
-			setNetworkChartData(historyData);
-			hasInitialized.current = true;
-			setHistoryLoaded(true);
-		}
-	}, [messageHistory, data.id, period]);
-
-	// Reset when switching to realtime
-	useEffect(() => {
-		if (period === "realtime") {
-			hasInitialized.current = false;
-			setHistoryLoaded(false);
-		}
-	}, [period]);
-
-	// 修改实时数据更新逻辑
-	useEffect(() => {
-		if (data && historyLoaded && period === "realtime") {
-			const timestamp = Date.now().toString();
-			setNetworkChartData((prevData) => {
-				let newData = [] as networkChartData[];
-				if (prevData.length === 0) {
-					newData = [
-						{ timeStamp: timestamp, upload: up, download: down },
-						{ timeStamp: timestamp, upload: up, download: down },
-					];
-				} else {
-					newData = [
-						...prevData,
-						{ timeStamp: timestamp, upload: up, download: down },
-					];
-					if (newData.length > 30) {
-						newData.shift();
-					}
-				}
-				return newData;
-			});
-		}
-	}, [data, historyLoaded, down, up, period]);
-
-	const displayData =
-		period === "realtime" ? networkChartData : networkHistoricalData;
-	const isNetworkLoading =
-		period !== "realtime" &&
-		(isLoadingNetwork || loadedPeriodNetwork !== period);
-
-	let maxDownload = Math.max(1, ...displayData.map((item) => item.download).filter(Number.isFinite));
-	maxDownload = Math.ceil(maxDownload);
-	if (maxDownload < 1) {
-		maxDownload = 1;
-	}
-
-	const chartConfig = {
-		upload: {
-			label: "Upload",
-		},
-		download: {
-			label: "Download",
-		},
-	} satisfies ChartConfig;
-
-	if (!isNetworkLoading && !displayData.some(point => Number.isFinite(point.upload) || Number.isFinite(point.download))) return null;
-
-	return (
-		<Card
-			className={cn({
-				"bg-card/70": customBackgroundImage,
-			})}
-		>
-			<CardContent className="px-6 py-3">
-				<section className="flex flex-col gap-1">
-					<div className="flex items-center">
-						<section className="flex items-center gap-4">
-							{Number.isFinite(up) && (<div className="flex flex-col w-20">
-								<p className="text-xs text-muted-foreground">
-									{t("serverDetailChart.upload")}
-								</p>
-								<div className="flex items-center gap-1">
-									<span className="relative inline-flex  size-1.5 rounded-full bg-[hsl(var(--chart-1))]" />
-									<p className="text-xs font-medium">
-										{up >= 1024
-											? `${(up / 1024).toFixed(2)}G/s`
-											: up >= 1
-												? `${up.toFixed(2)}M/s`
-												: `${(up * 1024).toFixed(2)}K/s`}
-									</p>
-								</div>
-							</div>)}
-							{Number.isFinite(down) && (<div className="flex flex-col w-20">
-								<p className=" text-xs text-muted-foreground">
-									{t("serverDetailChart.download")}
-								</p>
-								<div className="flex items-center gap-1">
-									<span className="relative inline-flex  size-1.5 rounded-full bg-[hsl(var(--chart-4))]" />
-									<p className="text-xs font-medium">
-										{down >= 1024
-											? `${(down / 1024).toFixed(2)}G/s`
-											: down >= 1
-												? `${down.toFixed(2)}M/s`
-												: `${(down * 1024).toFixed(2)}K/s`}
-									</p>
-								</div>
-							</div>)}
-						</section>
-					</div>
-					<ChartContainer
-						config={chartConfig}
-						className="aspect-auto h-[130px] w-full"
-					>
-						{isNetworkLoading ? (
-							<ChartSkeleton />
-						) : period !== "realtime" && displayData.length === 0 ? (
-							<p role="status" className="flex h-full items-center text-muted-foreground">暂无该时段的历史数据</p>
-						) : (
-							<LineChart
-								accessibilityLayer
-								data={displayData}
-								margin={{
-									top: 12,
-									left: 12,
-									right: 12,
-								}}
-							>
-								<CartesianGrid vertical={false} />
-								<XAxis
-									dataKey="timeStamp"
-									tickLine={false}
-									axisLine={false}
-									tickMargin={8}
-									minTickGap={200}
-									interval="preserveStartEnd"
-									tickFormatter={(value) => formatRelativeTime(value)}
-								/>
-								<YAxis
-									tickLine={false}
-									axisLine={false}
-									mirror={true}
-									tickMargin={-15}
-									type="number"
-									minTickGap={50}
-									interval="preserveStartEnd"
-									domain={[1, maxDownload]}
-									tickFormatter={(value) => `${value.toFixed(0)}M/s`}
-								/>
-								<ChartTooltip
-									isAnimationActive={false}
-									content={
-										<ChartTooltipContent
-											indicator="dot"
-											labelFormatter={(_, payload) => {
-												return formatTime(
-													Number(payload[0]?.payload?.timeStamp),
-												);
-											}}
-											formatter={(value, name) => {
-												const label =
-													name === "upload"
-														? t("serverDetailChart.upload")
-														: t("serverDetailChart.download");
-												return (
-													<div className="flex flex-1 items-center justify-between leading-none">
-														<span className="text-muted-foreground">
-															{label}
-														</span>
-														<span className="ml-2 font-medium text-foreground tabular-nums">
-															{Number(value).toFixed(2)} MB/s
-														</span>
-													</div>
-												);
-											}}
-										/>
-									}
-								/>
-								{displayData.some(point => Number.isFinite(point.upload)) && (<Line
-									isAnimationActive={false}
-									dataKey="upload"
-									type="linear"
-									stroke="hsl(var(--chart-1))"
-									strokeWidth={1}
-									dot={false}
-								/>)}
-								{displayData.some(point => Number.isFinite(point.download)) && (<Line
-									isAnimationActive={false}
-									dataKey="download"
-									type="linear"
-									stroke="hsl(var(--chart-4))"
-									strokeWidth={1}
-									dot={false}
-								/>)}
-							</LineChart>
-						)}
-					</ChartContainer>
-				</section>
-			</CardContent>
-		</Card>
-	);
-}
-
-function ConnectChart({
-	now,
-	data,
-	messageHistory,
-	period,
-}: {
-	now: number;
-	data: NezhaServer;
-	messageHistory: NezhaWebsocketResponse[];
-	period: ChartPeriod;
-}) {
-	const [connectChartData, setConnectChartData] = useState(
-		[] as connectChartData[],
-	);
-	const hasInitialized = useRef(false);
-	const [historyLoaded, setHistoryLoaded] = useState(false);
-
-	const customBackgroundImage =
-		(window.CustomBackgroundImage as string) !== ""
-			? window.CustomBackgroundImage
-			: undefined;
-
-	const { tcp, udp } = formatNezhaInfo(now, data);
-
-	// For connections, we fetch TCP and UDP separately and combine them
-	const [connectHistoricalData, setConnectHistoricalData] = useState<
-		connectChartData[]
-	>([]);
-	const [isLoadingConnect, setIsLoadingConnect] = useState(false);
-	const [loadedPeriodConnect, setLoadedPeriodConnect] =
-		useState<ChartPeriod>("realtime");
-
-	useEffect(() => {
-		let cancelled = false;
-
-		if (period === "realtime") {
-			setConnectHistoricalData([]);
-			setIsLoadingConnect(false);
-			setLoadedPeriodConnect("realtime");
-			return () => {
-				cancelled = true;
-			};
-		}
-
-		const fetchConnectData = async () => {
-			const loadingStartedAt = Date.now();
-			setIsLoadingConnect(true);
-			setConnectHistoricalData([]);
-			try {
-				const [tcpResponse, udpResponse] = await Promise.all([
-					fetchServerMetrics(data.id, "tcp_conn", period as MetricPeriod),
-					fetchServerMetrics(data.id, "udp_conn", period as MetricPeriod),
-				]);
-
-				if (tcpResponse.success && tcpResponse.data?.data_points) {
-					const combinedData = joinMetricSeries(tcpResponse.data.data_points, udpResponse.data?.data_points ?? []).map(point => ({timeStamp: point.timeStamp, tcp: point.left, udp: point.right}));
-					if (!cancelled) {
-						setConnectHistoricalData(combinedData);
-					}
-				}
-			} catch (error) {
-				console.error("Failed to fetch connection metrics:", error);
-			} finally {
-				const elapsed = Date.now() - loadingStartedAt;
-				if (elapsed < MIN_HISTORY_LOADING_MS) {
-					await sleep(MIN_HISTORY_LOADING_MS - elapsed);
-				}
-				if (!cancelled) {
-					setIsLoadingConnect(false);
-					setLoadedPeriodConnect(period);
-				}
-			}
-		};
-
-		fetchConnectData();
-		return () => {
-			cancelled = true;
-		};
-	}, [data.id, period]);
-
-	// 初始化历史数据
-	useEffect(() => {
-		if (
-			period === "realtime" &&
-			!hasInitialized.current &&
-			messageHistory.length > 0
-		) {
-			const historyData = messageHistory
-				.map((wsData) => {
-					const server = wsData.servers.find((s) => s.id === data.id);
-					if (!server) return null;
-					const { tcp, udp } = formatNezhaInfo(wsData.now, server);
-					return {
-						timeStamp: wsData.now.toString(),
-						tcp,
-						udp,
-					};
-				})
-				.filter((item): item is connectChartData => item !== null)
-				.reverse();
-
-			setConnectChartData(historyData);
-			hasInitialized.current = true;
-			setHistoryLoaded(true);
-		}
-	}, [messageHistory, data.id, period]);
-
-	// Reset when switching to realtime
-	useEffect(() => {
-		if (period === "realtime") {
-			hasInitialized.current = false;
-			setHistoryLoaded(false);
-		}
-	}, [period]);
-
-	// 修改实时数据更新逻辑
-	useEffect(() => {
-		if (data && historyLoaded && period === "realtime") {
-			const timestamp = Date.now().toString();
-			setConnectChartData((prevData) => {
-				let newData = [] as connectChartData[];
-				if (prevData.length === 0) {
-					newData = [
-						{ timeStamp: timestamp, tcp, udp },
-						{ timeStamp: timestamp, tcp, udp },
-					];
-				} else {
-					newData = [...prevData, { timeStamp: timestamp, tcp, udp }];
-					if (newData.length > 30) {
-						newData.shift();
-					}
-				}
-				return newData;
-			});
-		}
-	}, [data, historyLoaded, tcp, udp, period]);
-
-	const chartConfig = {
-		tcp: {
-			label: "TCP",
-		},
-		udp: {
-			label: "UDP",
-		},
-	} satisfies ChartConfig;
-
-	const displayData =
-		period === "realtime" ? connectChartData : connectHistoricalData;
-	const isConnectLoading =
-		period !== "realtime" &&
-		(isLoadingConnect || loadedPeriodConnect !== period);
-
-	if (!isConnectLoading && !displayData.some(point => Number.isFinite(point.tcp) || Number.isFinite(point.udp))) return null;
-
-	return (
-		<Card
-			className={cn({
-				"bg-card/70": customBackgroundImage,
-			})}
-		>
-			<CardContent className="px-6 py-3">
-				<section className="flex flex-col gap-1">
-					<div className="flex items-center">
-						<section className="flex items-center gap-4">
-							{Number.isFinite(tcp) && (<div className="flex flex-col w-12">
-								<p className="text-xs text-muted-foreground">TCP</p>
-								<div className="flex items-center gap-1">
-									<span className="relative inline-flex  size-1.5 rounded-full bg-[hsl(var(--chart-1))]" />
-									<p className="text-xs font-medium">{tcp}</p>
-								</div>
-							</div>)}
-							{Number.isFinite(udp) && (<div className="flex flex-col w-12">
-								<p className=" text-xs text-muted-foreground">UDP</p>
-								<div className="flex items-center gap-1">
-									<span className="relative inline-flex  size-1.5 rounded-full bg-[hsl(var(--chart-4))]" />
-									<p className="text-xs font-medium">{udp}</p>
-								</div>
-							</div>)}
-						</section>
-					</div>
-					<ChartContainer
-						config={chartConfig}
-						className="aspect-auto h-[130px] w-full"
-					>
-						{isConnectLoading ? (
-							<ChartSkeleton />
-						) : period !== "realtime" && displayData.length === 0 ? (
-							<p role="status" className="flex h-full items-center text-muted-foreground">暂无该时段的历史数据</p>
-						) : (
-							<LineChart
-								accessibilityLayer
-								data={displayData}
-								margin={{
-									top: 12,
-									left: 12,
-									right: 12,
-								}}
-							>
-								<CartesianGrid vertical={false} />
-								<XAxis
-									dataKey="timeStamp"
-									tickLine={false}
-									axisLine={false}
-									tickMargin={8}
-									minTickGap={200}
-									interval="preserveStartEnd"
-									tickFormatter={(value) => formatRelativeTime(value)}
-								/>
-								<YAxis
-									tickLine={false}
-									axisLine={false}
-									mirror={true}
-									tickMargin={-15}
-									type="number"
-									interval="preserveStartEnd"
-								/>
-								<ChartTooltip
-									isAnimationActive={false}
-									content={
-										<ChartTooltipContent
-											indicator="dot"
-											labelFormatter={(_, payload) => {
-												return formatTime(
-													Number(payload[0]?.payload?.timeStamp),
-												);
-											}}
-											formatter={(value, name) => {
-												const label = name === "tcp" ? "TCP" : "UDP";
-												return (
-													<div className="flex flex-1 items-center justify-between leading-none">
-														<span className="text-muted-foreground">
-															{label}
-														</span>
-														<span className="ml-2 font-medium text-foreground tabular-nums">
-															{Number(value).toFixed(0)}
-														</span>
-													</div>
-												);
-											}}
-										/>
-									}
-								/>
-								{displayData.some(point => Number.isFinite(point.tcp)) && (<Line
-									isAnimationActive={false}
-									dataKey="tcp"
-									type="linear"
-									stroke="hsl(var(--chart-1))"
-									strokeWidth={1}
-									dot={false}
-								/>)}
-								{displayData.some(point => Number.isFinite(point.udp)) && (<Line
-									isAnimationActive={false}
-									dataKey="udp"
-									type="linear"
-									stroke="hsl(var(--chart-4))"
-									strokeWidth={1}
-									dot={false}
-								/>)}
-							</LineChart>
-						)}
-					</ChartContainer>
-				</section>
-			</CardContent>
-		</Card>
-	);
+  return (
+    <Card
+      className={cn({
+        "bg-card/70": customBackgroundImage,
+      })}
+    >
+      <CardContent className="px-6 py-3">
+        <section className="flex flex-col gap-1">
+          <div className="flex items-center">
+            <section className="flex items-center gap-4">
+              <div className="flex flex-col w-12">
+                <p className="text-xs text-muted-foreground">TCP</p>
+                <div className="flex items-center gap-1">
+                  <span className="relative inline-flex  size-1.5 rounded-full bg-[hsl(var(--chart-1))]"></span>
+                  <p className="text-xs font-medium">{tcp}</p>
+                </div>
+              </div>
+              <div className="flex flex-col w-12">
+                <p className=" text-xs text-muted-foreground">UDP</p>
+                <div className="flex items-center gap-1">
+                  <span className="relative inline-flex  size-1.5 rounded-full bg-[hsl(var(--chart-4))]"></span>
+                  <p className="text-xs font-medium">{udp}</p>
+                </div>
+              </div>
+            </section>
+          </div>
+          <ChartContainer config={chartConfig} className="aspect-auto h-[130px] w-full">
+            <LineChart
+              accessibilityLayer
+              data={connectChartData}
+              margin={{
+                top: 12,
+                left: 12,
+                right: 12,
+              }}
+            >
+              <CartesianGrid vertical={false} />
+              <XAxis
+                dataKey="timeStamp"
+                tickLine={false}
+                axisLine={false}
+                tickMargin={8}
+                minTickGap={200}
+                interval="preserveStartEnd"
+                tickFormatter={(value) => formatRelativeTime(value)}
+              />
+              <YAxis tickLine={false} axisLine={false} mirror={true} tickMargin={-15} type="number" interval="preserveStartEnd" />
+              <Line isAnimationActive={false} dataKey="tcp" type="linear" stroke="hsl(var(--chart-1))" strokeWidth={1} dot={false} />
+              <Line isAnimationActive={false} dataKey="udp" type="linear" stroke="hsl(var(--chart-4))" strokeWidth={1} dot={false} />
+            </LineChart>
+          </ChartContainer>
+        </section>
+      </CardContent>
+    </Card>
+  )
 }

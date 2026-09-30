@@ -39,6 +39,19 @@ export function summarizeTraffic(servers: ProbeServer[]) {
   }
 }
 
+/** Billing totals use host-adjusted usage, never raw directional or NIC counters. */
+export function summarizeBillingTraffic(nodes: ReadonlyArray<{
+  billable_traffic_used?: number;
+  traffic_limit?: number;
+}>) {
+  const sum = (key: 'billable_traffic_used' | 'traffic_limit'): number =>
+    !nodes.length || nodes.some(node => finite(node[key]) === undefined || node[key]! < 0)
+      ? NaN : nodes.reduce((total, node) => total + node[key]!, 0)
+  const used = sum('billable_traffic_used')
+  const limit = sum('traffic_limit')
+  return { used, limit, remaining: Math.max(0, limit - used) }
+}
+
 export function hasTrafficPeriod(server: ProbeServer): boolean {
   return Boolean(server.period_start && server.period_end)
 }

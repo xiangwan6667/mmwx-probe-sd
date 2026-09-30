@@ -1,3 +1,4 @@
+// MMWX adaptation (2026-09-30): host integration; see licenses/NezhaDash-NOTICE.md.
 // Adapted from BITJEBE/nezha-BITJEBE (Apache-2.0); MMWX changes described in licenses/NezhaDash-NOTICE.md.
 import { Globe2 } from "lucide-react"
 import { useEffect, useMemo, useState } from "react"

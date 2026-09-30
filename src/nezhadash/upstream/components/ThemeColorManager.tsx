@@ -1,3 +1,4 @@
+// MMWX adaptation (2026-09-30): host integration; see licenses/NezhaDash-NOTICE.md.
 "use client";
 // MMWX adaptation: resolve system colors through the host; see licenses/NezhaDash-NOTICE.md.
 

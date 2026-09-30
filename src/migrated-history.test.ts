@@ -39,5 +39,5 @@ test('Nezha unknown boot traffic does not render as measured zero', () => {
   assert.ok(Number.isNaN(server.state.net_out_transfer));
   assert.ok(Number.isNaN(server.state.net_in_transfer));
   assert.equal(formatBytes(NaN), '—');
-  assert.equal(formatBytes(0), '0 KiB');
+  assert.equal(formatBytes(0), '0 Bytes');
 });

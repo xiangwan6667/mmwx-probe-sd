@@ -1,3 +1,4 @@
+// MMWX adaptation (2026-09-30): host integration; see licenses/NezhaDash-NOTICE.md.
 // MMWX adaptation (2026-09-29): host data/theme/router integration; see licenses/NezhaDash-NOTICE.md.
 import { createContext, type ReactNode, useEffect } from 'react';
 import { useColorModePreference, saveColorModePreference } from '../../../theme-settings';

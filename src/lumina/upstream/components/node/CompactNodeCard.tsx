@@ -594,7 +594,7 @@ function CompactTrafficBar({
     >
       <div className={clsx("compact-node-traffic-body", uptimeLabel && "has-uptime")}>
         <div className="compact-node-traffic-head">
-          <TrafficQuotaLabel remainingLabel={traffic.remainingLabel} reset={reset} />
+          <TrafficQuotaLabel reset={reset} />
           {uptimeLabel ? (
             <span className="compact-node-traffic-uptime">{uptimeLabel}</span>
           ) : (

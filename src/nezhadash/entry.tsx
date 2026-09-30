@@ -2,6 +2,8 @@ import { useEffect, useMemo, useState } from 'react';
 import { createRoot } from 'react-dom/client';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import App from './upstream/App';
+import { MotionProvider } from './upstream/components/motion/motion-provider';
+import { ThemeColorManager } from './upstream/components/ThemeColorManager';
 import { ThemeProvider } from './upstream/components/ThemeProvider';
 import { CommandProvider } from './upstream/context/command-provider';
 import { StatusProvider } from './upstream/context/status-provider';
@@ -47,7 +49,7 @@ function Root() {
   const [history, setHistory] = useState<NezhaWebsocketResponse[]>([]);
   useEffect(() => { if (data) setHistory(previous => [...previous.slice(-119), data]); }, [data]);
   if (!probe || !data) return <div className="min-h-screen flex items-center justify-center text-sm">正在连接主控…</div>;
-  return <ThemeProvider><QueryClientProvider client={queryClient}><WebSocketContext.Provider value={{ lastData: data, connected: !probe.error, messageHistory: history, needReconnect: false, reconnect: () => {}, setNeedReconnect: () => {} }}><CommandProvider><StatusProvider><SortProvider><TooltipProvider><App /></TooltipProvider></SortProvider></StatusProvider></CommandProvider></WebSocketContext.Provider></QueryClientProvider></ThemeProvider>;
+  return <MotionProvider><ThemeProvider><ThemeColorManager /><QueryClientProvider client={queryClient}><WebSocketContext.Provider value={{ lastData: data, lastMessage: { data: JSON.stringify(data) }, connected: !probe.error, messageHistory: history.map(item => ({ data: JSON.stringify(item) })), needReconnect: false, reconnect: () => {}, setNeedReconnect: () => {} }}><CommandProvider><StatusProvider><SortProvider><TooltipProvider><App /></TooltipProvider></SortProvider></StatusProvider></CommandProvider></WebSocketContext.Provider></QueryClientProvider></ThemeProvider></MotionProvider>;
 }
 // Initialize upstream background globals before mounting its components.
 void loadSiteSettings().then(settings => {

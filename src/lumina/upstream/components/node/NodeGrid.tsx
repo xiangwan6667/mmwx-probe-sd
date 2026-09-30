@@ -1,4 +1,4 @@
-import { summarizePeriodTraffic } from "@lumina/utils/traffic";
+import { summarizeBillingTraffic } from '../../../../traffic-display';
 import { useCallback, useEffect, useMemo, useState, type CSSProperties } from "react";
 import { Link } from "react-router-dom";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
@@ -78,9 +78,9 @@ interface HomeOverview {
   totalNodes: number;
   onlineNodes: number;
   offlineNodes: number;
-  trafficUp: number;
-  trafficDown: number;
   billableTraffic: number;
+  trafficLimit: number;
+  remainingTraffic: number;
   netUp: number;
   netDown: number;
 }
@@ -118,7 +118,7 @@ export function HomeBrand({ siteName }: { siteName: string }) {
   );
 }
 
-function HomeOverviewCards({
+export function HomeOverviewCards({
   overview,
   costSummary,
   costLoading,
@@ -152,7 +152,7 @@ function HomeOverviewCards({
   onWarmTraffic: () => void;
 }) {
   const [trafficValue, trafficUnit] = formatBytes(
-    overview.trafficUp + overview.trafficDown,
+    overview.billableTraffic, 2,
   ).split(" ");
   const rate = formatByteRate(overview.netUp + overview.netDown);
   const onlinePct =
@@ -166,15 +166,13 @@ function HomeOverviewCards({
       : costLoading
         ? "计算中"
         : "—";
-  const trafficDetailLabel = `周期上行 ${formatBytes(overview.trafficUp)} · 周期下行 ${formatBytes(overview.trafficDown)} · 计费用量 ${formatBytes(overview.billableTraffic)}`;
-  const trafficCompactLabel = `↑${formatCompactBytes(overview.trafficUp)} ↓${formatCompactBytes(overview.trafficDown)}`;
   const bandwidthDetailLabel = `↑ ${formatByteRateLabel(overview.netUp)} · ↓ ${formatByteRateLabel(overview.netDown)}`;
   const bandwidthCompactLabel = `↑${formatCompactBytes(overview.netUp)} ↓${formatCompactBytes(overview.netDown)}`;
   const trafficRating =
-    showOverviewRatings && showTrafficRating && Number.isFinite(overview.trafficUp + overview.trafficDown)
+    showOverviewRatings && showTrafficRating && Number.isFinite(overview.billableTraffic)
       ? getOverviewRating({
           kind: "traffic",
-          value: overview.trafficUp + overview.trafficDown,
+          value: overview.billableTraffic,
           customLabels: trafficRatingLabels,
         })
       : null;
@@ -254,9 +252,9 @@ function HomeOverviewCards({
         </div>
       </article>)}
 
-      {Number.isFinite(overview.trafficUp + overview.trafficDown) && (<article className="overview-card" data-metric="traffic">
+      {Number.isFinite(overview.billableTraffic) && (<article className="overview-card" data-metric="traffic">
         <div className="overview-card-head">
-          <span className="overview-card-label">周期流量</span>
+          <span className="overview-card-label">已用流量</span>
           <Link
             to="/traffic"
             className="overview-card-action"
@@ -276,10 +274,6 @@ function HomeOverviewCards({
           </p>
         </div>
         <div className="overview-card-footer">
-          <p className="overview-card-sub" title={trafficDetailLabel}>
-            <span className="overview-card-sub-full">{trafficDetailLabel}</span>
-            <span className="overview-card-sub-compact">{trafficCompactLabel}</span>
-          </p>
           {renderRating(trafficRating)}
         </div>
       </article>)}
@@ -445,9 +439,7 @@ export function NodeGrid() {
   const overview = useMemo<HomeOverview>(() => {
     let onlineNodes = 0;
     let offlineNodes = 0;
-    const periodTraffic = summarizePeriodTraffic(visibleMeta);
-    const trafficUp = periodTraffic.up;
-    const trafficDown = periodTraffic.down;
+    const billingTraffic = summarizeBillingTraffic(visibleMeta);
     let netUp = 0;
     let netDown = 0;
     for (const node of visibleNodes) {
@@ -463,9 +455,9 @@ export function NodeGrid() {
       totalNodes: visibleNodes.length,
       onlineNodes,
       offlineNodes,
-      trafficUp,
-      trafficDown,
-      billableTraffic: visibleMeta.reduce((sum,node)=>sum+(node.billable_traffic_used ?? NaN),0),
+      billableTraffic: billingTraffic.used,
+      trafficLimit: billingTraffic.limit,
+      remainingTraffic: billingTraffic.remaining,
       netUp,
       netDown,
     };

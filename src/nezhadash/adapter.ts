@@ -13,7 +13,8 @@ export function toNezhaData(data: ProbePayload, now = Date.now()): NezhaWebsocke
       const traffic = bootTraffic(server);
       const load = server.loadavg?.trim().split(/\s+/).map(value => value ? Number(value) : NaN) ?? [];
       return {
-        id, name: server.name || `服务器 ${id + 1}`, public_note: toPublicNote(server),
+        id, online: server.online, traffic_limit: measurement(server.traffic_limit), traffic_limit_type: server.traffic_stats_mode || "sum",
+        name: server.name || `服务器 ${id + 1}`, public_note: toPublicNote(server),
         last_active: server.online ? new Date(now).toISOString() : '0001-01-01T00:00:00Z',
         country_code: server.region_country || (/^[a-z]{2}$/i.test(server.region || '') ? server.region! : ''),
         host: { platform: server.os || '', platform_version: server.kernel || '', cpu: server.cpu_model ? [server.cpu_model] : [], gpu: [],

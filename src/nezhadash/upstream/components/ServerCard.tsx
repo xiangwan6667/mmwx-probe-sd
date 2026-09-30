@@ -1,295 +1,207 @@
-import { NezhaUnlocks } from "../../ProbeUnlocks";
-// MMWX adaptation (2026-09-29): host data/theme/router integration; see licenses/NezhaDash-NOTICE.md.
-import { getProbe } from "../../bridge";
-import { billableTraffic, trafficModeLabel } from "../../../traffic-display";
-import TrafficBar from "./TrafficBar";
-import { memo } from "react";
-import { useTranslation } from "react-i18next";
-import { useNavigate } from "react-router-dom";
-import ServerFlag from "@/components/ServerFlag";
-import ServerUsageBar from "@/components/ServerUsageBar";
-import { formatBytes } from "@/lib/format";
-import {
-	GetFontLogoClass,
-	GetOsName,
-	MageMicrosoftWindows,
-} from "@/lib/logo-class";
-import { saveMainPageScrollPosition } from "@/lib/navigation";
-import { cn, formatNezhaInfo, parsePublicNote } from "@/lib/utils";
-import type { NezhaServer } from "@/types/nezha-api";
-import BillingInfo from "./billingInfo";
-import PlanInfo from "./PlanInfo";
-import { Badge } from "./ui/badge";
-import { Card } from "./ui/card";
+// MMWX adaptation (2026-09-30): host integration; see licenses/NezhaDash-NOTICE.md.
+import { NezhaUnlocks } from "../../ProbeUnlocks"
+import { getProbe } from "../../bridge"
+import { billableTraffic, trafficModeLabel } from "../../../traffic-display"
+import ServerFlag from "@/components/ServerFlag"
+import ServerUsageBar from "@/components/ServerUsageBar"
+import TrafficBar from "@/components/TrafficBar"
+import { formatBytes } from "@/lib/format"
+import { GetFontLogoClass, GetOsName, MageMicrosoftWindows } from "@/lib/logo-class"
+import { cn, calcTrafficUsed, formatNezhaInfo, parsePublicNote } from "@/lib/utils"
+import { NezhaServer } from "@/types/nezha-api"
+import { useTranslation } from "react-i18next"
+import { useNavigate } from "react-router-dom"
 
-function ServerCard({
-	now,
-	serverInfo,
-}: {
-	now: number;
-	serverInfo: NezhaServer;
-}) {
-	const { t } = useTranslation();
-	const navigate = useNavigate();
-	const {
-		name,
-		country_code,
-		online,
-		cpu,
-		up,
-		down,
-		mem,
-		stg,
-		net_in_transfer,
-		net_out_transfer,
-		public_note,
-		platform,
-	} = formatNezhaInfo(now, serverInfo);
+import PlanInfo from "./PlanInfo"
+import BillingInfo from "./billingInfo"
+import { Badge } from "./ui/badge"
+import { Card } from "./ui/card"
 
-	const cardClick = () => {
-		saveMainPageScrollPosition();
-		navigate(`/server/${serverInfo.id}`);
-	};
+export default function ServerCard({ now, serverInfo }: { now: number; serverInfo: NezhaServer }) {
+  const { t } = useTranslation()
+  const navigate = useNavigate()
+  const { name, country_code, online, cpu, up, down, mem, stg, net_in_transfer, net_out_transfer, public_note, platform, traffic_limit, traffic_limit_type, traffic_reset_day } = formatNezhaInfo(
+    now,
+    serverInfo,
+  )
 
-	const probe = getProbe().servers?.[serverInfo.id];
-	const showFlag = true;
+  const cardClick = () => {
+    sessionStorage.setItem("fromMainPage", "true")
+    navigate(`/server/${serverInfo.id}`)
+  }
 
-	const customBackgroundImage =
-		(window.CustomBackgroundImage as string) !== ""
-			? window.CustomBackgroundImage
-			: undefined;
+  const probe = getProbe().servers?.[serverInfo.id]
+  const showFlag = true
 
-	// @ts-expect-error ShowNetTransfer is a global variable
-	const showNetTransfer = window.ShowNetTransfer as boolean;
+  const customBackgroundImage = (window.CustomBackgroundImage as string) !== "" ? window.CustomBackgroundImage : undefined
 
-	// @ts-expect-error FixedTopServerName is a global variable
-	const fixedTopServerName = window.FixedTopServerName as boolean;
+  // @ts-expect-error ShowNetTransfer is a global variable
+  const showNetTransfer = window.ShowNetTransfer as boolean
 
-	const parsedData = parsePublicNote(public_note);
+  // @ts-expect-error FixedTopServerName is a global variable
+  const fixedTopServerName = window.FixedTopServerName as boolean
 
-	return online ? (
-		<Card
-			className={cn(
-				"nezha-server-card flex flex-col items-center justify-start gap-3 p-3 md:px-5 cursor-pointer hover:bg-accent/50 transition-colors",
-				{
-					"flex-col": fixedTopServerName,
-					"lg:flex-row": !fixedTopServerName,
-				},
-				{
-					"bg-card/70": customBackgroundImage,
-				},
-			)}
-			onClick={cardClick}
-		>
-			<NezhaUnlocks id={serverInfo.id} corner />
-			<section
-				className={cn("grid items-center gap-2", {
-					"lg:w-40": !fixedTopServerName,
-				})}
-				style={{ gridTemplateColumns: "auto auto 1fr" }}
-			>
-				<span className="h-2 w-2 shrink-0 rounded-full bg-green-500 self-center"></span>
-				<div
-					className={cn(
-						"flex items-center justify-center",
-						showFlag ? "min-w-[17px]" : "min-w-0",
-					)}
-				>
-					{showFlag ? <ServerFlag country_code={country_code} /> : null}
-				</div>
-				<div className="relative flex flex-col">
-					<p
-						className={cn(
-							"break-normal font-bold tracking-tight",
-							showFlag ? "text-xs " : "text-sm",
-						)}
-					>
-						{name}
-					</p>
-					<div
-						className={cn("hidden lg:block", {
-							"lg:hidden": fixedTopServerName,
-						})}
-					>
-						{parsedData?.billingDataMod && (
-							<BillingInfo parsedData={parsedData} />
-						)}
-					</div>
-				</div>
-			</section>
-			<div
-				className={cn("flex items-center gap-2 -mt-2 lg:hidden", {
-					"lg:flex": fixedTopServerName,
-				})}
-			>
-				{parsedData?.billingDataMod && <BillingInfo parsedData={parsedData} />}
-			</div>
-			<div className="flex flex-col lg:items-start items-center gap-2">
-				<section
-					className={cn("flex flex-wrap items-center gap-3", {
-						"lg:gap-4": fixedTopServerName,
-					})}
-				>
-					{fixedTopServerName && Boolean(platform) && (
-						<div
-							className={
-								"hidden col-span-1 items-center lg:flex lg:flex-row gap-2"
-							}
-						>
-							<div className="text-xs font-semibold">
-								{platform.includes("Windows") ? (
-									<MageMicrosoftWindows className="size-[10px]" />
-								) : (
-									<p className={`fl-${GetFontLogoClass(platform)}`} />
-								)}
-							</div>
-							<div className={"flex w-14 flex-col"}>
-								<p className="text-xs text-muted-foreground">
-									{t("serverCard.system")}
-								</p>
-								<div className="flex items-center text-[10.5px] font-semibold">
-									{platform.includes("Windows")
-										? "Windows"
-										: GetOsName(platform)}
-								</div>
-							</div>
-						</div>
-					)}
-					{Number.isFinite(cpu) && (<div className={"flex w-14 flex-col"}>
-						<p className="text-xs text-muted-foreground">{"CPU"}</p>
-						<div className="flex items-center text-xs font-semibold">
-							{`${cpu.toFixed(2)}%`}
-						</div>
-						<ServerUsageBar value={cpu} />
-					</div>)}
-					{Number.isFinite(mem) && (<div className={"flex w-14 flex-col"}>
-						<p className="text-xs text-muted-foreground">
-							{t("serverCard.mem")}
-						</p>
-						<div className="flex items-center text-xs font-semibold">
-							{`${mem.toFixed(2)}%`}
-						</div>
-						<ServerUsageBar value={mem} />
-					</div>)}
-					{Number.isFinite(stg) && (<div className={"flex w-14 flex-col"}>
-						<p className="text-xs text-muted-foreground">
-							{t("serverCard.stg")}
-						</p>
-						<div className="flex items-center text-xs font-semibold">
-							{`${stg.toFixed(2)}%`}
-						</div>
-						<ServerUsageBar value={stg} />
-					</div>)}
-					{Number.isFinite(up) && (<div className={"flex w-14 flex-col"}>
-						<p className="text-xs text-muted-foreground">
-							{t("serverCard.upload")}
-						</p>
-						<div className="flex items-center text-xs font-semibold">
-							{up >= 1024
-								? `${(up / 1024).toFixed(2)}G/s`
-								: up >= 1
-									? `${up.toFixed(2)}M/s`
-									: `${(up * 1024).toFixed(2)}K/s`}
-						</div>
-					</div>)}
-					{Number.isFinite(down) && (<div className={"flex w-14 flex-col"}>
-						<p className="text-xs text-muted-foreground">
-							{t("serverCard.download")}
-						</p>
-						<div className="flex items-center text-xs font-semibold">
-							{down >= 1024
-								? `${(down / 1024).toFixed(2)}G/s`
-								: down >= 1
-									? `${down.toFixed(2)}M/s`
-									: `${(down * 1024).toFixed(2)}K/s`}
-						</div>
-					</div>)}
-				</section>
-				{probe && (window as unknown as Record<string, unknown>).ShowTrafficBar !== false && (
-					<TrafficBar used={billableTraffic(probe)} limit={probe.traffic_limit ?? 0} periodEnd={probe.period_end} billingMode={trafficModeLabel(probe)} now={now} />
-				)}
-				{showNetTransfer && (Number.isFinite(net_out_transfer) || Number.isFinite(net_in_transfer)) && (
-					<section className={"flex items-center w-full justify-between gap-1"}>
-						{Number.isFinite(net_out_transfer) && (<Badge
-							variant="secondary"
-							className="items-center flex-1 justify-center rounded-[8px] text-nowrap text-[11px] border-muted-50 shadow-md shadow-neutral-200/30 dark:shadow-none"
-						>
-							开机上行:{formatBytes(net_out_transfer)}
-						</Badge>)}
-						{Number.isFinite(net_in_transfer) && (<Badge
-							variant="outline"
-							className="items-center flex-1 justify-center rounded-[8px] text-nowrap text-[11px] shadow-md shadow-neutral-200/30 dark:shadow-none"
-						>
-							开机下行:{formatBytes(net_in_transfer)}
-						</Badge>)}
-					</section>
-				)}
-				{parsedData?.planDataMod && <PlanInfo parsedData={parsedData} />}
-			</div>
-		</Card>
-	) : (
-		<Card
-			className={cn(
-				"nezha-server-card flex flex-col items-center justify-start gap-3 sm:gap-0 p-3 md:px-5 cursor-pointer hover:bg-accent/50 transition-colors",
-				showNetTransfer
-					? "lg:min-h-[91px] min-h-[123px]"
-					: "lg:min-h-[61px] min-h-[93px]",
-				{
-					"flex-col": fixedTopServerName,
-					"lg:flex-row": !fixedTopServerName,
-				},
-				{
-					"bg-card/70": customBackgroundImage,
-				},
-			)}
-			onClick={cardClick}
-		>
-			<NezhaUnlocks id={serverInfo.id} corner />
-			<section
-				className={cn("grid items-center gap-2", {
-					"lg:w-40": !fixedTopServerName,
-				})}
-				style={{ gridTemplateColumns: "auto auto 1fr" }}
-			>
-				<span className="h-2 w-2 shrink-0 rounded-full bg-red-500 self-center"></span>
-				<div
-					className={cn(
-						"flex items-center justify-center",
-						showFlag ? "min-w-[17px]" : "min-w-0",
-					)}
-				>
-					{showFlag ? <ServerFlag country_code={country_code} /> : null}
-				</div>
-				<div className="relative flex flex-col">
-					<p
-						className={cn(
-							"break-normal font-bold tracking-tight max-w-[108px]",
-							showFlag ? "text-xs" : "text-sm",
-						)}
-					>
-						{name}
-					</p>
-					<div
-						className={cn("hidden lg:block", {
-							"lg:hidden": fixedTopServerName,
-						})}
-					>
-						{parsedData?.billingDataMod && (
-							<BillingInfo parsedData={parsedData} />
-						)}
-					</div>
-				</div>
-			</section>
-			<div
-				className={cn("flex items-center gap-2 lg:hidden", {
-					"lg:flex": fixedTopServerName,
-				})}
-			>
-				{parsedData?.billingDataMod && <BillingInfo parsedData={parsedData} />}
-			</div>
-			{parsedData?.planDataMod && <PlanInfo parsedData={parsedData} />}
-		</Card>
-	);
+  const parsedData = parsePublicNote(public_note)
+
+  return online ? (
+    <Card
+      className={cn(
+        "nezha-server-card nezha-server-card-compact flex flex-col items-center justify-start gap-3 p-3 md:px-5 cursor-pointer hover:bg-accent/50 transition-colors",
+        {
+          "flex-col": fixedTopServerName,
+          "lg:flex-row": !fixedTopServerName,
+        },
+        {
+          "bg-card/70": customBackgroundImage,
+        },
+      )}
+      onClick={cardClick}
+    >
+      <NezhaUnlocks id={serverInfo.id} corner />
+      <section
+        className={cn("grid items-center gap-2", {
+          "lg:w-40": !fixedTopServerName,
+        })}
+        style={{ gridTemplateColumns: "auto auto 1fr" }}
+      >
+        <span className="h-2 w-2 shrink-0 rounded-full bg-green-500 self-center"></span>
+        <div className={cn("flex items-center justify-center", showFlag ? "min-w-[17px]" : "min-w-0")}>
+          {showFlag ? <ServerFlag country_code={country_code} /> : null}
+        </div>
+        <div className="relative flex flex-col">
+          <p className={cn("break-normal font-bold tracking-tight", showFlag ? "text-xs " : "text-sm")}>{name}</p>
+          <div
+            className={cn("hidden lg:block", {
+              "lg:hidden": fixedTopServerName,
+            })}
+          >
+            {parsedData?.billingDataMod && <BillingInfo parsedData={parsedData} />}
+          </div>
+        </div>
+      </section>
+      <div
+        className={cn("flex items-center gap-2 -mt-2 lg:hidden", {
+          "lg:flex": fixedTopServerName,
+        })}
+      >
+        {parsedData?.billingDataMod && <BillingInfo parsedData={parsedData} />}
+      </div>
+      <div className="flex max-w-full flex-col lg:items-start items-center gap-2">
+        <section
+          className={cn("nezha-server-resources grid max-w-full grid-cols-5 items-center gap-3", {
+            "lg:grid-cols-6 lg:gap-4": fixedTopServerName,
+          })}
+        >
+          {fixedTopServerName && Boolean(platform) && (
+            <div className={"hidden col-span-1 items-center lg:flex lg:flex-row gap-2"}>
+              <div className="text-xs font-semibold">
+                {platform.includes("Windows") ? (
+                  <MageMicrosoftWindows className="size-[10px]" />
+                ) : (
+                  <p className={`fl-${GetFontLogoClass(platform)}`} />
+                )}
+              </div>
+              <div className={"flex w-14 flex-col"}>
+                <p className="text-xs text-muted-foreground">{t("serverCard.system")}</p>
+                <div className="flex items-center text-[10.5px] font-semibold">{platform.includes("Windows") ? "Windows" : GetOsName(platform)}</div>
+              </div>
+            </div>
+          )}
+          {Number.isFinite(cpu) && (<div className={"flex w-14 flex-col"}>
+            <p className="text-xs text-muted-foreground">{"CPU"}</p>
+            {Number.isFinite(cpu) && (<div className="flex items-center text-xs font-semibold">{cpu.toFixed(2)}%</div>)}
+            <ServerUsageBar value={cpu} />
+          </div>)}
+          {Number.isFinite(mem) && (<div className={"flex w-14 flex-col"}>
+            <p className="text-xs text-muted-foreground">{t("serverCard.mem")}</p>
+            {Number.isFinite(mem) && (<div className="flex items-center text-xs font-semibold">{mem.toFixed(2)}%</div>)}
+            <ServerUsageBar value={mem} />
+          </div>)}
+          {Number.isFinite(stg) && (<div className={"flex w-14 flex-col"}>
+            <p className="text-xs text-muted-foreground">{t("serverCard.stg")}</p>
+            {Number.isFinite(stg) && (<div className="flex items-center text-xs font-semibold">{stg.toFixed(2)}%</div>)}
+            <ServerUsageBar value={stg} />
+          </div>)}
+          {Number.isFinite(up) && (<div className={"flex w-14 flex-col"}>
+            <p className="text-xs text-muted-foreground">{t("serverCard.upload")}</p>
+            {Number.isFinite(up) && (<div className="flex items-center text-xs font-semibold">
+              {up >= 1024 ? `${(up / 1024).toFixed(2)}G/s` : up >= 1 ? `${up.toFixed(2)}M/s` : `${(up * 1024).toFixed(2)}K/s`}
+            </div>)}
+          </div>)}
+          {Number.isFinite(down) && (<div className={"flex w-14 flex-col"}>
+            <p className="text-xs text-muted-foreground">{t("serverCard.download")}</p>
+            {Number.isFinite(down) && (<div className="flex items-center text-xs font-semibold">
+              {down >= 1024 ? `${(down / 1024).toFixed(2)}G/s` : down >= 1 ? `${down.toFixed(2)}M/s` : `${(down * 1024).toFixed(2)}K/s`}
+            </div>)}
+          </div>)}
+        </section>
+        {probe && (window as unknown as Record<string, unknown>).ShowTrafficBar !== false && (
+ <TrafficBar used={billableTraffic(probe)} limit={probe.traffic_limit ?? 0} periodEnd={probe.period_end} billingMode={trafficModeLabel(probe)} now={now} />
+ )}
+        {showNetTransfer && (
+          <section className={"flex items-center w-full justify-between gap-1"}>
+            {Number.isFinite(net_out_transfer) && (<Badge
+              variant="secondary"
+              className="items-center flex-1 justify-center rounded-[8px] text-nowrap text-[11px] border-muted-50 shadow-md shadow-neutral-200/30 dark:shadow-none"
+            >
+              开机上行:{formatBytes(net_out_transfer)}
+            </Badge>)}
+            {Number.isFinite(net_in_transfer) && (<Badge
+              variant="outline"
+              className="items-center flex-1 justify-center rounded-[8px] text-nowrap text-[11px] shadow-md shadow-neutral-200/30 dark:shadow-none"
+            >
+              开机下行:{formatBytes(net_in_transfer)}
+            </Badge>)}
+          </section>
+        )}
+        {parsedData?.planDataMod && <PlanInfo parsedData={parsedData} />}
+      </div>
+    </Card>
+  ) : (
+    <Card
+      className={cn(
+        "nezha-server-card nezha-server-card-compact flex flex-col items-center justify-start gap-3 sm:gap-0 p-3 md:px-5 cursor-pointer hover:bg-accent/50 transition-colors",
+        showNetTransfer ? "lg:min-h-[91px] min-h-[123px]" : "lg:min-h-[61px] min-h-[93px]",
+        {
+          "flex-col": fixedTopServerName,
+          "lg:flex-row": !fixedTopServerName,
+        },
+        {
+          "bg-card/70": customBackgroundImage,
+        },
+      )}
+      onClick={cardClick}
+    >
+      <NezhaUnlocks id={serverInfo.id} corner />
+      <section
+        className={cn("grid items-center gap-2", {
+          "lg:w-40": !fixedTopServerName,
+        })}
+        style={{ gridTemplateColumns: "auto auto 1fr" }}
+      >
+        <span className="h-2 w-2 shrink-0 rounded-full bg-red-500 self-center"></span>
+        <div className={cn("flex items-center justify-center", showFlag ? "min-w-[17px]" : "min-w-0")}>
+          {showFlag ? <ServerFlag country_code={country_code} /> : null}
+        </div>
+        <div className="relative flex flex-col">
+          <p className={cn("break-normal font-bold tracking-tight max-w-[108px]", showFlag ? "text-xs" : "text-sm")}>{name}</p>
+          <div
+            className={cn("hidden lg:block", {
+              "lg:hidden": fixedTopServerName,
+            })}
+          >
+            {parsedData?.billingDataMod && <BillingInfo parsedData={parsedData} />}
+          </div>
+        </div>
+      </section>
+      <div
+        className={cn("flex items-center gap-2 lg:hidden", {
+          "lg:flex": fixedTopServerName,
+        })}
+      >
+        {parsedData?.billingDataMod && <BillingInfo parsedData={parsedData} />}
+      </div>
+      {parsedData?.planDataMod && <PlanInfo parsedData={parsedData} />}
+    </Card>
+  )
 }
-
-export default memo(ServerCard);

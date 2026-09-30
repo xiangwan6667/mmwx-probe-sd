@@ -1,601 +1,403 @@
-// MMWX adaptation: anchored sorting menu on desktop and mobile; see licenses/NezhaDash-NOTICE.md.
-import {
-	ArrowDownIcon,
-	ArrowsUpDownIcon,
-	ArrowUpIcon,
-	ChartBarSquareIcon,
-	MapIcon,
-	ServerStackIcon,
-	ViewColumnsIcon,
-} from "@heroicons/react/20/solid";
-import { useQuery } from "@tanstack/react-query";
-import { useCallback, useEffect, useMemo, useRef, useState } from "react";
-import { useTranslation } from "react-i18next";
-import GlobalMap from "@/components/GlobalMap";
-import GroupSwitch from "@/components/GroupSwitch";
-import { Loader } from "@/components/loading/Loader";
-import ServerCard from "@/components/ServerCard";
-import ServerCardInline from "@/components/ServerCardInline";
-import ServerOverview from "@/components/ServerOverview";
-import VisitorCapsuleBar from "@/components/VisitorCapsuleBar";
-import { ServiceTracker } from "@/components/ServiceTracker";
-import { ChevronDown } from "lucide-react";
-import { DropdownMenu, DropdownMenuTrigger, DropdownMenuContent, DropdownMenuRadioGroup, DropdownMenuRadioItem } from "@/components/ui/dropdown-menu";
-import { SORT_TYPES } from "@/context/sort-context";
-import { useSort } from "@/hooks/use-sort";
-import { useStatus } from "@/hooks/use-status";
-import { useWebSocketContext } from "@/hooks/use-websocket-context";
-import { fetchServerGroup, fetchService } from "@/lib/nezha-api";
-import { cn } from "@/lib/utils";
-import type { NezhaServer, ServerGroup } from "@/types/nezha-api";
+// MMWX adaptation (2026-09-30): host integration; see licenses/NezhaDash-NOTICE.md.
+import { getProbe } from "../../bridge"
+import { parsePublicNote } from "@/lib/utils"
+import GlobalMap from "@/components/GlobalMap"
+import GroupSwitch from "@/components/GroupSwitch"
+import ServerCard from "@/components/ServerCard"
+import ServerCardInline from "@/components/ServerCardInline"
+import ServerOverview from "@/components/ServerOverview"
+import { ServiceTracker } from "@/components/ServiceTracker"
+import VisitorCapsuleBar from "@/components/VisitorCapsuleBar"
+import { Loader } from "@/components/loading/Loader"
+import { Label } from "@/components/ui/label"
+import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover"
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
+import { SORT_ORDERS, SORT_TYPES } from "@/context/sort-context"
+import { useSort } from "@/hooks/use-sort"
+import { useStatus } from "@/hooks/use-status"
+import { useWebSocketContext } from "@/hooks/use-websocket-context"
+import { fetchServerGroup } from "@/lib/nezha-api"
+import { cn, formatNezhaInfo } from "@/lib/utils"
+import { NezhaWebsocketResponse } from "@/types/nezha-api"
+import { ServerGroup } from "@/types/nezha-api"
+import { ArrowDownIcon, ArrowUpIcon, ArrowsUpDownIcon, ChartBarSquareIcon, MapIcon, ViewColumnsIcon } from "@heroicons/react/20/solid"
+import { useQuery } from "@tanstack/react-query"
+import { useEffect, useRef, useState } from "react"
+import { useTranslation } from "react-i18next"
 
-type PreparedServer = {
-	online: boolean;
-	server: NezhaServer;
-};
+export default function Servers() {
+  const { t } = useTranslation()
+  const { sortType, sortOrder, setSortOrder, setSortType } = useSort()
+  const { data: groupData } = useQuery({
+    queryKey: ["server-group"],
+    queryFn: () => fetchServerGroup(),
+  })
+  const { lastMessage, connected } = useWebSocketContext()
+  const { status } = useStatus()
+  const [showServices, setShowServices] = useState<string>("0")
+  const [showMap, setShowMap] = useState<string>("0")
+  const [inline, setInline] = useState<string>("0")
+  const containerRef = useRef<HTMLDivElement>(null)
+  const [settingsOpen, setSettingsOpen] = useState<boolean>(false)
+  const [currentGroup, setCurrentGroup] = useState<string>("All")
 
-const EMPTY_SERVER_LIST: NezhaServer[] = [];
+  const customBackgroundImage = (window.CustomBackgroundImage as string) !== "" ? window.CustomBackgroundImage : undefined
+  const themeSettings = window as unknown as Record<string, unknown>
+  const showVisitorCapsule = themeSettings.ShowVisitorCapsule !== false
 
-const isServerOnline = (now: number, server: NezhaServer) => {
-	const lastActiveTime = server.last_active.startsWith("000")
-		? 0
-		: Date.parse(server.last_active);
+  const restoreScrollPosition = () => {
+    const savedPosition = sessionStorage.getItem("scrollPosition")
+    if (savedPosition && containerRef.current) {
+      containerRef.current.scrollTop = Number(savedPosition)
+    }
+  }
 
-	return now - lastActiveTime <= 30000;
-};
+  const handleTagChange = (newGroup: string) => {
+    setCurrentGroup(newGroup)
+    sessionStorage.setItem("selectedGroup", newGroup)
+    sessionStorage.setItem("scrollPosition", String(containerRef.current?.scrollTop || 0))
+  }
 
-const getUsagePercent = (used = 0, total = 0) => {
-	if (!total) return 0;
-	return (used / total) * 100;
-};
+  useEffect(() => {
+    const showServicesState = localStorage.getItem("showServices")
+    if (false) {
+      setShowServices("0")
+    } else if (showServicesState !== null) {
+      setShowServices(showServicesState)
+    }
+  }, [])
 
-const getErrorMessage = (error: unknown) => {
-	if (!error) return "";
-	if (error instanceof Error) return error.message;
-	return String(error);
-};
+  useEffect(() => {
+    const checkInlineSettings = () => {
+      const isMobile = window.innerWidth < 768
 
-function BackendErrorState({ error }: { error: unknown }) {
-	const { t } = useTranslation();
-	const message = getErrorMessage(error);
+      if (!isMobile) {
+        const inlineState = localStorage.getItem("inline")
+        if (window.ForceCardInline) {
+          setInline("1")
+        } else if (inlineState !== null) {
+          setInline(inlineState)
+        }
+      }
+    }
 
-	return (
-		<div className="flex min-h-96 flex-col items-center justify-center px-4 text-center">
-			<div className="flex max-w-md flex-col items-center gap-2">
-				<p className="text-sm font-semibold text-stone-900 dark:text-stone-100">
-					{t("error.backendUnavailableTitle")}
-				</p>
-				<p className="text-sm text-muted-foreground">
-					{t("error.backendUnavailableDescription")}
-				</p>
-				{message && (
-					<p className="mt-1 max-w-full break-words rounded-md bg-stone-100 px-2 py-1 text-xs text-stone-500 dark:bg-stone-800 dark:text-stone-400">
-						{message}
-					</p>
-				)}
-			</div>
-		</div>
-	);
-}
+    checkInlineSettings()
 
-function ServerEmptyState({ filtered = false }: { filtered?: boolean }) {
-	const { t } = useTranslation();
+    window.addEventListener("resize", checkInlineSettings)
 
-	return (
-		<div
-			className="server-empty-state mt-6 flex min-h-52 flex-col items-center justify-center gap-2 px-4 text-center"
-			role="status"
-		>
-			<ServerStackIcon
-				aria-hidden="true"
-				className="size-7 text-stone-300 dark:text-stone-600"
-			/>
-			<p className="text-sm font-medium text-stone-500 dark:text-stone-400">
-				{t(filtered ? "info.noMatchingServers" : "info.noServers")}
-			</p>
-		</div>
-	);
-}
+    return () => {
+      window.removeEventListener("resize", checkInlineSettings)
+    }
+  }, [])
 
-export default function Servers({
-	backendError,
-}: {
-	backendError?: Error | null;
-}) {
-	const { t } = useTranslation();
-	const { sortType, sortOrder, setSortOrder, setSortType } = useSort();
-	const { data: groupData, error: groupError } = useQuery({
-		queryKey: ["server-group"],
-		queryFn: () => fetchServerGroup(),
-		retry: false,
-	});
-	const { data: serviceData, error: serviceError } = useQuery({
-		queryKey: ["service"],
-		queryFn: () => fetchService(),
-		refetchOnMount: true,
-		refetchOnWindowFocus: true,
-		refetchInterval: 10000,
-		retry: false,
-	});
-	const hasServices =
-		!!serviceData?.data?.services &&
-		Object.keys(serviceData.data.services).length > 0;
-	const { lastData, connected } = useWebSocketContext();
-	const { status } = useStatus();
-	const [showServices, setShowServices] = useState<string>("0");
-	const [showMap, setShowMap] = useState<string>("0");
-	const [inline, setInline] = useState<string>("0");
-	const hasRestoredScroll = useRef(false);
-	const [currentGroup, setCurrentGroup] = useState<string>("All");
-	const nezhaWsData = lastData;
+  useEffect(() => {
+    const showMapState = localStorage.getItem("showMap")
+    if (window.ForceShowMap) {
+      setShowMap("1")
+    } else if (showMapState !== null) {
+      setShowMap(showMapState)
+    }
+  }, [])
 
-	const restoreScrollPosition = useCallback(() => {
-		const isFromMainPage = sessionStorage.getItem("fromMainPage") === "true";
-		const savedPosition = sessionStorage.getItem("scrollPosition");
-		const scrollTop = savedPosition ? Number(savedPosition) : Number.NaN;
+  useEffect(() => {
+    const savedGroup = sessionStorage.getItem("selectedGroup") || "All"
+    setCurrentGroup(savedGroup)
 
-		if (
-			hasRestoredScroll.current ||
-			!isFromMainPage ||
-			!Number.isFinite(scrollTop)
-		) {
-			return;
-		}
+    restoreScrollPosition()
+  }, [])
 
-		hasRestoredScroll.current = true;
-		requestAnimationFrame(() => {
-			requestAnimationFrame(() => {
-				window.scrollTo({ top: scrollTop, left: 0, behavior: "auto" });
-			});
-		});
-	}, []);
+  const nezhaWsData = lastMessage ? (JSON.parse(lastMessage.data) as NezhaWebsocketResponse) : null
 
-	const handleTagChange = (newGroup: string) => {
-		setCurrentGroup(newGroup);
-		sessionStorage.setItem("selectedGroup", newGroup);
-		sessionStorage.setItem("scrollPosition", String(window.scrollY || 0));
-	};
+  const groupTabs = [
+    "All",
+    ...(groupData?.data
+      ?.filter((item: ServerGroup) => {
+        return Array.isArray(item.servers) && item.servers.some((serverId) => nezhaWsData?.servers?.some((server) => server.id === serverId))
+      })
+      ?.map((item: ServerGroup) => item.group.name) || []),
+  ]
 
-	useEffect(() => {
-		const showServicesState = localStorage.getItem("showServices");
-		if (window.ForceShowServices) {
-			setShowServices("1");
-		} else if (showServicesState !== null) {
-			setShowServices(showServicesState);
-		}
-	}, []);
+  if (!connected && !lastMessage) {
+    return (
+      <div className="flex flex-col items-center min-h-96 justify-center ">
+        <div className="font-semibold flex items-center gap-2 text-sm">
+          <Loader visible={true} />
+          {/* {t("info.websocketConnecting")} */}
+        </div>
+      </div>
+    )
+  }
 
-	useEffect(() => {
-		if (!hasServices) {
-			setShowServices("0");
-		}
-	}, [hasServices]);
+  if (!nezhaWsData) {
+    return (
+      <div className="flex flex-col items-center justify-center ">
+        <p className="font-semibold text-sm">{t("info.processing")}</p>
+      </div>
+    )
+  }
 
-	useEffect(() => {
-		const checkInlineSettings = () => {
-			const isMobile = window.innerWidth < 768;
+  const groupFilteredServers =
+    nezhaWsData?.servers?.filter((server) => {
+      if (currentGroup === "All") return true
+      const group = groupData?.data?.find(
+        (g: ServerGroup) => g.group.name === currentGroup && Array.isArray(g.servers) && g.servers.includes(server.id),
+      )
+      return !!group
+    }) || []
+  let filteredServers = groupFilteredServers
 
-			if (!isMobile) {
-				const inlineState = localStorage.getItem("inline");
-				if (window.ForceCardInline) {
-					setInline("1");
-				} else if (inlineState !== null) {
-					setInline(inlineState);
-				}
-			}
-		};
+  const totalServers = filteredServers.length || 0
+  const onlineServers = filteredServers.filter((server) => formatNezhaInfo(nezhaWsData.now, server).online)?.length || 0
+  const offlineServers = filteredServers.filter((server) => !formatNezhaInfo(nezhaWsData.now, server).online)?.length || 0
+  const up =
+    filteredServers.reduce(
+      (total, server) => (formatNezhaInfo(nezhaWsData.now, server).online ? total + (server.state?.net_out_transfer ?? 0) : total),
+      0,
+    ) || 0
+  const down =
+    filteredServers.reduce(
+      (total, server) => (formatNezhaInfo(nezhaWsData.now, server).online ? total + (server.state?.net_in_transfer ?? 0) : total),
+      0,
+    ) || 0
 
-		checkInlineSettings();
+  const upSpeed =
+    filteredServers.reduce(
+      (total, server) => (formatNezhaInfo(nezhaWsData.now, server).online ? total + (server.state?.net_out_speed ?? 0) : total),
+      0,
+    ) || 0
+  const downSpeed =
+    filteredServers.reduce(
+      (total, server) => (formatNezhaInfo(nezhaWsData.now, server).online ? total + (server.state?.net_in_speed ?? 0) : total),
+      0,
+    ) || 0
 
-		window.addEventListener("resize", checkInlineSettings);
+  filteredServers =
+    status === "all"
+      ? filteredServers
+      : filteredServers.filter((server) => [status].includes(formatNezhaInfo(nezhaWsData.now, server).online ? "online" : "offline"))
 
-		return () => {
-			window.removeEventListener("resize", checkInlineSettings);
-		};
-	}, []);
+  filteredServers = filteredServers.sort((a, b) => {
+    const serverAInfo = formatNezhaInfo(nezhaWsData.now, a)
+    const serverBInfo = formatNezhaInfo(nezhaWsData.now, b)
 
-	useEffect(() => {
-		const showMapState = localStorage.getItem("showMap");
-		if (window.ForceShowMap) {
-			setShowMap("1");
-		} else if (showMapState !== null) {
-			setShowMap(showMapState);
-		}
-	}, []);
+    if (sortType !== "name") {
+      // 仅在非 "name" 排序时，先按在线状态排序
+      if (!serverAInfo.online && serverBInfo.online) return 1
+      if (serverAInfo.online && !serverBInfo.online) return -1
+      if (!serverAInfo.online && !serverBInfo.online) {
+        // 如果两者都离线，可以继续按照其他条件排序，或者保持原序
+        // 这里选择保持原序
+        return 0
+      }
+    }
 
-	useEffect(() => {
-		const savedGroup = sessionStorage.getItem("selectedGroup") || "All";
-		setCurrentGroup(savedGroup);
-	}, []);
+    let comparison = 0
 
-	useEffect(() => {
-		if (nezhaWsData) {
-			restoreScrollPosition();
-		}
-	}, [nezhaWsData, restoreScrollPosition]);
+    switch (sortType) {
+      case "name":
+        comparison = a.name.localeCompare(b.name)
+        break
+      case "uptime":
+        comparison = (a.state?.uptime ?? 0) - (b.state?.uptime ?? 0)
+        break
+      case "system":
+        comparison = a.host.platform.localeCompare(b.host.platform)
+        break
+      case "cpu":
+        comparison = (a.state?.cpu ?? 0) - (b.state?.cpu ?? 0)
+        break
+      case "mem":
+        comparison = (formatNezhaInfo(nezhaWsData.now, a).mem ?? 0) - (formatNezhaInfo(nezhaWsData.now, b).mem ?? 0)
+        break
+      case "disk":
+        comparison = (formatNezhaInfo(nezhaWsData.now, a).disk ?? 0) - (formatNezhaInfo(nezhaWsData.now, b).disk ?? 0)
+        break
+      case "up":
+        comparison = (a.state?.net_out_speed ?? 0) - (b.state?.net_out_speed ?? 0)
+        break
+      case "down":
+        comparison = (a.state?.net_in_speed ?? 0) - (b.state?.net_in_speed ?? 0)
+        break
+      case "up total":
+        comparison = (a.state?.net_out_transfer ?? 0) - (b.state?.net_out_transfer ?? 0)
+        break
+      case "down total":
+        comparison = (a.state?.net_in_transfer ?? 0) - (b.state?.net_in_transfer ?? 0)
+        break
+      default:
+        comparison = (a.display_index ?? 0) - (b.display_index ?? 0)
+    }
 
-	const groupServerIdSets = useMemo(() => {
-		const sets = new Map<string, Set<number>>();
+    return sortOrder === "asc" ? comparison : -comparison
+  })
 
-		for (const item of groupData?.data ?? []) {
-			if (Array.isArray(item.servers)) {
-				sets.set(item.group.name, new Set(item.servers));
-			}
-		}
-
-		return sets;
-	}, [groupData?.data]);
-
-	const groupTabs = useMemo(
-		() => [
-			"All",
-			...(groupData?.data?.map((item: ServerGroup) => item.group.name) || []),
-		],
-		[groupData?.data],
-	);
-	const {
-		down,
-		downSpeed,
-		filteredServers,
-		offlineServers,
-		onlineServers,
-		totalServers,
-		up,
-		upSpeed,
-	} = useMemo(() => {
-		if (!nezhaWsData) {
-			return {
-				down: 0,
-				downSpeed: 0,
-				filteredServers: EMPTY_SERVER_LIST,
-				offlineServers: 0,
-				onlineServers: 0,
-				totalServers: 0,
-				up: 0,
-				upSpeed: 0,
-			};
-		}
-
-		const currentGroupServerIds = groupServerIdSets.get(currentGroup);
-		const groupFilteredServers: PreparedServer[] = [];
-		const overview = {
-			down: 0,
-			downSpeed: 0,
-			offlineServers: 0,
-			onlineServers: 0,
-			up: 0,
-			upSpeed: 0,
-		};
-
-		for (const server of nezhaWsData.servers) {
-			if (currentGroup !== "All" && !currentGroupServerIds?.has(server.id)) {
-				continue;
-			}
-
-			const online = isServerOnline(nezhaWsData.now, server);
-
-			groupFilteredServers.push({
-				online,
-				server,
-			});
-
-			if (!online) {
-				overview.offlineServers += 1;
-				continue;
-			}
-
-			overview.onlineServers += 1;
-			overview.up += server.state?.net_out_transfer ?? 0;
-			overview.down += server.state?.net_in_transfer ?? 0;
-			overview.upSpeed += server.state?.net_out_speed ?? 0;
-			overview.downSpeed += server.state?.net_in_speed ?? 0;
-		}
-
-		const statusFilteredServers =
-			status === "all"
-				? groupFilteredServers
-				: groupFilteredServers.filter((item) =>
-						status === "online" ? item.online : !item.online,
-					);
-
-		if (sortType === "default") {
-			const onlineServers: NezhaServer[] = [];
-			const offlineServers: NezhaServer[] = [];
-
-			for (const item of statusFilteredServers) {
-				if (item.online) {
-					onlineServers.push(item.server);
-				} else {
-					offlineServers.push(item.server);
-				}
-			}
-
-			return {
-				...overview,
-				filteredServers: [...onlineServers, ...offlineServers],
-				totalServers: groupFilteredServers.length,
-			};
-		}
-
-		const sortedServers = [...statusFilteredServers].sort((a, b) => {
-			if (sortType !== "name") {
-				if (!a.online && b.online) return 1;
-				if (a.online && !b.online) return -1;
-				if (!a.online && !b.online) {
-					return 0;
-				}
-			}
-
-			let comparison = 0;
-
-			switch (sortType) {
-				case "name":
-					comparison = a.server.name.localeCompare(b.server.name);
-					break;
-				case "uptime":
-					comparison =
-						(a.server.state?.uptime ?? 0) - (b.server.state?.uptime ?? 0);
-					break;
-				case "system":
-					comparison = (a.server.host?.platform ?? "").localeCompare(
-						b.server.host?.platform ?? "",
-					);
-					break;
-				case "cpu":
-					comparison = (a.server.state?.cpu ?? 0) - (b.server.state?.cpu ?? 0);
-					break;
-				case "mem":
-					comparison =
-						getUsagePercent(
-							a.server.state?.mem_used,
-							a.server.host?.mem_total,
-						) -
-						getUsagePercent(b.server.state?.mem_used, b.server.host?.mem_total);
-					break;
-				case "disk":
-					comparison =
-						getUsagePercent(
-							a.server.state?.disk_used,
-							a.server.host?.disk_total,
-						) -
-						getUsagePercent(
-							b.server.state?.disk_used,
-							b.server.host?.disk_total,
-						);
-					break;
-				case "up":
-					comparison =
-						(a.server.state?.net_out_speed ?? 0) -
-						(b.server.state?.net_out_speed ?? 0);
-					break;
-				case "down":
-					comparison =
-						(a.server.state?.net_in_speed ?? 0) -
-						(b.server.state?.net_in_speed ?? 0);
-					break;
-				case "up total":
-					comparison =
-						(a.server.state?.net_out_transfer ?? 0) -
-						(b.server.state?.net_out_transfer ?? 0);
-					break;
-				case "down total":
-					comparison =
-						(a.server.state?.net_in_transfer ?? 0) -
-						(b.server.state?.net_in_transfer ?? 0);
-					break;
-				default:
-					comparison = 0;
-			}
-
-			return sortOrder === "asc" ? comparison : -comparison;
-		});
-
-		return {
-			...overview,
-			filteredServers: sortedServers.map((item) => item.server),
-			totalServers: groupFilteredServers.length,
-		};
-	}, [
-		currentGroup,
-		groupServerIdSets,
-		nezhaWsData,
-		sortOrder,
-		sortType,
-		status,
-	]);
-
-	const currentBackendError = backendError || groupError || serviceError;
-
-	if (!nezhaWsData && currentBackendError) {
-		return <BackendErrorState error={currentBackendError} />;
-	}
-
-	if (!connected && !lastData) {
-		return (
-			<div className="flex flex-col items-center min-h-96 justify-center ">
-				<div className="font-semibold flex items-center gap-2 text-sm">
-					<Loader visible={true} />
-					{t("info.websocketConnecting")}
-				</div>
-			</div>
-		);
-	}
-
-	if (!nezhaWsData) {
-		return (
-			<div className="flex flex-col items-center justify-center ">
-				<p className="font-semibold text-sm">{t("info.processing")}</p>
-			</div>
-		);
-	}
-
-	const hasServers = nezhaWsData.servers.length > 0;
-
-	return (
-		<div className="mx-auto w-full max-w-5xl px-0">
-			<VisitorCapsuleBar />
-			<ServerOverview
-				total={totalServers}
-				online={onlineServers}
-				offline={offlineServers}
-				up={up}
-				down={down}
-				upSpeed={upSpeed}
-				downSpeed={downSpeed}
-			/>
-			<div
-				hidden={!hasServers}
-				className="flex mt-6 items-center justify-between gap-2 server-overview-controls"
-			>
-				<section className="flex items-center gap-2 w-full overflow-hidden">
-					<button
-						aria-label="显示地图"
-						aria-pressed={showMap === "1"}
-						onClick={() => {
-							setShowMap(showMap === "0" ? "1" : "0");
-							localStorage.setItem("showMap", showMap === "0" ? "1" : "0");
-						}}
-						className={cn(
-							"nezha-glass-control nezha-view-toggle inset-shadow-2xs inset-shadow-white/20 flex cursor-pointer flex-col items-center gap-0 rounded-[50px] bg-blue-100 p-2.5 text-blue-600 transition-all dark:bg-blue-900 dark:text-blue-100",
-							{
-								"inset-shadow-black/20 bg-blue-600 text-white dark:bg-blue-100 dark:text-blue-600":
-									showMap === "1",
-							},
-						)}
-					>
-						<MapIcon className="size-[13px]" />
-					</button>
-					{hasServices && (
-						<button
-							aria-label="显示服务状态"
-							aria-pressed={showServices === "1"}
-							onClick={() => {
-								setShowServices(showServices === "0" ? "1" : "0");
-								localStorage.setItem(
-									"showServices",
-									showServices === "0" ? "1" : "0",
-								);
-							}}
-							className={cn(
-								"nezha-glass-control nezha-view-toggle inset-shadow-2xs inset-shadow-white/20 flex cursor-pointer flex-col items-center gap-0 rounded-[50px] bg-blue-100 p-2.5 text-blue-600 transition-all dark:bg-blue-900 dark:text-blue-100",
-								{
-									"inset-shadow-black/20 bg-blue-600 text-white dark:bg-blue-100 dark:text-blue-600":
-										showServices === "1",
-								},
-							)}
-						>
-							<ChartBarSquareIcon className="size-[13px]" />
-						</button>
-					)}
-					<button
-						aria-label="切换列表布局"
-						aria-pressed={inline === "1"}
-						onClick={() => {
-							setInline(inline === "0" ? "1" : "0");
-							localStorage.setItem("inline", inline === "0" ? "1" : "0");
-						}}
-						className={cn(
-							"nezha-glass-control nezha-view-toggle inset-shadow-2xs inset-shadow-white/20 flex cursor-pointer flex-col items-center gap-0 rounded-[50px] bg-blue-100 p-2.5 text-blue-600 transition-all dark:bg-blue-900 dark:text-blue-100",
-							{
-								"inset-shadow-black/20 bg-blue-600 text-white dark:bg-blue-100 dark:text-blue-600":
-									inline === "1",
-							},
-						)}
-					>
-						<ViewColumnsIcon className="size-[13px]" />
-					</button>
-					<GroupSwitch
-						tabs={groupTabs}
-						currentTab={currentGroup}
-						setCurrentTab={handleTagChange}
-					/>
-				</section>
-				<div
-					className={cn(
-						"nezha-glass-control flex h-8 items-center rounded-full border border-stone-200 bg-white text-sm text-stone-600 shadow-xs transition-all dark:border-stone-800 dark:bg-stone-800 dark:text-stone-300 dark:shadow-none shrink-0",
-						{
-							" text-blue-600  dark:text-blue-400": sortType !== "default",
-						},
-					)}
-				>
-					<button
-						aria-label={sortOrder === "asc" ? "切换为降序" : "切换为升序"}
-						onClick={() => setSortOrder(sortOrder === "asc" ? "desc" : "asc")}
-						disabled={sortType === "default"}
-						className="flex h-full cursor-pointer items-center gap-1.5 px-3 disabled:cursor-default disabled:opacity-40"
-					>
-						<div className="text-stone-900 dark:text-stone-100">
-							{sortOrder === "asc" && sortType !== "default" ? (
-								<ArrowUpIcon className="size-3.5 shrink-0" />
-							) : sortOrder === "desc" && sortType !== "default" ? (
-								<ArrowDownIcon className="size-3.5 shrink-0" />
-							) : (
-								<ArrowsUpDownIcon className="size-3.5 shrink-0" />
-							)}
-						</div>
-
-						<span className="font-medium text-stone-900 dark:text-stone-100">
-							{t("sort.label")}
-						</span>
-					</button>
-					<span className="text-stone-300 dark:text-stone-600 mb-0.5">|</span>
-					<DropdownMenu modal={false}>
-						<DropdownMenuTrigger asChild>
-							<button type="button" aria-label="排序方式" className="nezha-sort-trigger">
-								{t(`sort.types.${sortType.replace(/ /g, "_")}`)}
-								<ChevronDown size={13} aria-hidden="true" />
-							</button>
-						</DropdownMenuTrigger>
-						<DropdownMenuContent align="end" sideOffset={8} collisionPadding={12} className="nezha-sort-menu" aria-label="排序方式">
-							<DropdownMenuRadioGroup value={sortType} onValueChange={(value) => {
-								const next = SORT_TYPES.find(type => type === value);
-								if (!next) return;
-								setSortType(next);
-								if (next === "default") setSortOrder("desc");
-							}}>
-								{SORT_TYPES.map(type => (
-									<DropdownMenuRadioItem key={type} value={type} className="nezha-sort-item">
-										{t(`sort.types.${type.replace(/ /g, "_")}`)}
-									</DropdownMenuRadioItem>
-								))}
-							</DropdownMenuRadioGroup>
-						</DropdownMenuContent>
-					</DropdownMenu>
-				</div>
-			</div>
-			{hasServers && showMap === "1" && (
-				<GlobalMap now={nezhaWsData.now} serverList={nezhaWsData.servers} />
-			)}
-			{hasServers && showServices === "1" && (
-				<ServiceTracker serverList={filteredServers} />
-			)}
-			{!hasServers ? (
-				<ServerEmptyState />
-			) : filteredServers.length > 0 ? (
-				inline === "1" ? (
-					<section className="flex flex-col gap-2 overflow-x-scroll p-px scrollbar-hidden mt-6 server-inline-list">
-						{filteredServers.map((serverInfo) => (
-							<ServerCardInline
-								key={serverInfo.id}
-								now={nezhaWsData.now}
-								serverInfo={serverInfo}
-							/>
-						))}
-					</section>
-				) : (
-					<section className="grid grid-cols-1 gap-2 md:grid-cols-2 mt-6 server-card-list">
-						{filteredServers.map((serverInfo) => (
-							<ServerCard
-								key={serverInfo.id}
-								now={nezhaWsData.now}
-								serverInfo={serverInfo}
-							/>
-						))}
-					</section>
-				)
-			) : (
-				<ServerEmptyState filtered />
-			)}
-		</div>
-	);
+  return (
+    <div className="mx-auto w-full max-w-5xl px-0">
+      <ServerOverview
+        total={totalServers}
+        online={onlineServers}
+        offline={offlineServers}
+        up={up}
+        down={down}
+        upSpeed={upSpeed}
+        downSpeed={downSpeed}
+      />
+      {showVisitorCapsule && <VisitorCapsuleBar />}
+      <div className="flex mt-6 items-center justify-between gap-2 server-overview-controls">
+        <section className="flex items-center gap-2 w-full overflow-hidden">
+          <button
+            type="button"
+            aria-label="切换地图"
+            aria-pressed={showMap === "1"}
+            onClick={() => {
+              setShowMap(showMap === "0" ? "1" : "0")
+              localStorage.setItem("showMap", showMap === "0" ? "1" : "0")
+            }}
+            className={cn(
+              "nezha-glass-control nezha-view-toggle rounded-[50px] bg-white dark:bg-stone-800 cursor-pointer p-[10px] transition-all border dark:border-none border-stone-200 dark:border-stone-700 hover:bg-stone-100 dark:hover:bg-stone-700 shadow-[inset_0_1px_0_rgba(255,255,255,0.2)]",
+              {
+                "shadow-[inset_0_1px_0_rgba(0,0,0,0.2)] bg-blue-600 hover:bg-blue-600 border-blue-600 dark:border-blue-600": showMap === "1",
+                "text-white": showMap === "1",
+              },
+              {
+                "bg-white/70 dark:bg-black/70": customBackgroundImage,
+              },
+            )}
+          >
+            <MapIcon
+              className={cn("size-[13px]", {
+                "text-white": showMap === "1",
+              })}
+            />
+          </button>
+          <button
+            hidden
+            type="button"
+            aria-label="切换服务监控"
+            aria-pressed={showServices === "1"}
+            onClick={() => {
+              setShowServices(showServices === "0" ? "1" : "0")
+              localStorage.setItem("showServices", showServices === "0" ? "1" : "0")
+            }}
+            className={cn(
+              "rounded-[50px] bg-white dark:bg-stone-800 cursor-pointer p-[10px] transition-all border dark:border-none border-stone-200 dark:border-stone-700 hover:bg-stone-100 dark:hover:bg-stone-700 shadow-[inset_0_1px_0_rgba(255,255,255,0.2)]",
+              {
+                "shadow-[inset_0_1px_0_rgba(0,0,0,0.2)] bg-blue-600 hover:bg-blue-600 border-blue-600 dark:border-blue-600": showServices === "1",
+                "text-white": showServices === "1",
+              },
+              {
+                "bg-white/70 dark:bg-black/70": customBackgroundImage,
+              },
+            )}
+          >
+            <ChartBarSquareIcon
+              className={cn("size-[13px]", {
+                "text-white": showServices === "1",
+              })}
+            />
+          </button>
+          <button
+            type="button"
+            aria-label="切换卡片布局"
+            aria-pressed={inline === "1"}
+            onClick={() => {
+              setInline(inline === "0" ? "1" : "0")
+              localStorage.setItem("inline", inline === "0" ? "1" : "0")
+            }}
+            className={cn(
+              "nezha-glass-control nezha-view-toggle rounded-[50px] bg-white dark:bg-stone-800 cursor-pointer p-[10px] transition-all border dark:border-none border-stone-200 dark:border-stone-700 hover:bg-stone-100 dark:hover:bg-stone-700 shadow-[inset_0_1px_0_rgba(255,255,255,0.2)]",
+              {
+                "shadow-[inset_0_1px_0_rgba(0,0,0,0.2)] bg-blue-600 hover:bg-blue-600 border-blue-600 dark:border-blue-600": inline === "1",
+                "text-white": inline === "1",
+              },
+              {
+                "bg-white/70 dark:bg-black/70": customBackgroundImage,
+              },
+            )}
+          >
+            <ViewColumnsIcon
+              className={cn("size-[13px]", {
+                "text-white": inline === "1",
+              })}
+            />
+          </button>
+          <GroupSwitch tabs={groupTabs} currentTab={currentGroup} setCurrentTab={handleTagChange} />
+        </section>
+        <Popover onOpenChange={setSettingsOpen}>
+          <PopoverTrigger asChild>
+            <button
+              className={cn(
+                "nezha-glass-control rounded-[50px] flex items-center gap-1 dark:text-white border dark:border-none text-black cursor-pointer dark:[text-shadow:_0_1px_0_rgb(0_0_0_/_20%)] dark:bg-stone-800 bg-white  p-[10px] transition-all shadow-[inset_0_1px_0_rgba(255,255,255,0.2)]  ",
+                {
+                  "shadow-[inset_0_1px_0_rgba(0,0,0,0.2)] dark:bg-stone-700 bg-stone-200": settingsOpen,
+                },
+                {
+                  "dark:bg-stone-800/70 bg-stone-100/70 ": customBackgroundImage,
+                },
+              )}
+            >
+              <p className="text-[10px] font-bold whitespace-nowrap">{sortType === "default" ? "Sort" : sortType.toUpperCase()}</p>
+              {sortOrder === "asc" && sortType !== "default" ? (
+                <ArrowUpIcon className="size-[13px]" />
+              ) : sortOrder === "desc" && sortType !== "default" ? (
+                <ArrowDownIcon className="size-[13px]" />
+              ) : (
+                <ArrowsUpDownIcon className="size-[13px]" />
+              )}
+            </button>
+          </PopoverTrigger>
+          <PopoverContent className="p-4 w-[240px] rounded-lg">
+            <div className="space-y-4">
+              <div className="space-y-2">
+                <Label className="text-xs font-medium text-muted-foreground">Sort by</Label>
+                <Select value={sortType} onValueChange={setSortType}>
+                  <SelectTrigger className="w-full text-xs h-8">
+                    <SelectValue placeholder="Choose type" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {SORT_TYPES.map((type) => (
+                      <SelectItem key={type} value={type} className="text-xs">
+                        {type.charAt(0).toUpperCase() + type.slice(1)}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+              <div className="space-y-2">
+                <Label className="text-xs font-medium text-muted-foreground">Sort order</Label>
+                <Select value={sortOrder} onValueChange={setSortOrder} disabled={sortType === "default"}>
+                  <SelectTrigger className="w-full text-xs h-8">
+                    <SelectValue placeholder="Choose order" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {SORT_ORDERS.map((order) => (
+                      <SelectItem key={order} value={order} className="text-xs">
+                        {order.charAt(0).toUpperCase() + order.slice(1)}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+            </div>
+          </PopoverContent>
+        </Popover>
+      </div>
+      {showMap === "1" && <GlobalMap now={nezhaWsData.now} serverList={nezhaWsData?.servers || []} />}
+      {showServices === "1" && <ServiceTracker serverList={filteredServers} />}
+      {inline === "1" && (
+        <section ref={containerRef} className="flex flex-col gap-2 overflow-x-scroll scrollbar-hidden mt-6 server-inline-list">
+          {filteredServers.map((serverInfo) => (
+            <ServerCardInline now={nezhaWsData.now} key={serverInfo.id} serverInfo={serverInfo} />
+          ))}
+        </section>
+      )}
+      {inline === "0" && (
+        <section ref={containerRef} className="grid grid-cols-1 gap-2 md:grid-cols-2 mt-6 server-card-list">
+          {filteredServers.map((serverInfo) => (
+            <ServerCard now={nezhaWsData.now} key={serverInfo.id} serverInfo={serverInfo} />
+          ))}
+        </section>
+      )}
+    </div>
+  )
 }

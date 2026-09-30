@@ -2,7 +2,7 @@
 
 基于 [mmwx-group/mmwx-probe](https://github.com/mmwx-group/mmwx-probe) 的**非官方独立探针前端**，由 [xiangwan6667](https://github.com/xiangwan6667) 维护。依赖妙妙屋 X 主控提供数据，不包含采集 Agent，也不替代主控。
 
-支持服务器状态、实时网速与历史曲线；提供扁平、像素、二次元、高级黑金、**Nezha**、**Emerald** 和 **LuminaPlus** 主题，明暗默认跟随系统，也会记住当前浏览器手动选择的浅色或深色。访客切换主题只影响当前浏览器，也可跟随主控指定的主题。Nezha 复用 NezhaDash 页面源码，融合 BITJEBE 卡片样式；数据能力与付费权限取决于主控。
+支持服务器状态、实时网速与历史曲线；提供扁平、像素、二次元、高级黑金、**Nezha**、**Emerald** 和 **LuminaPlus** 主题，明暗默认跟随系统，也会记住当前浏览器手动选择的浅色或深色。访客切换主题只影响当前浏览器，也可跟随主控指定的主题。Nezha 完整复用 BITJEBE 主题的页面、组件与样式；数据能力与付费权限取决于主控。
 
 ## 部署
 
@@ -13,7 +13,7 @@
 3. 生产分支填 `main`，构建命令填 `npm run build`，部署命令填 `npx wrangler deploy`。Worker 名称与 `wrangler.jsonc` 中的 `name` 保持一致。
 4. 在 Worker **Settings → Variables and Secrets** 配置下面的运行时变量，保存并重新部署。
 
-## 配置变量
+## 配置
 
 ### Worker 运行时变量
 
@@ -44,7 +44,7 @@
 
 `ASSETS` 是 `wrangler.jsonc` 自动创建的静态资源绑定，无需手动添加。正常部署不需要设置 `VITE_*` 构建变量；上游保留的 `VITE_GIT_HASH` 仅用于 Nezha 页脚版本链接，不控制探针功能。上游源码中的 `window.Custom*`、`window.Hide*` 等不是 Cloudflare 环境变量；背景请使用上表中的变量。
 
-## 主控指定主题
+## 主题
 
 在主控 **系统设置 → 探针 → 探针主题** 选择 **自定义主题名称**，填写下表中的英文值（小写，不加 `theme-` 前缀）：
 
@@ -60,7 +60,9 @@
 
 外置探针选择 **跟随主控** 后生效；若浏览器已手动选过主题，需先切回“跟随主控”。`server` 是浏览器的“跟随主控”选项，不是主控主题名称。旧值 `nezhadash` 兼容映射到 `nezha`，新配置统一用 `nezha`。这些名称对应本项目的外置探针，主控内置探针对未知主题仍使用默认样式。
 
-Nezha 卡片缺失的数据不补造，续费进度按到期日和续费周期估算。首页访客胶囊约 12 秒后隐藏，不调用第三方 IP 查询服务。
+三套移植主题均使用主控公开探针数据，缺失字段隐藏对应展示，真实零值保留为零，历史缺样保留断点。首页流量概览仅展示已用量，节点卡片不展示剩余流量；已用量使用主控调整后的 `traffic_used`。周期上下行与网卡开机累计独立映射，不相加替代计费用量。流量汇总包含离线节点用量，实时网速只汇总在线节点。
+
+Nezha 续费进度按到期日和续费周期估算，访客胶囊约 12 秒后隐藏，访客信息来自 Cloudflare 请求信息。Emerald 与 LuminaPlus 在同源 iframe 中复用上游页面与样式，并共享宿主数据快照。各主题的来源、数据映射和限制见下方主题说明。
 
 ## 更新
 
@@ -70,7 +72,7 @@ Fork 连接 Cloudflare Workers Builds 后，`main` 分支收到更新即可自�
 - 定时同步：启用 Fork 的 **Actions**，将 **Workflow permissions** 设为 **Read and write**。内置 **Sync upstream** 每天北京时间 11:23 从本仓库同步，也可手动运行。
 - 有冲突会停止，不会强制覆盖修改。长期不活跃时，需检查 GitHub 是否暂停了定时任务。
 
-## 本地开发
+## 开发
 
 需要 Node.js 22+。复制 [`.dev.vars.example`](.dev.vars.example) 为 `.dev.vars`，按变量表填写，然后执行：
 
@@ -87,11 +89,13 @@ npm run dev
 
 ## 来源与许可
 
-- 主项目：[mmwx-group/mmwx-probe](https://github.com/mmwx-group/mmwx-probe)，Copyright © 2026 Jim Lee，遵循 [MSAL-1.0](LICENSE)。仅允许许可证规定的非商业使用，商业使用需取得原版权方授权；这是源码可用项目，不是 OSI 开源许可。
-- Nezha 主题：[nezha-dash-v2](https://github.com/hamster1963/nezha-dash-v2) 页面 + [nezha-BITJEBE](https://github.com/BITJEBE/nezha-BITJEBE) 卡片，来源与修改记录见 [主题声明](licenses/NezhaDash-NOTICE.md)。第三方部分保留 Apache-2.0 许可。
+本项目基于 [mmwx-group/mmwx-probe](https://github.com/mmwx-group/mmwx-probe)，由 [xiangwan6667](https://github.com/xiangwan6667) 独立维护，不代表原作者或官方项目。问题请提交至 [Issues](https://github.com/xiangwan6667/mmwx-probe-sd/issues)。
 
-- Emerald 主题：复用 [komari-theme-emerald](https://github.com/Tokinx/komari-theme-emerald) 的 Vue 页面、卡片、地球与图表源码，保留 [MIT 许可](src/emerald/LICENSE)，适配说明见 [移植记录](docs/emerald-port.md)。费用汇总按汇率折算，默认美元，保留原币种明细；缺失字段显示 `—`；三网目标按主控配置匹配。
+| 部分 | 上游来源 | 许可 | 说明与记录 |
+| --- | --- | --- | --- |
+| 主项目 | [mmwx-group/mmwx-probe](https://github.com/mmwx-group/mmwx-probe)，Copyright © 2026 Jim Lee | [MSAL-1.0](LICENSE) | 非商业使用须遵守许可证；商业使用需取得原版权方授权。该许可不是 OSI 开源许可 |
+| Nezha | [BITJEBE/nezha-BITJEBE](https://github.com/BITJEBE/nezha-BITJEBE)，基于 [Akizon77/nezha-dash-v1](https://github.com/Akizon77/nezha-dash-v1) | [Apache-2.0](licenses/NezhaDash-Apache-2.0.txt) | [主题说明](licenses/NezhaDash-NOTICE.md) |
+| Emerald | [Tokinx/komari-theme-emerald](https://github.com/Tokinx/komari-theme-emerald) | [MIT](src/emerald/LICENSE) | [主题说明](docs/emerald-port.md) · [本地图像声明](public/emerald-assets/NOTICE.md) |
+| LuminaPlus | [shanyang242/Komari-Theme-LuminaPlus](https://github.com/shanyang242/Komari-Theme-LuminaPlus) | [MIT](src/lumina/LICENSE) | [主题说明](docs/lumina-port.md) |
 
-- LuminaPlus 主题：完整复用 [Komari-Theme-LuminaPlus](https://github.com/shanyang242/Komari-Theme-LuminaPlus) 的 React 页面与样式，保留 [MIT 许可](src/lumina/LICENSE)。独立页面隔离样式，深色画布为纯黑；来源、数据适配与限制见 [移植记录](docs/lumina-port.md)。
-
-本版独立维护，不代表原作者或官方项目。问题请提交至 [Issues](https://github.com/xiangwan6667/mmwx-probe-sd/issues)。
+第三方源码与资源保留各自的版权和许可证；主题移植不改变主项目或第三方部分的许可。以上是来源索引，使用条件以各许可证原文为准。

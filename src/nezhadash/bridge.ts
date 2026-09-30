@@ -11,5 +11,5 @@ export function getProbe() {
   return snapshot.data;
 }
 export function useProbeBridge() {
-  return useSyncExternalStore(listener => { listeners.add(listener); return () => listeners.delete(listener); }, () => snapshot);
+  return useSyncExternalStore(listener => { listeners.add(listener); return () => listeners.delete(listener); }, () => snapshot, () => snapshot);
 }

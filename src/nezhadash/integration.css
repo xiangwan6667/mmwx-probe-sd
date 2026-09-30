@@ -1,4 +1,4 @@
-/* Only integration controls: upstream page styles live unmodified in index.css. */
+/* Host controls and conditional glass surfaces over the upstream page styles. */
 .nezha-unlocks-trigger { width: 28px; height: 28px; padding: 0; border-radius: 999px; flex: none; }
 .nezha-unlocks-trigger svg { color: #047857; }
 .nezha-unlocks-trigger[data-complete="true"] svg { color: #b7791f; }
@@ -9,6 +9,19 @@
 .nezha-server-card { position: relative; }
 .nezha-server-card:has(.nezha-unlocks-corner) > section:first-of-type { margin-left: 30px; max-width: calc(100% - 30px); }
 .nezha-unlocks-corner { position: absolute; top: 10px; left: 10px; }
+/* The corner control overlays the compact desktop card; reserving a column
+   for it narrows the upstream five-column resource grid. */
+@media (min-width: 1024px) {
+  .nezha-server-card-compact:has(.nezha-unlocks-corner) > section:first-of-type {
+    margin-left: 0;
+    max-width: 100%;
+  }
+}
+/* Keep the upstream five columns readable on the smallest phone widths. */
+@media (max-width: 379px) {
+  .nezha-server-resources { column-gap: 8px; }
+  .nezha-server-resources > div { width: 100%; min-width: 0; }
+}
 .nezha-unlocks-corner svg { width: 14px; height: 14px; }
 .nezha-unlocks-panel { width: min(320px, calc(100vw - 16px)); max-height: var(--radix-popover-content-available-height); overflow: auto; overscroll-behavior: contain; border-radius: 16px; }
 .nezha-unlocks-heading { display: flex; align-items: center; justify-content: space-between; gap: 8px; font-size: 13px; margin-bottom: 12px; }
@@ -81,8 +94,10 @@
   --nezha-glass-border: hsl(var(--border) / 0.48);
   --nezha-glass-shadow: 0 10px 30px rgb(0 0 0 / 0.26), inset 0 1px 0 rgb(255 255 255 / 0.08);
 }
-:root:has(.nezha-glass-root.has-custom-background) :is(
-  [class~="bg-card"], [class~="bg-card/70"], .nezha-glass-control,
+:root:has(.nezha-glass-root.has-custom-background) :where(
+  [class~="bg-card"], [class~="bg-card/70"], [class~="bg-popover"],
+  [role="dialog"][class~="bg-background"], .header-handles > button,
+  .server-charts select, select[aria-label="资源图表时间范围"], .nezha-glass-control,
   .probe-theme-switch, .nezha-glass-popup, .probe-theme-dropdown
 ) {
   background-color: var(--nezha-glass-surface) !important;
@@ -91,7 +106,7 @@
   -webkit-backdrop-filter: blur(16px) saturate(125%);
   backdrop-filter: blur(16px) saturate(125%);
 }
-:root:has(.nezha-glass-root.has-custom-background) :is(.nezha-glass-popup, .probe-theme-dropdown) {
+:root:has(.nezha-glass-root.has-custom-background) :is([class~="bg-popover"], [role="dialog"][class~="bg-background"], .nezha-glass-popup, .probe-theme-dropdown) {
   background-color: var(--nezha-glass-menu) !important;
   --menu-surface: var(--nezha-glass-menu);
 }
@@ -100,14 +115,30 @@
   background-color: transparent;
   border-color: var(--nezha-glass-border);
 }
-:root:has(.nezha-glass-root.has-custom-background) :is(.nezha-glass-control, .probe-theme-switch) {
+:root:has(.nezha-glass-root.has-custom-background) :is(.header-handles > button, .nezha-glass-control, .probe-theme-switch) {
   box-shadow: none;
+}
+/* An inset control already sits on a blurred card. Reusing the outer surface
+   would darken it twice and make a small button look like a black cutout. */
+:root:has(.nezha-glass-root.has-custom-background) .nezha-unlocks-trigger {
+  background-color: hsl(var(--foreground) / 0.06) !important;
+  border-color: hsl(var(--foreground) / 0.12);
+  -webkit-backdrop-filter: none;
+  backdrop-filter: none;
+}
+:root:has(.nezha-glass-root.has-custom-background) .nezha-unlocks-trigger:hover,
+:root:has(.nezha-glass-root.has-custom-background) .nezha-unlocks-trigger[data-state="open"] {
+  background-color: hsl(var(--foreground) / 0.12) !important;
 }
 :root:has(.nezha-glass-root.has-custom-background) .nezha-view-toggle[aria-pressed="true"] {
   background-color: rgb(37 99 235 / 0.85) !important;
 }
 :root.dark:has(.nezha-glass-root.has-custom-background) .nezha-view-toggle[aria-pressed="true"] {
   background-color: rgb(219 234 254 / 0.85) !important;
+  color: #0f172a;
+}
+:root.dark:has(.nezha-glass-root.has-custom-background) .nezha-view-toggle[aria-pressed="true"] svg {
+  color: inherit;
 }
 .probe-theme-switch { display: inline-flex; align-items: center; justify-content: center; width: 34px; height: 32px; border: 1px solid hsl(var(--border)); border-radius: 999px; background: hsl(var(--card)); }
 .probe-theme-switch svg { width: 16px; height: 16px; }

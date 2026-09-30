@@ -1,4 +1,3 @@
-// Adapted from BITJEBE/nezha-BITJEBE (Apache-2.0); MMWX changes described in licenses/NezhaDash-NOTICE.md.
 // 主题色板:用于访客胶囊和资产卡片的"主色"下拉框配置。
 //
 // Tailwind JIT 通过扫描源码字面量来识别 class,所以这里必须把完整 class 字符串
@@ -96,5 +95,73 @@ export const CAPSULE_COLORS: Record<ThemeColorKey, CapsuleColorClasses> = {
     iconWrap:
       "border-amber-200/70 bg-white/80 text-amber-600 dark:border-amber-300/25 dark:bg-amber-900/70 dark:text-amber-200",
     errorAccent: "text-amber-700 dark:text-amber-200",
+  },
+}
+
+// 资产卡片用色板
+export interface AssetColorClasses {
+  triggerText: string
+  panelTitle: string
+  primaryText: string
+  hoverPrimary: string
+  focusInput: string
+}
+
+export const ASSET_COLORS: Record<ThemeColorKey, AssetColorClasses> = {
+  blue: {
+    triggerText: "text-blue-700 dark:text-blue-300",
+    panelTitle: "text-blue-700 dark:text-blue-300",
+    primaryText: "text-blue-700 dark:text-blue-300",
+    hoverPrimary: "hover:text-blue-600",
+    focusInput: "focus:border-blue-400 focus:ring-blue-300/50",
+  },
+  green: {
+    triggerText: "text-green-700 dark:text-green-300",
+    panelTitle: "text-green-700 dark:text-green-300",
+    primaryText: "text-green-700 dark:text-green-300",
+    hoverPrimary: "hover:text-green-600",
+    focusInput: "focus:border-green-400 focus:ring-green-300/50",
+  },
+  purple: {
+    triggerText: "text-purple-700 dark:text-purple-300",
+    panelTitle: "text-purple-700 dark:text-purple-300",
+    primaryText: "text-purple-700 dark:text-purple-300",
+    hoverPrimary: "hover:text-purple-600",
+    focusInput: "focus:border-purple-400 focus:ring-purple-300/50",
+  },
+  pink: {
+    triggerText: "text-pink-700 dark:text-pink-300",
+    panelTitle: "text-pink-700 dark:text-pink-300",
+    primaryText: "text-pink-700 dark:text-pink-300",
+    hoverPrimary: "hover:text-pink-600",
+    focusInput: "focus:border-pink-400 focus:ring-pink-300/50",
+  },
+  orange: {
+    triggerText: "text-orange-700 dark:text-orange-300",
+    panelTitle: "text-orange-700 dark:text-orange-300",
+    primaryText: "text-orange-700 dark:text-orange-300",
+    hoverPrimary: "hover:text-orange-600",
+    focusInput: "focus:border-orange-400 focus:ring-orange-300/50",
+  },
+  red: {
+    triggerText: "text-red-700 dark:text-red-300",
+    panelTitle: "text-red-700 dark:text-red-300",
+    primaryText: "text-red-700 dark:text-red-300",
+    hoverPrimary: "hover:text-red-600",
+    focusInput: "focus:border-red-400 focus:ring-red-300/50",
+  },
+  cyan: {
+    triggerText: "text-cyan-700 dark:text-cyan-300",
+    panelTitle: "text-cyan-700 dark:text-cyan-300",
+    primaryText: "text-cyan-700 dark:text-cyan-300",
+    hoverPrimary: "hover:text-cyan-600",
+    focusInput: "focus:border-cyan-400 focus:ring-cyan-300/50",
+  },
+  amber: {
+    triggerText: "text-amber-700 dark:text-amber-300",
+    panelTitle: "text-amber-700 dark:text-amber-300",
+    primaryText: "text-amber-700 dark:text-amber-300",
+    hoverPrimary: "hover:text-amber-600",
+    focusInput: "focus:border-amber-400 focus:ring-amber-300/50",
   },
 }

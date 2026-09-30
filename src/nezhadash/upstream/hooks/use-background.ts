@@ -1,3 +1,4 @@
+// MMWX adaptation (2026-09-30): host integration; see licenses/NezhaDash-NOTICE.md.
 // MMWX adaptation: initialize from runtime settings; see licenses/NezhaDash-NOTICE.md.
 import { useEffect, useState } from "react";
 

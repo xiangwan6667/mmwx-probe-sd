@@ -1,3 +1,4 @@
+// MMWX adaptation (2026-09-30): host integration; see licenses/NezhaDash-NOTICE.md.
 "use client";
 // MMWX adaptation: distinguish pointer and keyboard focus; see licenses/NezhaDash-NOTICE.md.
 

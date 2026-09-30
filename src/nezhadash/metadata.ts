@@ -31,7 +31,7 @@ export function toPublicNote(server: ProbeServer): string {
   }
   const billingDataMod = hasPrice || end || permanent ? {
     amount: hasPrice ? price === 0 ? '0' : `${symbol}${price}` : '',
-    cycle: cycle?.label ?? '', autoRenewal: '0', startDate,
+    currency: currency ?? '', cycle: cycle?.label ?? '', autoRenewal: '0', startDate,
     endDate: permanent ? '0000-00-00' : end?.toISOString() ?? '',
   } : undefined;
 

@@ -15,6 +15,29 @@ const payload: ProbePayload = { enabled: true, servers: [
     boot_traffic_up: 30, boot_traffic_down: 40, upload_speed: 99, download_speed: 99 },
 ] };
 
+test('billing overview agrees with the master even when raw transfer totals are much larger', () => {
+  // Raw transfer is 12.78 TiB; the master adjusted usage is only 1.93 TiB.
+  const nodes = [
+    { billable_traffic_used: 1024 ** 4, traffic_limit: 20 * 1024 ** 4, online: true },
+    { billable_traffic_used: 0.93 * 1024 ** 4, traffic_limit: 22.48 * 1024 ** 4, online: false },
+  ];
+  const summary = trafficDisplay.summarizeBillingTraffic(nodes);
+  assert.ok(Math.abs(summary.used / 1024 ** 4 - 1.93) < 1e-10);
+  assert.ok(Math.abs(summary.limit / 1024 ** 4 - 42.48) < 1e-10);
+  assert.ok(Math.abs(summary.remaining / 1024 ** 4 - 40.55) < 1e-10);
+});
+
+test('billing overview preserves zero, unknown totals and overspent quota', () => {
+  const summarize = trafficDisplay.summarizeBillingTraffic;
+  assert.deepEqual(summarize([{billable_traffic_used:0,traffic_limit:0}]), {used:0,limit:0,remaining:0});
+  const partial = summarize([{billable_traffic_used:0,traffic_limit:10},{traffic_limit:20}]);
+  assert.ok(Number.isNaN(partial.used));
+  assert.equal(partial.limit,30);
+  assert.ok(Number.isNaN(partial.remaining));
+  assert.deepEqual(summarize([{billable_traffic_used:15,traffic_limit:10}]), {used:15,limit:10,remaining:0});
+  for (const value of Object.values(summarize([]))) assert.ok(Number.isNaN(value));
+});
+
 test('ported themes carry cycle directions separately from boot counters and billed usage', () => {
   for (const nodes of [payloadToNodes(payload), luminaNodes(payload)]) {
     assert.equal(nodes[0].period_traffic_up, 400);
@@ -84,7 +107,7 @@ test('Nezha preserves missing measurements instead of inventing zero', () => {
   assert.ok(Number.isNaN(missing.host.boot_time));
 });
 
-test('Nezha renders complete cycle totals including real zero and hides unavailable totals', async () => {
+test('Nezha overview renders only billed usage, preserves zero and hides missing usage', async () => {
   const { createElement } = await import('react');
   const { renderToStaticMarkup } = await import('react-dom/server');
   const { default: ServerOverview } = await import('./nezhadash/upstream/components/ServerOverview');
@@ -99,11 +122,13 @@ test('Nezha renders complete cycle totals including real zero and hides unavaila
         { value: { status: 'all', setStatus: () => {} } }, createElement(ServerOverview,
           { online: 1, offline: 0, total: servers.length, up: 0, down: 0, upSpeed: 0, downSpeed: 0 })));
     };
-    assert.match(render(payload.servers!), /周期流量/);
+    assert.match(render(payload.servers!), /已用流量/);
+    assert.doesNotMatch(render(payload.servers!), /周期流量|配额|剩余/);
     assert.match(render([{ online: true, traffic_used: 0, traffic_used_up: 0,
-      traffic_used_down: 0, upload_speed: 0, download_speed: 0 }]), /计费用量 0 KiB/);
-    assert.doesNotMatch(render([{ online: true }]), /周期流量|计费用量/);
-    assert.match(render(payload.servers!), /周期流量/);
+      traffic_used_down: 0, upload_speed: 0, download_speed: 0 }]), /0 Bytes/);
+    assert.doesNotMatch(render([{ online: true }]), /已用流量/);
+    assert.doesNotMatch(render([{ online: true, traffic_used_up: 1, upload_speed: 1 }]), /已用流量/);
+    assert.match(render(payload.servers!), /已用流量/);
   } finally {
     Object.assign(globalThis, { window: previousWindow });
   }

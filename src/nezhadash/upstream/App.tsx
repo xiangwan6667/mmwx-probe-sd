@@ -1,3 +1,4 @@
+// MMWX adaptation (2026-09-30): host integration; see licenses/NezhaDash-NOTICE.md.
 // MMWX adaptation (2026-09-29): host data/theme/router integration; see licenses/NezhaDash-NOTICE.md.
 import { useQuery } from "@tanstack/react-query";
 import type React from "react";
@@ -7,6 +8,7 @@ import { Route, HashRouter as Router, Routes } from "react-router-dom";
 
 import { DashCommand } from "./components/DashCommand";
 import ErrorBoundary from "./components/ErrorBoundary";
+import PrivateAccessGate from "./components/PrivateAccessGate";
 import Footer from "./components/Footer";
 import Header, { RefreshToast } from "./components/Header";
 import { useBackground } from "./hooks/use-background";
@@ -87,6 +89,7 @@ const MainApp: React.FC = () => {
 		return null;
 	}
 
+	if (settingData?.data.private_site) return <PrivateAccessGate siteName={settingData.data.config.site_name} siteDesc={settingData.data.config.site_desc} />;
 	const hasGlassBackground = hasCustomBackground(customBackgroundImage, customMobileBackgroundImage);
 
 	return (
@@ -124,7 +127,7 @@ const MainApp: React.FC = () => {
 					<Routes>
 						<Route
 							path="/"
-							element={<Server backendError={initialBackendError} />}
+							element={<Server />}
 						/>
 						<Route
 							path="/server/:id"

@@ -140,7 +140,6 @@ export const NodeCard = memo(function NodeCard({
 
           {Number.isFinite(node.billable_traffic_used) && Number.isFinite(node.traffic_limit) && <NodeTrafficQuota
             litCount={trafficQuotaLitCount(traffic.fraction)}
-            remainingLabel={traffic.remainingLabel}
             detail={traffic.detail}
             typeLabel={traffic.typeLabel}
             reset={trafficReset}
@@ -375,20 +374,18 @@ function trafficQuotaLitCount(fraction: number) {
   return count;
 }
 
-// 流量阈值行:label + 剩余量(剩余量用中性色,不抢眼)、同行的 used / limit(弱化),
+// 流量阈值行：已用量与实际重置时间，同行展示 used / limit。
 // 下面是 18 个独立 segment。每个 segment 按它的绝对位置上色(绿→黄→红,见 trafficQuotaSegmentColor
 // / 上面预算好的色数组),只要 used fraction 到达就点亮,否则用中性轨道色 —— 于是点亮区段呈现整条
 // 渐变,前沿就能看出离用满还有多远。memo + litCount:父卡片每 tick 重渲染,但只要点亮段数与文案没变
 // 就整棵跳过。
 const NodeTrafficQuota = memo(function NodeTrafficQuota({
   litCount,
-  remainingLabel,
   detail,
   typeLabel,
   reset,
 }: {
   litCount: number;
-  remainingLabel: string;
   detail: string;
   typeLabel: string;
   reset: TrafficResetDisplay | null;
@@ -399,7 +396,7 @@ const NodeTrafficQuota = memo(function NodeTrafficQuota({
       title={`流量阈值 · ${typeLabel}`}
     >
       <div className="traffic-quota-head">
-        <TrafficQuotaLabel remainingLabel={remainingLabel} reset={reset} />
+        <TrafficQuotaLabel reset={reset} />
         <span className="traffic-quota-usage">{detail}</span>
       </div>
       <div className="traffic-quota-track" aria-hidden>

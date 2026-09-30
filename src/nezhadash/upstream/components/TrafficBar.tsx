@@ -1,3 +1,4 @@
+// MMWX adaptation (2026-09-30): host integration; see licenses/NezhaDash-NOTICE.md.
 // MMWX adaptation (2026-09-29): BITJEBE TrafficBar with authoritative billable usage and period end; see licenses/NezhaDash-NOTICE.md.
 import { formatBytes } from "@/lib/format"
 import { useEffect, useRef, useState } from "react"

@@ -364,7 +364,7 @@ const NodeRow = memo(function NodeRow({ uuid, showCosts }: { uuid: string; showC
 
       <div
         className="node-list-cell col-traffic"
-        title={`开机累计上下行 · 剩余 ${traffic.remainingLabel} · ${traffic.detail}`}
+        title={`开机累计上下行 · ${traffic.detail}`}
       >
         <div className="node-list-traffic-rows">
           <StackLine icon={<ArrowUp size={11} strokeWidth={2.1} />} value={formatBytes(node.trafficUp)} />
