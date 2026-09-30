@@ -26,8 +26,8 @@ export async function getPingRecords(uuid:string,hours=6,options?:ApiCallOptions
  const result=pingSnapshot({enabled:true,servers:[{online:true,ping:data.all_series||[]}]},(data.generated_at??Date.now()/1000)*1000,data.bucket_sec||probeRangeBucketSec(rangeForHours(hours)));
  return {...result,records:result.records.map(r=>({...r,client:uuid})),tasks:result.tasks.map(t=>({...t,clients:[uuid]})),stats:result.stats.map(s=>({...s,client:uuid}))};
 }
-export interface TodayTrafficMetricResponse {series:TrafficMetricSeries[];rangeStartMs:number;rangeEndMs:number;intervalSeconds?:number}
-export async function getTodayTrafficMetrics(ids:string[],startMs:number,endMs:number,options?:ApiCallOptions):Promise<TodayTrafficMetricResponse>{check(options);return {series:todayTraffic(payload(),ids,endMs),rangeStartMs:startMs,rangeEndMs:endMs};}
+export interface TodayTrafficMetricResponse {source:'daily';series:TrafficMetricSeries[];rangeStartMs:number;rangeEndMs:number;intervalSeconds?:number}
+export async function getTodayTrafficMetrics(ids:string[],startMs:number,endMs:number,options?:ApiCallOptions):Promise<TodayTrafficMetricResponse>{check(options);return {source:'daily',series:todayTraffic(payload(),ids,endMs),rangeStartMs:startMs,rangeEndMs:endMs};}
 export async function getPingOverview(hours=1,taskId?:number,options?:ApiCallOptions & {entityIds?:string[];includeStats?:boolean}){
  check(options);const data=pingSnapshot(payload());const selected=(client:string,id:number)=>(taskId===undefined||taskId===id)&&(!options?.entityIds?.length||options.entityIds.includes(client));
  const records=data.records.filter(r=>selected(r.client,r.task_id)&&Date.parse(String(r.time))>=Date.now()-hours*3600000);

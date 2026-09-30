@@ -225,6 +225,7 @@ export const OsLogo = memo(function OsLogo({
   const [failedImage, setFailedImage] = useState<string | null>(null);
   const src = failedImage === os.image ? DEFAULT_OS_CONFIG.image : os.image;
 
+  if (!value?.trim()) return null;
   return (
     <img
       className="os-logo"

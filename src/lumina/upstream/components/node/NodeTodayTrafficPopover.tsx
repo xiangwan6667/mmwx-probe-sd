@@ -1,3 +1,5 @@
+import { getPayload, subscribePayload } from "../../../bridge";
+import { useSyncExternalStore } from "react";
 import {
   useCallback,
   useEffect,
@@ -30,7 +32,7 @@ const VIEWPORT_PADDING = 8;
 const HOVER_CLOSE_DELAY_MS = 160;
 
 /**
- * 卡片上的「今日流量与峰值」入口：桌面悬浮、触屏点按，都通过 portal 渲染到
+ * 卡片上的「今日流量」入口：桌面悬浮、触屏点按，都通过 portal 渲染到
  * document.body，避免被卡片的 overflow:hidden 裁剪。数据只在弹层实际打开时激活，
  * 由 NodeGrid 的 TodayTrafficStatsProvider 按活跃节点分别查询并复用缓存。
  */
@@ -42,6 +44,8 @@ export function NodeTodayTrafficPopover({
   size?: number;
 }) {
   const traffic = useNodeTodayTraffic(uuid);
+  const payload = useSyncExternalStore(subscribePayload,getPayload,getPayload);
+  const ledger = payload?.servers?.[Number(uuid)]?.daily_traffic;
   const trafficAvailable = traffic.available;
   const setTrafficActive = traffic.setActive;
   const fineHover = useFineHover();
@@ -216,7 +220,7 @@ export function NodeTodayTrafficPopover({
     };
   }, [cancelClose, open]);
 
-  if (!traffic.available) return null;
+  if (!traffic.available || !ledger?.some(day=>Number.isFinite(day.uplink) || Number.isFinite(day.downlink))) return null;
 
   return (
     <>
@@ -224,7 +228,7 @@ export function NodeTodayTrafficPopover({
         ref={triggerRef}
         type="button"
         className="node-traffic-trigger"
-        aria-label="今日流量与峰值"
+        aria-label="今日流量"
         aria-haspopup="dialog"
         aria-expanded={open}
         onClick={handleClick}
@@ -241,7 +245,7 @@ export function NodeTodayTrafficPopover({
             ref={popoverRef}
             className="node-traffic-popover"
             role="dialog"
-            aria-label="今日流量与峰值"
+            aria-label="今日流量"
             tabIndex={-1}
             style={
               position
@@ -328,8 +332,8 @@ function TodayTrafficPopoverBody({ traffic }: { traffic: NodeTodayTrafficView })
           value={formatBytes(stat.trafficDown)}
         />
       </div>
-      <div className="node-traffic-popover-head is-peak">峰值速度</div>
-      <div className="node-traffic-popover-rows">
+      {(source !== "daily" && (stat.peakUpAt != null || stat.peakDownAt != null)) && (<div className="node-traffic-popover-head is-peak">峰值速度</div>)}
+      {(source !== "daily" && (stat.peakUpAt != null || stat.peakDownAt != null)) && (<div className="node-traffic-popover-rows">
         <PopoverRow
           icon={<ArrowUp size={12} strokeWidth={2.4} />}
           label="上行"
@@ -350,10 +354,10 @@ function TodayTrafficPopoverBody({ traffic }: { traffic: NodeTodayTrafficView })
               : undefined
           }
         />
-      </div>
+      </div>)}
       <div className="node-traffic-popover-foot">
         <span>
-          {source === "records" ? "按记录采样" : "按 5 分钟采样"} · 更新{" "}
+          {source === "daily" ? "主控每日累计" : source === "records" ? "按记录采样" : "按 5 分钟采样"} · 更新{" "}
           {formatClockTime(dataUpdatedAt)}
         </span>
         <Link to="/traffic" className="node-traffic-popover-link">
@@ -400,6 +404,7 @@ function PopoverRow({
   value: string;
   note?: string;
 }) {
+  if (value === "—") return null;
   return (
     <div className="node-traffic-popover-row">
       <span className="node-traffic-popover-label">

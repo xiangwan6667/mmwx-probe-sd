@@ -103,8 +103,8 @@ function ServerCardInline({
 				</section>
 				<Separator orientation="vertical" className="h-8 mx-0 ml-2" />
 				<div className="flex flex-col gap-1">
-					<section className={cn("grid grid-cols-9 items-center gap-3 flex-1")}>
-						<div
+					<section className={cn("flex flex-wrap items-center gap-3 flex-1")}>
+						{Boolean(platform) && (<div
 							className={"items-center flex flex-row gap-2 whitespace-nowrap"}
 						>
 							<div className="text-xs font-semibold">
@@ -124,8 +124,8 @@ function ServerCardInline({
 										: GetOsName(platform)}
 								</div>
 							</div>
-						</div>
-						<div className={"flex w-20 flex-col"}>
+						</div>)}
+						{Number.isFinite(uptime) && (<div className={"flex w-20 flex-col"}>
 							<p className="text-xs text-muted-foreground">
 								{t("serverCard.uptime")}
 							</p>
@@ -134,72 +134,72 @@ function ServerCardInline({
 									? `${(uptime / 86400).toFixed(0)} ${t("serverCard.days")}`
 									: `${(uptime / 3600).toFixed(0)} ${t("serverCard.hours")}`}
 							</div>
-						</div>
-						<div className={"flex w-14 flex-col"}>
+						</div>)}
+						{Number.isFinite(cpu) && (<div className={"flex w-14 flex-col"}>
 							<p className="text-xs text-muted-foreground">{"CPU"}</p>
 							<div className="flex items-center text-xs font-semibold">
-								{probe?.cpu_pct !== undefined ? `${cpu.toFixed(2)}%` : "—"}
+								{`${cpu.toFixed(2)}%`}
 							</div>
-							<ServerUsageBar value={probe?.cpu_pct !== undefined ? cpu : 0} />
-						</div>
-						<div className={"flex w-14 flex-col"}>
+							<ServerUsageBar value={cpu} />
+						</div>)}
+						{Number.isFinite(mem) && (<div className={"flex w-14 flex-col"}>
 							<p className="text-xs text-muted-foreground">
 								{t("serverCard.mem")}
 							</p>
 							<div className="flex items-center text-xs font-semibold">
-								{probe?.mem_used !== undefined && !!probe?.mem_total ? `${mem.toFixed(2)}%` : "—"}
+								{`${mem.toFixed(2)}%`}
 							</div>
-							<ServerUsageBar value={probe?.mem_used !== undefined && !!probe?.mem_total ? mem : 0} />
-						</div>
-						<div className={"flex w-14 flex-col"}>
+							<ServerUsageBar value={mem} />
+						</div>)}
+						{Number.isFinite(stg) && (<div className={"flex w-14 flex-col"}>
 							<p className="text-xs text-muted-foreground">
 								{t("serverCard.stg")}
 							</p>
 							<div className="flex items-center text-xs font-semibold">
-								{probe?.disk_used !== undefined && !!probe?.disk_total ? `${stg.toFixed(2)}%` : "—"}
+								{`${stg.toFixed(2)}%`}
 							</div>
-							<ServerUsageBar value={probe?.disk_used !== undefined && !!probe?.disk_total ? stg : 0} />
-						</div>
-						<div className={"flex w-16 flex-col"}>
+							<ServerUsageBar value={stg} />
+						</div>)}
+						{Number.isFinite(up) && (<div className={"flex w-16 flex-col"}>
 							<p className="text-xs text-muted-foreground">
 								{t("serverCard.upload")}
 							</p>
 							<div className="flex items-center text-xs font-semibold">
-								{probe?.upload_speed === undefined ? "—" : up >= 1024
+								{up >= 1024
 									? `${(up / 1024).toFixed(2)}G/s`
 									: up >= 1
 										? `${up.toFixed(2)}M/s`
 										: `${(up * 1024).toFixed(2)}K/s`}
 							</div>
-						</div>
-						<div className={"flex w-16 flex-col"}>
+						</div>)}
+						{Number.isFinite(down) && (<div className={"flex w-16 flex-col"}>
 							<p className="text-xs text-muted-foreground">
 								{t("serverCard.download")}
 							</p>
 							<div className="flex items-center text-xs font-semibold">
-								{probe?.download_speed === undefined ? "—" : down >= 1024
+								{down >= 1024
 									? `${(down / 1024).toFixed(2)}G/s`
 									: down >= 1
 										? `${down.toFixed(2)}M/s`
 										: `${(down * 1024).toFixed(2)}K/s`}
 							</div>
-						</div>
-						<div className={"flex w-20 flex-col"}>
+						</div>)}
+						{Number.isFinite(net_out_transfer) && (<div className={"flex w-20 flex-col"}>
 							<p className="text-xs text-muted-foreground">
-								{t("serverCard.totalUpload")}
+								开机上行
 							</p>
 							<div className="flex items-center text-xs font-semibold">
 								{formatBytes(net_out_transfer)}
 							</div>
-						</div>
-						<div className={"flex w-20 flex-col"}>
+						</div>)}
+						{Number.isFinite(net_in_transfer) && (<div className={"flex w-20 flex-col"}>
 							<p className="text-xs text-muted-foreground">
-								{t("serverCard.totalDownload")}
+								开机下行
 							</p>
 							<div className="flex items-center text-xs font-semibold">
 								{formatBytes(net_in_transfer)}
 							</div>
-						</div>
+						</div>)}
 					</section>
 					{probe && (window as unknown as Record<string, unknown>).ShowTrafficBar !== false && (
 						<TrafficBar used={billableTraffic(probe)} limit={probe.traffic_limit ?? 0} periodEnd={probe.period_end} billingMode={trafficModeLabel(probe)} now={now} />

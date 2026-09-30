@@ -70,6 +70,7 @@ const MultiPingMetricRow = memo(function MultiPingMetricRow({
           : metric === "latency"
             ? Math.round(value)
             : value.toFixed(1);
+  if (!isLoading && !isError && (value == null || !Number.isFinite(value))) return null;
   return (
     <div
       className="multi-ping-metric-row"

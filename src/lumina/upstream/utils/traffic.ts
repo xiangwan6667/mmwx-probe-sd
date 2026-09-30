@@ -52,7 +52,7 @@ export function resolveTrafficUsage(
   limit: number,
   billableUsed?: number,
 ): TrafficUsage {
-  const used = billableUsed != null && Number.isFinite(billableUsed) ? Math.max(0, billableUsed) : computeTrafficUsed(type, up, down);
+  const used = billableUsed !== undefined ? nonNegative(billableUsed) : computeTrafficUsed(type, up, down);
   const unlimited = Number.isFinite(limit) && limit <= 0;
   const remaining = unlimited ? 0 : Math.max(0, limit - used);
   const fraction = unlimited ? 0 : Math.max(0, Math.min(1, used / limit));
@@ -73,4 +73,9 @@ export function trafficTypeLabel(type: string | null | undefined): string {
     default:
       return "上下取大";
   }
+}
+
+/** Period direction totals preserve missing values and include offline nodes. */
+export function summarizePeriodTraffic(nodes: ReadonlyArray<{period_traffic_up?:number;period_traffic_down?:number}>) {
+ return nodes.reduce((total,node)=>({up:total.up + nonNegative(node.period_traffic_up ?? NaN),down:total.down + nonNegative(node.period_traffic_down ?? NaN)}),{up:0,down:0});
 }

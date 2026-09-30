@@ -111,7 +111,8 @@ export function formatByteRateLabel(bytesPerSec: number | undefined | null): str
 }
 
 export function formatUptimeDays(seconds: number): { value: string; unit: string } {
-  if (!Number.isFinite(seconds) || seconds <= 0) return { value: "—", unit: "" };
+  if (!Number.isFinite(seconds) || seconds < 0) return { value: "—", unit: "" };
+  if (seconds === 0) return { value: "0", unit: "分钟" };
   const days = seconds / 86400;
   if (days >= 1) return { value: Math.floor(days).toString(), unit: "天" };
   const hours = seconds / 3600;

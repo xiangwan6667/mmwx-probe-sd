@@ -37,6 +37,9 @@ export interface NodeData {
   tags: string
   hidden: boolean
   billable_traffic_used?: number
+  period_traffic_up?: number
+  period_traffic_down?: number
+  traffic_usage_label?: string
   traffic_limit: number
   traffic_limit_type: TrafficLimitType
   created_at: string

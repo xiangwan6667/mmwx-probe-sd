@@ -1,5 +1,4 @@
 // MMWX adaptation (2026-09-29): host data/theme/router integration; see licenses/NezhaDash-NOTICE.md.
-import { getProbe } from "../../bridge";
 import countries from "i18n-iso-countries";
 import enLocale from "i18n-iso-countries/langs/en.json";
 import { useTranslation } from "react-i18next";
@@ -32,7 +31,6 @@ export default function ServerDetailOverview({
 	server_id: string;
 }) {
 	const { t } = useTranslation();
-	const probe = getProbe().servers?.[Number(server_id)];
 	const navigate = useNavigate();
 
 	const { lastData, connected } = useWebSocketContext();
@@ -124,7 +122,7 @@ export default function ServerDetailOverview({
 						</section>
 					</CardContent>
 				</Card>
-				{online && (
+				{online && Number.isFinite(uptime) && (
 					<Card className="rounded-[10px] bg-transparent border-none shadow-none ring-0">
 						<CardContent className="px-1.5 py-1">
 							<section className="flex flex-col items-start gap-0.5">
@@ -168,7 +166,7 @@ export default function ServerDetailOverview({
 					</Card>
 				)}
 
-				{mem_total ? (
+				{Number.isFinite(mem_total) ? (
 					<Card className="rounded-[10px] bg-transparent border-none shadow-none ring-0">
 						<CardContent className="px-1.5 py-1">
 							<section className="flex flex-col items-start gap-0.5">
@@ -181,7 +179,7 @@ export default function ServerDetailOverview({
 					</Card>
 				) : null}
 
-				{disk_total ? (
+				{Number.isFinite(disk_total) ? (
 					<Card className="rounded-[10px] bg-transparent border-none shadow-none ring-0">
 						<CardContent className="px-1.5 py-1">
 							<section className="flex flex-col items-start gap-0.5">
@@ -264,65 +262,47 @@ export default function ServerDetailOverview({
 				)}
 			</section>
 			<section className="flex flex-wrap gap-2 mt-1">
-				<Card className="rounded-[10px] bg-transparent border-none shadow-none ring-0">
+				{[server.state.load_1, server.state.load_5, server.state.load_15].some(Number.isFinite) && (<Card className="rounded-[10px] bg-transparent border-none shadow-none ring-0">
 					<CardContent className="px-1.5 py-1">
 						<section className="flex flex-col items-start gap-0.5">
 							<p className="text-xs text-muted-foreground">{"Load"}</p>
 							<div className="grid grid-cols-3 gap-2 text-xs tabular-nums">
 								{[
-									{ label: "1m", value: load_1 },
-									{ label: "5m", value: load_5 },
-									{ label: "15m", value: load_15 },
-								].map(({ label, value }) => (
+									{ label: "1m", value: load_1, raw: server.state.load_1 },
+									{ label: "5m", value: load_5, raw: server.state.load_5 },
+									{ label: "15m", value: load_15, raw: server.state.load_15 },
+								].filter(item => Number.isFinite(item.raw)).map(({ label, value }) => (
 									<div key={label} className="flex items-center gap-1">
 										<span className="text-[10px] text-muted-foreground">
 											{label}
 										</span>
-										<NumericText value={probe?.loadavg ? `${value}` : "—"} className="text-xs" />
+										<NumericText value={`${value}`} className="text-xs" />
 									</div>
 								))}
 							</div>
 						</section>
 					</CardContent>
-				</Card>
-				{net_out_transfer ? (
-					<Card className="rounded-[10px] bg-transparent border-none shadow-none ring-0">
+				</Card>)}
+				{Number.isFinite(net_out_transfer) && (<Card className="rounded-[10px] bg-transparent border-none shadow-none ring-0">
 						<CardContent className="px-1.5 py-1">
 							<section className="flex flex-col items-start gap-0.5">
 								<p className="text-xs text-muted-foreground">
-									{t("serverDetail.upload")}
+									开机累计上行
 								</p>
-								{net_out_transfer ? (
-									<NumericText
-										value={formatBytes(net_out_transfer)}
-										className="text-xs"
-									/>
-								) : (
-									<div className="text-xs"> {t("serverDetail.unknown")}</div>
-								)}
+								<NumericText value={formatBytes(net_out_transfer)} className="text-xs" />
 							</section>
 						</CardContent>
-					</Card>
-				) : null}
-				{net_in_transfer ? (
-					<Card className="rounded-[10px] bg-transparent border-none shadow-none ring-0">
+					</Card>)}
+				{Number.isFinite(net_in_transfer) && (<Card className="rounded-[10px] bg-transparent border-none shadow-none ring-0">
 						<CardContent className="px-1.5 py-1">
 							<section className="flex flex-col items-start gap-0.5">
 								<p className="text-xs text-muted-foreground">
-									{t("serverDetail.download")}
+									开机累计下行
 								</p>
-								{net_in_transfer ? (
-									<NumericText
-										value={formatBytes(net_in_transfer)}
-										className="text-xs"
-									/>
-								) : (
-									<div className="text-xs"> {t("serverDetail.unknown")}</div>
-								)}
+								<NumericText value={formatBytes(net_in_transfer)} className="text-xs" />
 							</section>
 						</CardContent>
-					</Card>
-				) : null}
+					</Card>)}
 			</section>
 			<section className="flex flex-wrap gap-2 mt-1">
 				{server?.state.temperatures &&
@@ -350,19 +330,19 @@ export default function ServerDetailOverview({
 			</section>
 
 			<section className="flex flex-wrap gap-2 mt-1">
-				<Card className="rounded-[10px] bg-transparent border-none shadow-none ring-0">
+				{Number.isFinite(server.host.boot_time) && (<Card className="rounded-[10px] bg-transparent border-none shadow-none ring-0">
 					<CardContent className="px-1.5 py-1">
 						<section className="flex flex-col items-start gap-0.5">
 							<p className="text-xs text-muted-foreground">
 								{t("serverDetail.bootTime")}
 							</p>
 							<div className="text-xs">
-								{probe?.uptime !== undefined ? boot_time_string : "—"}
+								{boot_time_string}
 							</div>
 						</section>
 					</CardContent>
-				</Card>
-				<Card className="rounded-[10px] bg-transparent border-none shadow-none ring-0">
+				</Card>)}
+				{Boolean(last_active_time_string) && (<Card className="rounded-[10px] bg-transparent border-none shadow-none ring-0">
 					<CardContent className="px-1.5 py-1">
 						<section className="flex flex-col items-start gap-0.5">
 							<p className="text-xs text-muted-foreground">
@@ -376,7 +356,7 @@ export default function ServerDetailOverview({
 							/>
 						</section>
 					</CardContent>
-				</Card>
+				</Card>)}
 			</section>
 		</div>
 	);

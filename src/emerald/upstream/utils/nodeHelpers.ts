@@ -1,10 +1,36 @@
 import type { NodeData, TrafficLimitType } from '@emerald/stores/nodes'
+import type { RecordFormat } from '@emerald/utils/recordHelper'
 import { formatDateTime } from '@emerald/utils/helper'
-import { formatPriceWithCycle, getDaysUntilExpired, getExpireStatus, getExpireTextClass, parseTags } from '@emerald/utils/tagHelper'
+import { formatPrice, formatPriceWithCycle, getDaysUntilExpired, getExpireStatus, getExpireTextClass, parseTags } from '@emerald/utils/tagHelper'
 
 export interface PriceTagItem {
   text: string
   highlight?: boolean
+}
+
+export function hasMeasurement(value: unknown): value is number {
+  return typeof value === 'number' && Number.isFinite(value) && value >= 0
+}
+
+export function hasHistoryMeasurement(records: Array<Partial<RecordFormat>>, keys: Array<keyof RecordFormat>): boolean {
+  return records.some(record => keys.some(key => hasMeasurement(record[key])))
+}
+
+/** A missing node measurement makes the whole subtotal unknown. */
+export function sumNodeMetric(nodes: NodeData[], key: keyof NodeData): number {
+  if (!nodes.length || nodes.some(node => typeof node[key] !== 'number' || !Number.isFinite(node[key]))) return Number.NaN
+  return nodes.reduce((sum, node) => sum + (node[key] as number), 0)
+}
+
+/** Retain an explicit offline gap instead of displaying the last online sample as current. */
+export function appendLiveRecord(records: RecordFormat[], uuid: string, record: RecordFormat | null, now: number): RecordFormat[] {
+  if (record) return [...records, record].slice(-150)
+  const previous = records.at(-1)
+  if (!previous) return records
+  const gap = Object.fromEntries(Object.keys(previous).map(key => [key, null])) as unknown as RecordFormat
+  gap.client = uuid
+  gap.time = new Date(now).toISOString()
+  return [...records, gap].slice(-150)
 }
 
 export function hasRegion(region: string | null | undefined): boolean {
@@ -44,8 +70,8 @@ export function getPriceTags(node: NodeData, lang: 'zh-CN' | 'en-US'): PriceTagI
   const days = getDaysUntilExpired(node.expired_at)
   const status = getExpireStatus(node.expired_at)
   const priceText = formatPriceWithCycle(node.price, node.billing_cycle, node.currency, lang)
-  if (Number.isFinite(node.price) && Number.isFinite(node.billing_cycle) && node.price !== 0)
-    tags.push({ text: priceText })
+  if (Number.isFinite(node.price))
+    tags.push({ text: Number.isFinite(node.billing_cycle) ? priceText : formatPrice(node.price, node.currency, lang) })
   if (!node.expired_at || !Number.isFinite(new Date(node.expired_at).getTime())) return tags
   if (status === 'long_term')
     tags.push({ text: lang === 'zh-CN' ? '长期' : 'Long-term' })

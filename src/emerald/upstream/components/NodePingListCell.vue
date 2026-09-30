@@ -11,14 +11,15 @@ const {
   latencyRenderBars,
   lossRenderBars,
   topPingNetworks,
+  pingStats,
 } = useNodePingDisplay(() => props.uuid)
 </script>
 
 <template>
-  <div class="flex flex-col">
+  <div v-if="pingStats.hasData.value || pingStats.history.value.some(point => point.latency !== null || point.loss !== null)" class="flex flex-col">
     <div v-if="topPingNetworks.length > 0" class="flex flex-row">
       <DataTooltip
-        v-for="(net, index) in topPingNetworks" :key="net.name" placement="top"
+        v-for="(net, index) in topPingNetworks.filter(net => net.latency !== '--')" :key="net.name" placement="top"
         :content="`${net.name}\n${net.latency}`"
         content-class="whitespace-pre-wrap w-max px-1.5 !leading-[1.2] text-[11px]"
       >
@@ -32,7 +33,7 @@ const {
       N/A
     </div>
     <div class="flex flex-col gap-[1px] w-full pr-4">
-      <div class="relative items-center gap-1">
+      <div v-if="pingStats.history.value.some(point => point.latency !== null)" class="relative items-center gap-1">
         <div
           class="grid h-1 cursor-auto items-end gap-[1px] transition-all hover:h-2.5"
           :style="{ gridTemplateColumns: `repeat(${latencyRenderBars.length}, minmax(0, 1fr))` }"
@@ -48,7 +49,7 @@ const {
           </DataTooltip>
         </div>
       </div>
-      <div class="relative items-center gap-1">
+      <div v-if="pingStats.history.value.some(point => point.loss !== null)" class="relative items-center gap-1">
         <div
           class="grid h-1 cursor-auto items-end gap-[1px] transition-all hover:h-2.5"
           :style="{ gridTemplateColumns: `repeat(${lossRenderBars.length}, minmax(0, 1fr))` }"

@@ -50,7 +50,7 @@ export function formatBytes(bytes: number, decimals = 1): string {
     return '0 B'
 
   const k = 1024
-  const i = Math.floor(Math.log(bytes) / Math.log(k))
+  const i = Math.max(0, Math.min(BYTE_UNITS.length - 1, Math.floor(Math.log(bytes) / Math.log(k))))
   const unit = BYTE_UNITS[i] ?? LAST_BYTE_UNIT
   return `${(bytes / k ** i).toFixed(decimals)} ${unit}`
 }
@@ -73,7 +73,7 @@ export function formatBytesWithConfig(bytes: number, config?: ByteDecimalsConfig
   }
 
   const k = 1024
-  const i = Math.floor(Math.log(bytes) / Math.log(k))
+  const i = Math.max(0, Math.min(BYTE_UNITS.length - 1, Math.floor(Math.log(bytes) / Math.log(k))))
 
   // 获取对应单位的精度配置
   const unitKey = BYTE_UNITS[i]
@@ -116,7 +116,7 @@ export function formatBytesSplit(bytes: number, config?: ByteDecimalsConfig): { 
   }
 
   const k = 1024
-  const i = Math.floor(Math.log(bytes) / Math.log(k))
+  const i = Math.max(0, Math.min(BYTE_UNITS.length - 1, Math.floor(Math.log(bytes) / Math.log(k))))
 
   const unitKey = BYTE_UNITS[i]
   const decimals = (unitKey === 'TB' || unitKey === 'PB') ? mergedConfig.TB : mergedConfig[unitKey as keyof ByteDecimalsConfig]

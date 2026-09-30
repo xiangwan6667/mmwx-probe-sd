@@ -13,7 +13,7 @@ export function formatTodayTrafficValue(
     return `↑ ${formatBytes(stat.trafficUp)} · ↓ ${formatBytes(stat.trafficDown)}（更新失败）`;
   }
   if (!stat || !stat.hasSamples) return "今日暂无采样";
-  return `↑ ${formatBytes(stat.trafficUp)} · ↓ ${formatBytes(stat.trafficDown)}`;
+  return [Number.isFinite(stat.trafficUp) ? `↑ ${formatBytes(stat.trafficUp)}` : "",Number.isFinite(stat.trafficDown) ? `↓ ${formatBytes(stat.trafficDown)}` : ""].filter(Boolean).join(" · ");
 }
 
 export function formatTodayPeakValue(

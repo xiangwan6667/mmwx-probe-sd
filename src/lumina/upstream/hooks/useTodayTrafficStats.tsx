@@ -31,6 +31,7 @@ import {
   buildTodayTrafficMetricSamples,
   buildTodayTrafficRecordSamples,
   summarizeTodayTrafficMetrics,
+  summarizeDailyTrafficMetrics,
   summarizeTodayTrafficRecords,
   type TodayTrafficSample,
   type TodayTrafficStat,
@@ -47,7 +48,7 @@ export interface TodayTrafficStatsResponse {
   rangeStartMs: number;
   rangeEndMs: number;
   intervalSeconds?: number;
-  source: "metrics" | "records";
+  source: "metrics" | "records" | "daily";
 }
 
 export interface NodeTodayTrafficView {
@@ -359,7 +360,9 @@ function getTodayTrafficQueryOptions(
           timeout: OPTIONAL_METRIC_TIMEOUT_MS,
         });
         return {
-          rows: summarizeTodayTrafficMetrics(data.series, stableUuids),
+          rows: data.source === "daily"
+            ? summarizeDailyTrafficMetrics(data.series, stableUuids)
+            : summarizeTodayTrafficMetrics(data.series, stableUuids),
           samplesByUuid:
             mode === "full"
               ? Object.fromEntries(
@@ -372,7 +375,7 @@ function getTodayTrafficQueryOptions(
           rangeStartMs: data.rangeStartMs,
           rangeEndMs: data.rangeEndMs,
           intervalSeconds: data.intervalSeconds,
-          source: "metrics",
+          source: data.source,
         };
       } catch (error) {
         if (signal.aborted) throw error;

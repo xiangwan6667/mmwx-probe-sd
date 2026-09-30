@@ -1,5 +1,5 @@
-import { lazy, Suspense, useEffect, useState } from "react";
-import { AlertTriangle, ChevronLeft, ChevronRight, Grid3x3, LayoutGrid, List, Palette, Rows3, Settings, SlidersHorizontal } from "lucide-react";
+import { lazy, Suspense, useState } from "react";
+import { AlertTriangle, Grid3x3, LayoutGrid, List, Palette, Rows3, Settings, SlidersHorizontal } from "lucide-react";
 import { Link } from "react-router-dom";
 import { usePreferences } from "@lumina/hooks/usePreferences";
 import { useViewMode } from "@lumina/hooks/useViewMode";
@@ -26,18 +26,13 @@ const VIEW_MODE_META: Record<NodeViewMode, { icon: typeof LayoutGrid; label: str
   list: { icon: List, label: "列表视图" },
 };
 
-export function FloatingControls({
-  onExpandedChange,
-}: {
-  onExpandedChange?: (expanded: boolean) => void;
-}) {
+export function FloatingControls() {
   usePreferences();
   const { mode, nextMode, toggleMode } = useViewMode();
   const { data: me } = useAuth();
   const adminEntryPath = useAdminEntryPath();
   const themeSettings = useThemeSettings();
   const { failureStreak } = useNodeStoreStatus();
-  const [collapsed, setCollapsed] = useState(false);
   const [colorsOpen, setColorsOpen] = useState(false);
   const [colorsMounted, setColorsMounted] = useState(false);
   const settingsReady = themeSettings.isReady;
@@ -48,35 +43,19 @@ export function FloatingControls({
   const showThemeManage = loggedIn;
   const showColorPicker = loggedIn;
   const showSyncWarning = failureStreak >= 2;
-  const hiddenTabIndex = collapsed ? -1 : undefined;
-  const ToggleIcon = collapsed ? ChevronLeft : ChevronRight;
   const ViewIcon = VIEW_MODE_META[nextMode].icon;
   // 只要不在最宽松的大卡默认态,就视为"已切换"，按钮保持高亮。
   const isReducedView = mode !== "large";
-  useEffect(() => {
-    onExpandedChange?.(true);
-    return () => onExpandedChange?.(false);
-  }, [onExpandedChange]);
-
-  const toggleControls = () => {
-    // 收起快捷栏时同时结束子面板状态，避免下次展开时调色盘自动复现。
-    const nextCollapsed = !collapsed;
-    if (nextCollapsed) setColorsOpen(false);
-    setCollapsed(nextCollapsed);
-    onExpandedChange?.(!nextCollapsed);
-  };
-
   return (
     <div
       className={clsx(
         "floating-controls",
-        collapsed && "is-collapsed",
         showSyncWarning && "has-warning",
       )}
     >
       <div className="floating-controls-inner">
         <div className="floating-controls-row">
-          <div className="floating-controls-actions" aria-hidden={collapsed} inert={collapsed}>
+          <div className="floating-controls-actions">
             {settingsReady && (
               <>
                 <ThemeSwitch className="control-button grid h-9 w-9 place-items-center" />
@@ -86,7 +65,6 @@ export function FloatingControls({
                   aria-label="切换卡片视图"
                   aria-pressed={isReducedView}
                   title={`临时切换到${VIEW_MODE_META[nextMode].label}`}
-                  tabIndex={hiddenTabIndex}
                   className={clsx(
                     "control-button grid h-9 w-9 place-items-center",
                     isReducedView && "control-toggle is-active",
@@ -104,7 +82,6 @@ export function FloatingControls({
                     aria-label="卡片配色"
                     aria-pressed={colorsOpen}
                     title="卡片配色"
-                    tabIndex={hiddenTabIndex}
                     className={clsx(
                       "control-button grid h-9 w-9 place-items-center",
                       colorsOpen && "control-toggle is-active",
@@ -120,7 +97,6 @@ export function FloatingControls({
                 to="/?view=theme-manage"
                 aria-label="主题设置"
                 title="主题设置"
-                tabIndex={hiddenTabIndex}
                 className="control-button grid h-9 w-9 place-items-center"
               >
                 <SlidersHorizontal size={16} />
@@ -131,33 +107,20 @@ export function FloatingControls({
                 href={adminEntryPath} target="_top"
                 aria-label={me?.logged_in ? "管理" : "后台登录"}
                 title={me?.logged_in ? "管理" : "后台登录"}
-                tabIndex={hiddenTabIndex}
                 className="control-button grid h-9 w-9 place-items-center"
               >
                 <Settings size={16} />
               </a>
             )}
           </div>
-          <button
-            type="button"
-            className="control-button floating-controls-trigger grid h-9 w-9 place-items-center"
-            aria-label={collapsed ? "展开快捷按钮" : "收起快捷按钮"}
-            aria-expanded={!collapsed}
-            onClick={toggleControls}
-            title={collapsed ? "展开快捷按钮" : "收起快捷按钮"}
-          >
-            <ToggleIcon size={16} />
-            {showSyncWarning && collapsed && (
-              <span className="floating-controls-warning-dot" aria-hidden />
-            )}
-          </button>
+
         </div>
         {showColorPicker && colorsMounted && (
           <Suspense fallback={null}>
-            <MetricColorPicker hidden={collapsed || !colorsOpen} />
+            <MetricColorPicker hidden={!colorsOpen} />
           </Suspense>
         )}
-        {showSyncWarning && !collapsed && !colorsOpen && (
+        {showSyncWarning && !colorsOpen && (
           <div className="floating-controls-sync-warning pointer-events-none flex items-center gap-2 rounded-full border border-[color-mix(in_srgb,var(--status-offline)_32%,transparent)] bg-[color-mix(in_srgb,var(--surface-a)_90%,transparent)] px-3 py-1 text-[11px] font-medium text-[var(--status-offline)] shadow-[0_10px_25px_-18px_rgba(0,0,0,0.8)] backdrop-blur">
             <AlertTriangle size={12} />
             <span>实时状态同步异常，当前展示的是最近缓存</span>

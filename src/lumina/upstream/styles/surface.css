@@ -316,9 +316,7 @@ body::after {
 }
 
 .floating-controls-actions {
-  position: absolute;
-  top: 0;
-  right: calc(100% + 8px);
+  position: relative;
   display: inline-flex;
   width: max-content;
   max-width: min(340px, calc(100vw - 5rem));
@@ -346,19 +344,11 @@ body::after {
   backdrop-filter: none;
 }
 
-.floating-controls-actions .control-button,
-.floating-controls-trigger {
+.floating-controls-actions .control-button {
   width: 36px;
   min-width: 36px;
   height: 36px;
   flex: 0 0 36px;
-}
-
-.floating-controls.is-collapsed .floating-controls-actions {
-  max-width: 0;
-  opacity: 0;
-  pointer-events: none;
-  transform: translateX(18px) scale(0.96);
 }
 
 .floating-controls-inner > .metric-color-picker,
@@ -372,27 +362,6 @@ body::after {
 .floating-controls-sync-warning {
   width: max-content;
   max-width: min(320px, calc(100vw - 2rem));
-}
-
-.floating-controls-trigger {
-  position: relative;
-  flex: 0 0 auto;
-  box-shadow: 0 10px 28px -22px rgba(0, 0, 0, 0.38);
-}
-
-.floating-controls.has-warning .floating-controls-trigger {
-  border-color: color-mix(in srgb, var(--status-offline) 38%, var(--border));
-}
-
-.floating-controls-warning-dot {
-  position: absolute;
-  top: 5px;
-  right: 5px;
-  width: 7px;
-  height: 7px;
-  border: 1px solid var(--surface);
-  border-radius: 999px;
-  background: var(--status-offline);
 }
 
 /* 悬浮控制卡里的"卡片配色"取色面板 */
@@ -688,8 +657,7 @@ body::after {
     max-width: calc(100vw - env(safe-area-inset-right, 0px) - 52px);
   }
 
-  .floating-controls-actions .control-button,
-  .floating-controls-trigger {
+  .floating-controls-actions .control-button {
     width: 32px;
     min-width: 32px;
     height: 32px;

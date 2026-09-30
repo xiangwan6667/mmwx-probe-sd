@@ -13,7 +13,7 @@ import { useNodeFormatters } from '@emerald/composables/useNodeFormatters'
 import { useNodePingDisplay } from '@emerald/composables/useNodePingDisplay'
 import { useAppStore } from '@emerald/stores/app'
 import { formatDateTime, formatMetric, getStatus } from '@emerald/utils/helper'
-import { getCustomTags, getDiskPercentage, getMemPercentage, getPriceTags, getRemainingTimeTagClass, getTrafficUsed, getTrafficUsedPercentage, hasRegion, showTrafficProgress } from '@emerald/utils/nodeHelpers'
+import { getCustomTags, getDiskPercentage, getMemPercentage, getPriceTags, getRemainingTimeTagClass, getTrafficUsed, getTrafficUsedPercentage, hasRegion, hasMeasurement, showTrafficProgress } from '@emerald/utils/nodeHelpers'
 import { getOSImage, getOSName } from '@emerald/utils/osImageHelper'
 import { getFlagSrc, getRegionDisplayName } from '@emerald/utils/regionHelper'
 
@@ -46,6 +46,7 @@ const {
   lossPanelTooltip,
   topPingNetworks,
   networkLabel,
+  pingStats,
 } = useNodePingDisplay(() => props.node.uuid)
 
 const trafficUsedPercentage = computed(() => getTrafficUsedPercentage(props.node))
@@ -83,7 +84,7 @@ function openPingDialog() {
 
     <template #header-extra>
       <div class="flex gap-2 items-center">
-        <img :src="getOSImage(props.node.os)" :alt="getOSName(props.node.os)" class="size-4">
+        <img v-if="props.node.os" :src="getOSImage(props.node.os)" :alt="getOSName(props.node.os)" class="size-4">
         <img
           v-if="hasRegion(props.node.region)" :src="getFlagSrc(props.node.region)"
           :alt="getRegionDisplayName(props.node.region)" class="size-5 shrink-0"
@@ -95,32 +96,32 @@ function openPingDialog() {
       <div class="flex flex-col gap-3">
         <div class="gap-x-3 gap-y-1 grid grid-cols-2">
           <!-- CPU -->
-          <div class="flex flex-col gap-1">
+          <div v-if="hasMeasurement(props.node.cpu) || hasMeasurement(props.node.load)" class="flex flex-col gap-1">
             <div class="w-full text-xs flex flex-row justify-between">
               <span class="text-muted-foreground">
                 CPU
               </span>
-              <span>{{ formatMetric(props.node.cpu, 1, '%') }}</span>
+              <span v-if="hasMeasurement(props.node.cpu)">{{ formatMetric(props.node.cpu, 1, '%') }}</span>
             </div>
             <ProgressThin v-if="Number.isFinite(props.node.cpu)" :percentage="props.node.cpu" :status="cpuStatus" :height="4" />
-            <div class="text-[11px] text-muted-foreground truncate">
-              {{ formatMetric(props.node.load, 2) }}, {{ formatMetric(props.node.load5, 2) }}, {{
-                formatMetric(props.node.load15, 2) }}
+            <div v-if="hasMeasurement(props.node.load) || hasMeasurement(props.node.load5) || hasMeasurement(props.node.load15)" class="text-[11px] text-muted-foreground truncate">
+              <span v-if="hasMeasurement(props.node.load)">{{ formatMetric(props.node.load, 2) }}</span><span v-if="hasMeasurement(props.node.load) && hasMeasurement(props.node.load5)">, </span><span v-if="hasMeasurement(props.node.load5)">{{ formatMetric(props.node.load5, 2) }}</span><span v-if="hasMeasurement(props.node.load15) && (hasMeasurement(props.node.load) || hasMeasurement(props.node.load5))">, </span><span v-if="hasMeasurement(props.node.load15)">{{
+                formatMetric(props.node.load15, 2) }}</span>
             </div>
           </div>
 
           <!-- 内存 -->
-          <div class="flex flex-col gap-1">
+          <div v-if="hasMeasurement(props.node.ram) || hasMeasurement(props.node.mem_total)" class="flex flex-col gap-1">
             <div class="w-full text-xs flex flex-row justify-between">
               <span class="text-muted-foreground">
                 内存
               </span>
-              <span>{{ formatMetric(memPercentage, 1, '%') }}</span>
+              <span v-if="hasMeasurement(memPercentage)">{{ formatMetric(memPercentage, 1, '%') }}</span>
             </div>
             <ProgressThin v-if="Number.isFinite(memPercentage)" :percentage="memPercentage" :status="memStatus" :height="4" />
-            <DataTooltip placement="top" class="block" :content-class="[!props.node.swap && '!hidden']">
+            <DataTooltip placement="top" class="block" :content-class="[!hasMeasurement(props.node.swap) && '!hidden']">
               <div class="text-[11px] text-muted-foreground truncate">
-                {{ formatBytes(props.node.ram) }} / {{ formatBytes(props.node.mem_total) }}
+                <span v-if="hasMeasurement(props.node.ram)">{{ formatBytes(props.node.ram) }}</span> <span v-if="hasMeasurement(props.node.ram) && hasMeasurement(props.node.mem_total)">/</span> <span v-if="hasMeasurement(props.node.mem_total)">{{ formatBytes(props.node.mem_total) }}</span>
               </div>
               <template #content>
                 <div class="flex items-center justify-between gap-3 whitespace-nowrap">
@@ -132,48 +133,49 @@ function openPingDialog() {
           </div>
 
           <!-- 硬盘 -->
-          <div class="flex flex-col gap-1">
+          <div v-if="hasMeasurement(props.node.disk) || hasMeasurement(props.node.disk_total)" class="flex flex-col gap-1">
             <div class="w-full text-xs flex flex-row justify-between">
               <span class="text-muted-foreground">
                 硬盘
               </span>
-              <span>{{ formatMetric(diskPercentage, 1, '%') }}</span>
+              <span v-if="hasMeasurement(diskPercentage)">{{ formatMetric(diskPercentage, 1, '%') }}</span>
             </div>
             <ProgressThin v-if="Number.isFinite(diskPercentage)" :percentage="diskPercentage" :status="diskStatus" :height="4" />
             <div class="text-[11px] text-muted-foreground truncate">
-              {{ formatBytes(props.node.disk) }} / {{ formatBytes(props.node.disk_total) }}
+              <span v-if="hasMeasurement(props.node.disk)">{{ formatBytes(props.node.disk) }}</span> <span v-if="hasMeasurement(props.node.disk) && hasMeasurement(props.node.disk_total)">/</span> <span v-if="hasMeasurement(props.node.disk_total)">{{ formatBytes(props.node.disk_total) }}</span>
             </div>
           </div>
 
           <!-- 流量进度条 -->
-          <div class="flex flex-col gap-1">
+          <div v-if="hasMeasurement(trafficUsed) || hasMeasurement(props.node.traffic_limit) || hasMeasurement(props.node.net_total_up) || hasMeasurement(props.node.net_total_down)" class="flex flex-col gap-1">
             <div class="w-full text-xs flex flex-row justify-between">
               <span class="text-muted-foreground">
-                流量
+                {{ props.node.traffic_usage_label || '当前计费用量' }}
               </span>
-              <span>{{ formatMetric(trafficUsedPercentage, 1, '%') }}</span>
+              <span v-if="hasMeasurement(trafficUsedPercentage)">{{ formatMetric(trafficUsedPercentage, 1, '%') }}</span>
             </div>
             <ProgressThin v-if="Number.isFinite(trafficUsedPercentage)" :percentage="trafficUsedPercentage" status="success" :height="4" />
             <DataTooltip placement="top" class="block">
               <div class="whitespace-pre-wrap text-[11px] text-muted-foreground truncate">
-                {{ formatBytes(trafficUsed) }} /
+                <span v-if="hasMeasurement(trafficUsed)">{{ formatBytes(trafficUsed) }}</span> <span v-if="hasMeasurement(trafficUsed) && hasMeasurement(props.node.traffic_limit)">/</span>
                 <template v-if="showTrafficProgress(props.node)">
                   {{ formatBytes(props.node.traffic_limit) }}
                 </template>
                 <template v-else>
-                  {{ Number.isFinite(props.node.traffic_limit) ? '∞' : '—' }}
+                  <span v-if="hasMeasurement(props.node.traffic_limit)">∞</span>
                 </template>
               </div>
               <template #content>
-                <div class="flex items-center justify-between gap-3 whitespace-nowrap">
+                <div v-if="hasMeasurement(props.node.net_total_up) || hasMeasurement(props.node.net_total_down)" class="flex items-center justify-between gap-3 whitespace-nowrap">
                   <div class="text-[11px] flex flex-col">
+                    <span class="text-muted-foreground">开机累计</span>
                     <div class="flex flex-row items-center gap-1">
                       <Icon icon="tabler:chevron-up" width="12" height="12" />
-                      {{ formatBytes(props.node.net_total_up) }}
+                      <span v-if="hasMeasurement(props.node.net_total_up)">{{ formatBytes(props.node.net_total_up) }}</span>
                     </div>
                     <div class="flex flex-row items-center gap-1">
                       <Icon icon="tabler:chevron-down" width="12" height="12" />
-                      {{ formatBytes(props.node.net_total_down) }}
+                      <span v-if="hasMeasurement(props.node.net_total_down)">{{ formatBytes(props.node.net_total_down) }}</span>
                     </div>
                   </div>
                 </div>
@@ -187,10 +189,10 @@ function openPingDialog() {
             class="absolute inset-0 z-10 flex flex-col items-center justify-center space-y-1"
           >
             <span class="text-sm text-red-600">离线</span>
-            <div>{{ offlineTime }}</div>
+            <div v-if="props.node.time">{{ offlineTime }}</div>
           </div>
           <div class="flex flex-col gap-y-2" :class="[!props.node.online && 'blur-xs opacity-60 pointer-events-none']">
-            <div class="flex items-center">
+            <div v-if="hasMeasurement(props.node.net_out) || hasMeasurement(props.node.net_in)" class="flex items-center">
               <span class="truncate">
                 速率
               </span>
@@ -198,15 +200,15 @@ function openPingDialog() {
               <div class="truncate flex flex-row gap-1">
                 <div class="text-green-600 flex flex-row items-center gap-1">
                   <Icon icon="tabler:chevron-up" width="12" height="12" />
-                  {{ formatBytesPerSecond(props.node.net_out) }}
+                  <span v-if="hasMeasurement(props.node.net_out)">{{ formatBytesPerSecond(props.node.net_out) }}</span>
                 </div>
                 <div class="text-blue-600 flex flex-row items-center gap-1">
                   <Icon icon="tabler:chevron-down" width="12" height="12" />
-                  {{ formatBytesPerSecond(props.node.net_in) }}
+                  <span v-if="hasMeasurement(props.node.net_in)">{{ formatBytesPerSecond(props.node.net_in) }}</span>
                 </div>
               </div>
             </div>
-            <div class="flex items-center justify-between">
+            <div v-if="hasMeasurement(props.node.uptime)" class="flex items-center justify-between">
               <span class="truncate">
                 在线
               </span>
@@ -215,7 +217,7 @@ function openPingDialog() {
                 {{ formatUptime(props.node.uptime) }}
               </span>
             </div>
-            <div class="flex items-center justify-between">
+            <div v-if="priceTags.length > 0" class="flex items-center justify-between">
               <span class="truncate">
                 费用
               </span>
@@ -231,14 +233,14 @@ function openPingDialog() {
                 </span>
               </DataTooltip>
             </div>
-            <div class="flex items-center justify-between">
+            <div v-if="topPingNetworks.some(net => net.latency !== '--')" class="flex items-center justify-between">
               <span class="truncate">
                 {{ networkLabel }}
               </span>
               <div class="border-t-2 border-dotted border-gray-500/10 mx-2 flex-1" />
               <div v-if="topPingNetworks.length > 0" class="flex flex-row">
                 <DataTooltip
-                  v-for="(net, index) in topPingNetworks" :key="net.name" placement="top"
+                  v-for="(net, index) in topPingNetworks.filter(net => net.latency !== '--')" :key="net.name" placement="top"
                   :content="`${net.name}\n${net.latency}`" content-class="whitespace-pre-wrap w-max px-1.5 !leading-[1.2] text-[11px]"
                 >
                   <div class="truncate">
@@ -251,9 +253,9 @@ function openPingDialog() {
                 N/A
               </div>
             </div>
-            <div class="grid grid-cols-6 gap-x-3">
+            <div v-if="pingStats.hasData.value || pingStats.history.value.some(point => point.latency !== null || point.loss !== null)" class="grid grid-cols-6 gap-x-3">
               <!-- 延迟 -->
-              <div
+              <div v-if="pingStats.avgLatency.value !== null || pingStats.history.value.some(point => point.latency !== null)"
                 role="button" tabindex="0"
                 class="group/panel relative col-span-3 flex h-6 cursor-pointer flex-col gap-2 text-left transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
                 :title="latencyPanelTooltip" :aria-label="`${props.node.name} 延迟`" @click.stop="openPingDialog"
@@ -280,7 +282,7 @@ function openPingDialog() {
                 </div>
               </div>
               <!-- 丢包 -->
-              <div
+              <div v-if="pingStats.avgLoss.value !== null || pingStats.history.value.some(point => point.loss !== null)"
                 role="button" tabindex="0"
                 class="group/panel relative col-span-3 flex h-6 cursor-pointer flex-col gap-2 text-left transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
                 :title="lossPanelTooltip" :aria-label="`${props.node.name} 丢包`" @click.stop="openPingDialog"

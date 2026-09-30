@@ -138,15 +138,15 @@ export const NodeCard = memo(function NodeCard({
             redrawKey={redrawKey}
           />
 
-          <NodeTrafficQuota
+          {Number.isFinite(node.billable_traffic_used) && Number.isFinite(node.traffic_limit) && <NodeTrafficQuota
             litCount={trafficQuotaLitCount(traffic.fraction)}
             remainingLabel={traffic.remainingLabel}
             detail={traffic.detail}
             typeLabel={traffic.typeLabel}
             reset={trafficReset}
-          />
+          />}
 
-          {showConnections && (
+          {showConnections && [node.connectionsTcp,node.connectionsUdp].some(Number.isFinite) && (
             <div className="card-metric-section server-card-meta-grid">
               <FooterStat
                 icon={<Network size={13} strokeWidth={2} />}
@@ -258,6 +258,7 @@ function NodeMetricSection({
   loadFraction: number;
   redrawKey: string;
 }) {
+  if (![node.cpuPct,node.ramPct,node.diskPct,node.load1].some(Number.isFinite)) return null;
   return (
     <div className="card-metric-section server-metric-grid">
       <MetricBar
@@ -265,7 +266,7 @@ function NodeMetricSection({
         label="CPU"
         valueText={formatFixed(node.cpuPct, 2)}
         unit="%"
-        detailText={Number.isFinite(node.cpu_cores) ? `${node.cpu_cores} 核` : '—'}
+        detailText={Number.isFinite(node.cpu_cores) ? `${node.cpu_cores} 核` : undefined}
         fraction={node.cpuPct / 100}
         redrawKey={redrawKey}
         paint="var(--progress-cpu)"
@@ -317,8 +318,9 @@ function NodeTrafficSection({
   isOnline: boolean;
   redrawKey: string;
 }) {
+  if (![node.netUp,node.netDown,node.trafficUp,node.trafficDown].some(Number.isFinite)) return null;
   return (
-    <div className="card-metric-section server-traffic-section">
+    <div className="card-metric-section server-traffic-section" title="开机累计流量">
       <TrafficStat
         direction="上行"
         totalLabel="出站"
@@ -467,9 +469,10 @@ const NodeHealthSection = memo(function NodeHealthSection({
     ? formatHealthBucketTooltip(hoveredLossBucket, "loss")
     : null;
 
+  if (!pingLoading && !pingError && ping.lastValue == null && ping.loss == null) return null;
   return (
     <div className="card-metric-section server-health-grid">
-      <div className="server-health-block">
+      {(pingLoading || pingError || Number.isFinite(ping.lastValue)) && (<div className="server-health-block">
         <div className="server-health-head">
           <div className="server-health-label">
             <Clock3 size={13} strokeWidth={2} />
@@ -512,8 +515,8 @@ const NodeHealthSection = memo(function NodeHealthSection({
             count={pingBuckets.length}
           />
         </div>
-      </div>
-      <div className="server-health-block">
+      </div>)}
+      {(pingLoading || pingError || Number.isFinite(ping.loss)) && (<div className="server-health-block">
         <div className="server-health-head">
           <div className="server-health-label">
             <Unplug size={13} strokeWidth={2} />
@@ -556,7 +559,7 @@ const NodeHealthSection = memo(function NodeHealthSection({
             count={pingBuckets.length}
           />
         </div>
-      </div>
+      </div>)}
     </div>
   );
 });
@@ -733,6 +736,7 @@ function TrafficStat({
 }) {
   // 按当前速率单位档取热力色:文字/圆点/实时点都随速度量级变色,图标仍用方向色(color)区分上下行。
   const speedColor = speedRateColor(rate.unit);
+  if (rate.value === "—" && total === "—") return null;
   return (
     <div className="traffic-stat">
       <div className="traffic-stat-head">
@@ -740,12 +744,12 @@ function TrafficStat({
           <span style={{ color }}>{icon}</span>
           <span style={{ color: speedColor }}>{direction}</span>
         </div>
-        <span className="traffic-stat-value tabular" style={{ color: speedColor }}>
+        {(rate.value !== "—") && (<span className="traffic-stat-value tabular" style={{ color: speedColor }}>
           {rate.value}
           <span className="traffic-stat-unit">{rate.unit}</span>
-        </span>
+        </span>)}
       </div>
-      <div className="traffic-stat-trend">
+      {(rate.value !== "—") && (<div className="traffic-stat-trend">
         <TrafficDotStrip samples={samples} color={speedColor} redrawKey={redrawKey} />
         <span
           className="traffic-stat-live"
@@ -761,14 +765,14 @@ function TrafficStat({
           />
           {live && <span>{active ? "实时" : "空闲"}</span>}
         </span>
-      </div>
-      <div className="traffic-stat-foot">
+      </div>)}
+      {(total !== "—") && (<div className="traffic-stat-foot">
         <div className="traffic-stat-total-label">
           <GlobeArrow direction={totalLabel} color={color} />
           <span>{totalLabel}</span>
         </div>
         <span className="tabular">{total}</span>
-      </div>
+      </div>)}
     </div>
   );
 }
@@ -876,6 +880,7 @@ function FooterStat({
   color: string;
   icon: ReactNode;
 }) {
+  if (value === "—") return null;
   return (
     <div className="server-card-meta">
       <div className="server-card-meta-label">

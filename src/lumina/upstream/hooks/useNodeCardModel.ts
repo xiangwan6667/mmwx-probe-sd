@@ -179,7 +179,7 @@ export function useNodeCardModel(
       expireColor: getExpireTextColor(meta.expired_at, now),
       trafficReset: getTrafficResetDisplay(meta.traffic_period_end, now),
       renewalPrice: formatRenewalPrice(meta),
-      osName: resolveOsInfo(meta.os).name,
+      osName: meta.os?.trim() ? resolveOsInfo(meta.os).name : "",
       loadBaseline: meta.cpu_cores > 0 ? meta.cpu_cores : 4,
     };
   }, [meta, now, showCardGroup]);
@@ -238,7 +238,7 @@ export function useNodeCardModel(
       fraction: trafficUsage.fraction,
       color: trafficColor,
       remainingLabel: trafficUsage.unlimited ? "∞" : formatBytes(trafficUsage.remaining),
-      detail: `${trafficUsedLabel} / ${trafficLimitLabel}`,
+      detail: `${meta.traffic_usage_label || "当前计费用量"} ${trafficUsedLabel} / ${trafficLimitLabel}`,
       typeLabel: trafficTypeLabel(meta.traffic_limit_type),
     };
 

@@ -145,7 +145,7 @@ export function useNodePingDisplay(
         return options.loadingPanelTooltipText?.latency ?? ''
       return options.emptyPanelTooltipText?.latency ?? ''
     }
-    return `平均延迟 ${Math.round(pingStats.avgLatency.value)} ms`
+    return `当前延迟 ${Math.round(pingStats.avgLatency.value)} ms`
   })
 
   const lossPanelTooltip = computed(() => {

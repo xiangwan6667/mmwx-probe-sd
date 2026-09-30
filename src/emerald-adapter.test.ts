@@ -2,8 +2,57 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 import { payloadToNodes, createPublicSettings } from './emerald/data-adapter';
 import { getPayload, receivePayload, subscribePayload, installHostBridge } from './emerald/bridge';
-import { formatBytes, formatBytesSplit, formatBytesPerSecond, formatUptime, formatUptimeWithFormat, formatMetric } from './emerald/upstream/utils/helper';
+import { formatBytes, formatBytesWithConfig, formatBytesSplit, formatBytesPerSecond, formatUptime, formatUptimeWithFormat, formatMetric } from './emerald/upstream/utils/helper';
 import { getPriceTags, getTrafficUsed, getMemPercentage } from './emerald/upstream/utils/nodeHelpers';
+import * as nodeHelpers from './emerald/upstream/utils/nodeHelpers';
+import { snapshotRecord } from './emerald/history';
+
+test('visibility follows missing, zero and newly received data without partial totals', () => {
+  const [missing] = payloadToNodes({enabled:true,servers:[{online:true}]});
+  assert.equal(typeof nodeHelpers.hasMeasurement, 'function');
+  assert.equal(nodeHelpers.hasMeasurement(missing.cpu), false);
+  assert.equal(nodeHelpers.hasMeasurement(null), false);
+  assert.equal(nodeHelpers.hasMeasurement(0), true);
+  const [received] = payloadToNodes({enabled:true,servers:[{online:true,cpu_pct:0,mem_used:0}]});
+  assert.equal(nodeHelpers.hasMeasurement(received.cpu), true);
+  assert.ok(Number.isNaN(nodeHelpers.sumNodeMetric([missing,received], 'cpu')));
+  assert.equal(nodeHelpers.hasHistoryMeasurement([{cpu:null}], ['cpu']), false);
+  assert.equal(nodeHelpers.hasHistoryMeasurement([{cpu:0}], ['cpu']), true);
+});
+
+test('fractional byte measurements stay in bytes and huge values stay in the largest unit', () => {
+  assert.equal(formatBytes(0.5), '0.5 B');
+  assert.equal(formatBytesWithConfig(0.5, { B: 1 }), '0.5 B');
+  assert.deepEqual(formatBytesSplit(0.5, { B: 1 }), { value: '0.5', unit: 'B' });
+  assert.equal(formatBytes(1024 ** 7), '1048576.0 PB');
+});
+
+test('price tags preserve currencies outside the exchange-rate list', () => {
+  const node = payloadToNodes({ enabled: true, servers: [{ online: true, renewal_price: 10, renewal_currency: 'TWD', renewal_cycle: 'month' }] })[0];
+  assert.deepEqual(getPriceTags(node, 'zh-CN'), [{ text: '10 TWD/月' }]);
+});
+
+test('period traffic includes offline nodes and keeps missing directions unknown', () => {
+  const nodes = payloadToNodes({ enabled: true, servers: [{ online: true }, { online: false }] });
+  Object.assign(nodes[0], { period_traffic_up: 400, period_traffic_down: 500, net_total_up: 10, net_total_down: 20 });
+  Object.assign(nodes[1], { period_traffic_up: 100, period_traffic_down: 200 });
+  assert.equal(typeof nodeHelpers.sumNodeMetric, 'function');
+  assert.equal(nodeHelpers.sumNodeMetric(nodes, 'period_traffic_up'), 500);
+  assert.equal(nodeHelpers.sumNodeMetric(nodes, 'period_traffic_down'), 700);
+  Object.assign(nodes[1], { period_traffic_down: NaN });
+  assert.ok(Number.isNaN(nodeHelpers.sumNodeMetric(nodes, 'period_traffic_down')));
+});
+
+test('live records retain offline gaps so the current measurement becomes unknown', () => {
+  const initial = snapshotRecord('0', { online: true, cpu_pct: 15, mem_used: 100 }, 1000)!;
+  assert.equal(typeof nodeHelpers.appendLiveRecord, 'function');
+  const offline = nodeHelpers.appendLiveRecord([initial], '0', null, 2000);
+  assert.equal(offline.at(-1)?.cpu, null);
+  assert.equal(offline.at(-1)?.ram, null);
+  assert.equal(offline.at(-1)?.time, new Date(2000).toISOString());
+  const resumed = nodeHelpers.appendLiveRecord(offline, '0', snapshotRecord('0', { online: true, cpu_pct: 30 }, 3000), 3000);
+  assert.deepEqual(resumed.map(record => record.cpu), [15, null, 30]);
+});
 
 test('unknown Emerald measurements render as dashes and zero remains real', () => {
   assert.equal(formatBytes(NaN), '—');

@@ -1,3 +1,4 @@
+import { summarizePeriodTraffic } from "@lumina/utils/traffic";
 import { useCallback, useEffect, useMemo, useState, type CSSProperties } from "react";
 import { Link } from "react-router-dom";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
@@ -79,6 +80,7 @@ interface HomeOverview {
   offlineNodes: number;
   trafficUp: number;
   trafficDown: number;
+  billableTraffic: number;
   netUp: number;
   netDown: number;
 }
@@ -105,7 +107,8 @@ function TrafficBarsIcon({ size = 19 }: { size?: number }) {
 }
 
 // 站点铭牌由 CSS 放进 AppShell 顶部留白，不占概览卡内容流。
-function HomeBrand({ siteName }: { siteName: string }) {
+export function HomeBrand({ siteName }: { siteName: string }) {
+  if (!siteName.trim()) return null;
   return (
     <header className="home-brand" aria-label="站点名称">
       <h1 className="home-brand-title" title={siteName}>
@@ -163,7 +166,7 @@ function HomeOverviewCards({
       : costLoading
         ? "计算中"
         : "—";
-  const trafficDetailLabel = `↑ ${formatBytes(overview.trafficUp)} · ↓ ${formatBytes(overview.trafficDown)}`;
+  const trafficDetailLabel = `周期上行 ${formatBytes(overview.trafficUp)} · 周期下行 ${formatBytes(overview.trafficDown)} · 计费用量 ${formatBytes(overview.billableTraffic)}`;
   const trafficCompactLabel = `↑${formatCompactBytes(overview.trafficUp)} ↓${formatCompactBytes(overview.trafficDown)}`;
   const bandwidthDetailLabel = `↑ ${formatByteRateLabel(overview.netUp)} · ↓ ${formatByteRateLabel(overview.netDown)}`;
   const bandwidthCompactLabel = `↑${formatCompactBytes(overview.netUp)} ↓${formatCompactBytes(overview.netDown)}`;
@@ -231,7 +234,7 @@ function HomeOverviewCards({
         )}
       </article>
 
-      <article className="overview-card" data-metric="bandwidth">
+      {Number.isFinite(overview.netUp + overview.netDown) && (<article className="overview-card" data-metric="bandwidth">
         <span className="overview-card-label">实时带宽</span>
         <div className="overview-card-main">
           <p
@@ -249,11 +252,11 @@ function HomeOverviewCards({
           </p>
           {renderRating(bandwidthRating)}
         </div>
-      </article>
+      </article>)}
 
-      <article className="overview-card" data-metric="traffic">
+      {Number.isFinite(overview.trafficUp + overview.trafficDown) && (<article className="overview-card" data-metric="traffic">
         <div className="overview-card-head">
-          <span className="overview-card-label">累计流量</span>
+          <span className="overview-card-label">周期流量</span>
           <Link
             to="/traffic"
             className="overview-card-action"
@@ -279,9 +282,9 @@ function HomeOverviewCards({
           </p>
           {renderRating(trafficRating)}
         </div>
-      </article>
+      </article>)}
 
-      <article className="overview-card" data-metric="asset">
+      {showCosts && costSummary && Number.isFinite(costSummary.remainingCny) && (<article className="overview-card" data-metric="asset">
         <div className="overview-card-head">
           <span className="overview-card-label">资产概览</span>
           {showDetailButton && <RenewalReminder nodes={renewalNodes} />}
@@ -293,7 +296,7 @@ function HomeOverviewCards({
           <p className="overview-card-caption">实时汇率计算</p>
           {renderRating(assetRating)}
         </div>
-      </article>
+      </article>)}
     </section>
   );
 }
@@ -379,7 +382,7 @@ export function NodeGrid() {
   const { hydrated: storeHydrated, nodeInfoError } = useNodeStoreStatus();
   const { data: me } = useAuth();
   const { data: publicConfig } = usePublicConfig();
-  const siteName = publicConfig?.sitename?.trim() || "节点概览";
+  const siteName = publicConfig?.sitename?.trim() || "";
   const themeSettings = useThemeSettings();
   const { mode } = useViewMode();
   const sort = useHomeSort();
@@ -442,17 +445,18 @@ export function NodeGrid() {
   const overview = useMemo<HomeOverview>(() => {
     let onlineNodes = 0;
     let offlineNodes = 0;
-    let trafficUp = 0;
-    let trafficDown = 0;
+    const periodTraffic = summarizePeriodTraffic(visibleMeta);
+    const trafficUp = periodTraffic.up;
+    const trafficDown = periodTraffic.down;
     let netUp = 0;
     let netDown = 0;
     for (const node of visibleNodes) {
       if (node.online === true) onlineNodes += 1;
       else if (node.online === false) offlineNodes += 1;
-      trafficUp += node.trafficUp;
-      trafficDown += node.trafficDown;
-      netUp += node.netUp;
-      netDown += node.netDown;
+      if (node.online === true) {
+        netUp += node.netUp;
+        netDown += node.netDown;
+      }
     }
 
     return {
@@ -461,10 +465,11 @@ export function NodeGrid() {
       offlineNodes,
       trafficUp,
       trafficDown,
+      billableTraffic: visibleMeta.reduce((sum,node)=>sum+(node.billable_traffic_used ?? NaN),0),
       netUp,
       netDown,
     };
-  }, [visibleNodes]);
+  }, [visibleNodes, visibleMeta]);
   const showHomeOverview = themeSettings.isReady && themeSettings.showHomeOverview;
   const showTrafficPopover = themeSettings.isReady && themeSettings.showTodayTrafficPopover;
   const hasNodes = visibleMeta.length > 0;

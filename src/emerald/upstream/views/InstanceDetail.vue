@@ -13,7 +13,7 @@ import { useAppStore } from '@emerald/stores/app'
 import { useNodesStore } from '@emerald/stores/nodes'
 import * as financeHelper from '@emerald/utils/financeHelper'
 import { formatDateTime } from '@emerald/utils/helper'
-import { getTrafficUsed } from '@emerald/utils/nodeHelpers'
+import { getTrafficUsed, hasMeasurement } from '@emerald/utils/nodeHelpers'
 import { getOSImage, getOSName } from '@emerald/utils/osImageHelper'
 import { getFlagSrc, getRegionDisplayName } from '@emerald/utils/regionHelper'
 import { getBillingCycleText, getExpireText, getExpireTextClass } from '@emerald/utils/tagHelper'
@@ -148,28 +148,28 @@ const metricCards = computed<MetricCard[]>(() => {
       unit: remainingValue.unit,
       icon: 'tabler:coins',
     },
-  ]
+  ].filter(item => item.value !== '—' && item.value !== '-')
 })
 
 const hardwareInfo = computed<InfoItem[]>(() => [
-  { label: 'CPU', value: data.value?.cpu_name ? `${data.value.cpu_name}${validNumber(data.value.cpu_cores) ? ` (x${data.value.cpu_cores})` : ''}` : '—', icon: 'icon-park-outline:cpu' },
+  { label: 'CPU', value: data.value?.cpu_name ? `${data.value.cpu_name}${validNumber(data.value.cpu_cores) ? ` (x${data.value.cpu_cores})` : ''}` : validNumber(data.value?.cpu_cores) ? `x${data.value.cpu_cores}` : '—', icon: 'icon-park-outline:cpu' },
   { label: '架构', value: data.value?.arch || '—', icon: 'icon-park-outline:application-two' },
   { label: '虚拟化', value: data.value?.virtualization || '—', icon: 'icon-park-outline:server' },
   { label: 'GPU', value: data.value?.gpu_name || '-', icon: 'icon-park-outline:video-one' },
-])
+].filter(item => item.value && item.value !== '—' && item.value !== '-'))
 
 const systemInfo = computed<InfoItem[]>(() => [
   { label: '操作系统', value: data.value?.os || '—', icon: 'icon-park-outline:computer' },
   { label: '内核版本', value: data.value?.kernel_version || '—', icon: 'icon-park-outline:code' },
   { label: '运行时间', value: formatUptime(data.value?.uptime, 'minute'), icon: 'icon-park-outline:timer' },
   { label: '最后上报', value: formatDateTime(data.value?.time), icon: 'icon-park-outline:time' },
-])
+].filter(item => item.value && item.value !== '—' && item.value !== '-'))
 
 const storageInfo = computed<InfoItem[]>(() => [
   { label: '内存', value: formatBytes(data.value?.mem_total), icon: 'icon-park-outline:memory' },
   { label: '内存交换', value: formatBytes(data.value?.swap_total), icon: 'icon-park-outline:switch' },
   { label: '硬盘', value: formatBytes(data.value?.disk_total), icon: 'icon-park-outline:hard-disk' },
-])
+].filter(item => item.value && item.value !== '—' && item.value !== '-'))
 
 const trafficUsed = computed(() => {
   if (!data.value)
@@ -188,9 +188,9 @@ const trafficUsedPercentage = computed(() => {
 })
 
 const trafficUsageText = computed(() => {
-  if (!validNumber(data.value?.traffic_limit)) return '—'
+  if (!validNumber(data.value?.traffic_limit)) return formatBytes(trafficUsed.value)
   if (!hasTrafficLimit.value)
-    return '无限流量'
+    return `${formatBytes(trafficUsed.value)} / 无限流量`
 
   return `${formatBytes(trafficUsed.value)} / ${formatBytes(data.value?.traffic_limit)}`
 })
@@ -224,7 +224,7 @@ const trafficProgressStyle = computed(() => ({
         </Button>
         <div class="text-lg font-bold flex gap-2 items-center">
           <ProbeUnlocks :uuid="data.uuid" />
-          <img
+          <img v-if="data.region"
             :src="getFlagSrc(data.region)" :alt="getRegionDisplayName(data.region)"
             class="size-6"
           >
@@ -235,7 +235,7 @@ const trafficProgressStyle = computed(() => ({
         </Badge>
       </div>
 
-      <div class="px-4 grid grid-cols-2 gap-4 lg:grid-cols-4">
+      <div v-if="metricCards.length" class="px-4 grid grid-cols-2 gap-4 lg:grid-cols-4">
         <CardX
           v-for="item in metricCards" :key="item.label" hoverable size="small"
           class="group h-full border-none transition-all rounded-md"
@@ -267,7 +267,7 @@ const trafficProgressStyle = computed(() => ({
 
       <div class="px-4 gap-4 grid grid-cols-1 lg:grid-cols-2">
         <CardX
-          title="硬件信息" size="small"
+          v-if="hardwareInfo.length" title="硬件信息" size="small"
           class="group h-full border-none transition-all rounded-md"
           :class="pickSurfaceClass('bg-background/60 hover:bg-background', 'bg-background/50 hover:bg-background backdrop-blur-xs')"
         >
@@ -286,7 +286,7 @@ const trafficProgressStyle = computed(() => ({
         </CardX>
 
         <CardX
-          title="系统信息" size="small"
+          v-if="systemInfo.length" title="系统信息" size="small"
           class="group h-full border-none transition-all rounded-md"
           :class="pickSurfaceClass('bg-background/60 hover:bg-background', 'bg-background/50 hover:bg-background backdrop-blur-xs')"
         >
@@ -313,7 +313,7 @@ const trafficProgressStyle = computed(() => ({
         </CardX>
 
         <CardX
-          title="存储信息" size="small"
+          v-if="storageInfo.length" title="存储信息" size="small"
           class="group h-full border-none transition-all rounded-md"
           :class="pickSurfaceClass('bg-background/60 hover:bg-background', 'bg-background/50 hover:bg-background backdrop-blur-xs')"
         >
@@ -332,13 +332,13 @@ const trafficProgressStyle = computed(() => ({
         </CardX>
 
         <CardX
-          title="网络信息" size="small"
+          v-if="hasMeasurement(trafficUsed) || hasMeasurement(data.net_total_up) || hasMeasurement(data.net_total_down) || hasMeasurement(data.net_in) || hasMeasurement(data.net_out)" title="网络信息" size="small"
           class="group h-full border-none transition-all rounded-md"
           :class="pickSurfaceClass('bg-background/60 hover:bg-background', 'bg-background/50 hover:bg-background backdrop-blur-xs')"
           content-class="pt-0"
         >
           <div class="gap-3 grid grid-cols-2">
-            <div class="relative min-w-0 overflow-hidden rounded-sm bg-slate-500/5 p-2">
+            <div v-if="hasMeasurement(trafficUsed) || hasMeasurement(data.net_total_up) || hasMeasurement(data.net_total_down)" class="relative min-w-0 overflow-hidden rounded-sm bg-slate-500/5 p-2">
               <div
                 v-if="hasTrafficLimit"
                 class="absolute inset-y-0 left-0 rounded-sm bg-primary/10 pointer-events-none transition-[width] duration-300 ease-out"
@@ -347,27 +347,25 @@ const trafficProgressStyle = computed(() => ({
               <div class="relative flex flex-col gap-1.5">
                 <div class="flex gap-1 items-center text-muted-foreground">
                   <Icon icon="icon-park-outline:transfer-data" :width="14" :height="14" />
-                  <span class="text-xs sm:text-sm">总流量</span>
-                  <div class="flex-1" />
-                  <span class="hidden sm:block text-[11px] font-medium text-foreground/70">{{
-                    formatBytes(data?.net_total_up) }} / {{ formatBytes(data?.net_total_down) }}</span>
+                  <span class="text-xs sm:text-sm">{{ data?.traffic_usage_label || '当前计费用量' }}</span>
                 </div>
-                <span class="text-xs sm:text-sm break-all">
+                <span v-if="hasMeasurement(trafficUsed)" class="text-xs sm:text-sm break-all">
                   {{ trafficUsageText }}
                 </span>
+                <span v-if="hasMeasurement(data.net_total_up) || hasMeasurement(data.net_total_down)" class="text-[11px] text-muted-foreground break-all">开机累计 ↑ <span v-if="hasMeasurement(data.net_total_up)">{{ formatBytes(data?.net_total_up) }}</span> / ↓ <span v-if="hasMeasurement(data.net_total_down)">{{ formatBytes(data?.net_total_down) }}</span></span>
               </div>
             </div>
-            <div class="min-w-0 flex flex-col gap-1 rounded-sm bg-slate-500/5 p-2">
+            <div v-if="hasMeasurement(data.net_in) || hasMeasurement(data.net_out)" class="min-w-0 flex flex-col gap-1 rounded-sm bg-slate-500/5 p-2">
               <div class="flex gap-1 items-center text-muted-foreground">
                 <Icon icon="icon-park-outline:dashboard-one" :width="14" :height="14" />
                 <span class="text-xs sm:text-sm">网络速率</span>
               </div>
               <span class="text-xs sm:text-sm break-all flex flex-row flex-wrap items-center gap-1">
                 <Icon icon="tabler:chevron-up" width="12" height="12" />
-                {{ formatBytesPerSecond(data?.net_out) }}
+                <span v-if="hasMeasurement(data.net_out)">{{ formatBytesPerSecond(data?.net_out) }}</span>
                 <span class="px-0.5" />
                 <Icon icon="tabler:chevron-down" width="12" height="12" />
-                {{ formatBytesPerSecond(data?.net_in) }}
+                <span v-if="hasMeasurement(data.net_in)">{{ formatBytesPerSecond(data?.net_in) }}</span>
               </span>
             </div>
           </div>

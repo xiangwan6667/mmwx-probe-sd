@@ -109,6 +109,23 @@ export function summarizeTodayTrafficMetrics(
   return [...stats.values()];
 }
 
+/** Daily ledger totals do not imply a measured value for the other direction. */
+export function summarizeDailyTrafficMetrics(series: TrafficMetricSeries[], uuids: string[]): TodayTrafficStat[] {
+ const rows = summarizeTodayTrafficMetrics(series, uuids);
+ const directions = new Map<string, Set<string>>();
+ for (const item of series) {
+  if (item.metricKey !== TRAFFIC_UP_METRIC && item.metricKey !== TRAFFIC_DOWN_METRIC) continue;
+  if (!item.points.some(point => validPoint(point) && Number.isFinite(Date.parse(point.time)))) continue;
+  const keys = directions.get(item.client) ?? new Set<string>();
+  keys.add(item.metricKey);
+  directions.set(item.client, keys);
+ }
+ return rows.map(row => ({ ...row,
+  trafficUp: directions.get(row.uuid)?.has(TRAFFIC_UP_METRIC) ? row.trafficUp : NaN,
+  trafficDown: directions.get(row.uuid)?.has(TRAFFIC_DOWN_METRIC) ? row.trafficDown : NaN,
+ }));
+}
+
 export function buildTodayTrafficMetricSamples(
   series: TrafficMetricSeries[],
   uuid: string,

@@ -284,7 +284,7 @@ export function Assets() {
         </div>
       ) : (
         <>
-          <section className="assets-hero" aria-label="资产汇总">
+          {(Boolean(summary && Number.isFinite(summary.remainingCny))) && (<section className="assets-hero" aria-label="资产汇总">
             <span className="assets-hero-mark" aria-hidden>
               ¥
             </span>
@@ -302,7 +302,7 @@ export function Assets() {
                 </div>
               ))}
             </dl>
-          </section>
+          </section>)}
 
           <div className="assets-section-head">
             <span className="assets-eyebrow">明细</span>
@@ -372,7 +372,7 @@ export function Assets() {
                     </tr>
                   </thead>
                   <tbody>
-                    {detailRows.map((detail) => {
+                    {detailRows.filter(detail=>!detail.note.endsWith("缺失")).map((detail) => {
                       const reminder = renewalByUuid.get(detail.uuid);
                       const renewalTone = reminder
                         ? assetsRenewalTone(reminder.daysRemaining)
@@ -448,7 +448,7 @@ export function Assets() {
                 </div>
               ) : (
                 <div className="assets-card-list">
-                {detailRows.map((detail) => {
+                {detailRows.filter(detail=>!detail.note.endsWith("缺失")).map((detail) => {
                   const reminder = renewalByUuid.get(detail.uuid);
                   const renewalTone = reminder
                     ? assetsRenewalTone(reminder.daysRemaining)

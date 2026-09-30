@@ -1,7 +1,7 @@
 import type { ProbePayload, ProbeServer } from '../types';
 import type { NodeData } from './upstream/stores/nodes';
 import type { PublicSettings } from './upstream/utils/api';
-import { billableTraffic, bootTraffic } from '../traffic-display';
+import { billableTraffic, bootTraffic, trafficUsageLabel } from '../traffic-display';
 
 const measurement = (value: number | undefined): number => typeof value === 'number' && Number.isFinite(value) ? value : NaN;
 const billingDays: Record<NonNullable<ProbeServer['renewal_cycle']>, number> = {
@@ -24,6 +24,7 @@ export function payloadToNodes(payload: ProbePayload): NodeData[] {
       auto_renewal: false, currency: server.renewal_price !== undefined ? (server.renewal_currency || 'CNY') : 'CNY',
       expired_at: server.expires_at || '', group: '',
       tags: '', hidden: false, billable_traffic_used: measurement(billableTraffic(server)), traffic_limit: measurement(server.traffic_limit),
+      period_traffic_up: measurement(server.traffic_used_up), period_traffic_down: measurement(server.traffic_used_down), traffic_usage_label: trafficUsageLabel(server),
       traffic_limit_type: server.traffic_stats_mode === 'upload' ? 'up' : server.traffic_stats_mode === 'download' ? 'down' : server.traffic_stats_mode === 'max' ? 'max' : 'sum',
       created_at: '', updated_at: '', online: server.online, time: '',
       cpu: measurement(server.cpu_pct), gpu: NaN, ram: measurement(server.mem_used), swap: NaN,

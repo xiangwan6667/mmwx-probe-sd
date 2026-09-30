@@ -1,5 +1,5 @@
 import dayjs from 'dayjs'
-import { CURRENCY_SYMBOLS, normalizeCurrency } from '@emerald/utils/financeHelper'
+import { CURRENCY_SYMBOLS, originalCurrency } from '@emerald/utils/financeHelper'
 
 /** 计费周期类型 */
 export type BillingCycleType = 'monthly' | 'quarterly' | 'semi_annual' | 'annual' | 'biennial' | 'triennial' | 'quinquennial' | 'once' | 'custom'
@@ -339,9 +339,9 @@ export function formatPrice(price: number, currency: string = 'CNY', lang: 'zh-C
     return lang === 'zh-CN' ? '免费' : 'Free'
   if (price === -1)
     return lang === 'zh-CN' ? '免费' : 'Free'
-  const code = normalizeCurrency(currency)
-  const symbol = CURRENCY_SYMBOLS[code]
-  return `${symbol}${price}`
+  const code = originalCurrency(currency)
+  const symbol = CURRENCY_SYMBOLS[code as keyof typeof CURRENCY_SYMBOLS]
+  return symbol ? `${symbol}${price}` : `${price} ${code || '未知币种'}`
 }
 
 /**

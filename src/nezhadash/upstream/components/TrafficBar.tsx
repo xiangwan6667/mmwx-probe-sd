@@ -67,7 +67,7 @@ export default function TrafficBar({ used, limit, periodEnd, billingMode, now }:
     }
   }, [shouldCycle, infoItems.length])
 
-  if (!Number.isFinite(limit) || limit <= 0) return null
+  if (!hasUsage || !Number.isFinite(limit) || limit <= 0) return null
 
   return (
     <div className="space-y-1.5 w-full">

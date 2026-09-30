@@ -36,53 +36,53 @@ export default function ServerDetailSummary({
 	return (
 		<div className="mb-2 flex flex-wrap items-center gap-4 server-detail-summary">
             <NezhaUnlocks id={server_id} />
-			<section className="flex w-24 flex-col justify-center gap-1 px-1.5 py-1">
+			{Number.isFinite(cpu) && (<section className="flex w-24 flex-col justify-center gap-1 px-1.5 py-1">
 				<section className="flex items-center justify-between">
 					<span className="text-[10px] text-muted-foreground">CPU</span>
 					<span className="font-medium text-[10px]">{cpu.toFixed(2)}%</span>
 				</section>
 				<UsageBar value={cpu} />
-			</section>
-			<section className="flex w-24 flex-col justify-center gap-1 px-1.5 py-1">
+			</section>)}
+			{Number.isFinite(mem) && (<section className="flex w-24 flex-col justify-center gap-1 px-1.5 py-1">
 				<section className="flex items-center justify-between">
 					<span className="text-[10px] text-muted-foreground">Mem</span>
 					<span className="font-medium text-[10px]">{mem.toFixed(2)}%</span>
 				</section>
 				<UsageBar value={mem} />
-			</section>
-			<section className="flex w-24 flex-col justify-center gap-1 px-1.5 py-1">
+			</section>)}
+			{Number.isFinite(disk) && (<section className="flex w-24 flex-col justify-center gap-1 px-1.5 py-1">
 				<section className="flex items-center justify-between">
 					<span className="text-[10px] text-muted-foreground">Disk</span>
 					<span className="font-medium text-[10px]">{disk.toFixed(2)}%</span>
 				</section>
 				<UsageBar value={disk} />
-			</section>
-			<section className="flex min-w-[85px] flex-col justify-center px-1.5 py-1">
+			</section>)}
+			{Number.isFinite(process) && (<section className="flex min-w-[85px] flex-col justify-center px-1.5 py-1">
 				<section className="flex items-center justify-between gap-4">
 					<span className="text-[10px] text-muted-foreground">Process</span>
 					<span className="font-medium text-[10px]">{process}</span>
 				</section>
-			</section>
-			<section className="flex min-w-[70px] flex-col justify-center gap-0.5 px-1.5 py-1">
-				<section className="flex items-center justify-between gap-4">
+			</section>)}
+			{(Number.isFinite(tcp) || Number.isFinite(udp)) && (<section className="flex min-w-[70px] flex-col justify-center gap-0.5 px-1.5 py-1">
+				{Number.isFinite(tcp) && (<section className="flex items-center justify-between gap-4">
 					<span className="text-[10px] text-muted-foreground">TCP</span>
 					<span className="font-medium text-[10px]">{tcp}</span>
-				</section>
-				<section className="flex items-center justify-between gap-4">
+				</section>)}
+				{Number.isFinite(udp) && (<section className="flex items-center justify-between gap-4">
 					<span className="text-[10px] text-muted-foreground">UDP</span>
 					<span className="font-medium text-[10px]">{udp}</span>
-				</section>
-			</section>
-			<section className="flex min-w-[120px] flex-col justify-center gap-0.5 px-1.5 py-1">
-				<section className="flex items-center justify-between gap-4">
+				</section>)}
+			</section>)}
+			{(Number.isFinite(up) || Number.isFinite(down)) && (<section className="flex min-w-[120px] flex-col justify-center gap-0.5 px-1.5 py-1">
+				{Number.isFinite(up) && (<section className="flex items-center justify-between gap-4">
 					<span className="text-[10px] text-muted-foreground">Upload</span>
 					<span className="font-medium text-[10px]">{up.toFixed(2)}M/s</span>
-				</section>
-				<section className="flex items-center justify-between gap-4">
+				</section>)}
+				{Number.isFinite(down) && (<section className="flex items-center justify-between gap-4">
 					<span className="text-[10px] text-muted-foreground">Download</span>
 					<span className="font-medium text-[10px]">{down.toFixed(2)}M/s</span>
-				</section>
-			</section>
+				</section>)}
+			</section>)}
 		</div>
 	);
 }

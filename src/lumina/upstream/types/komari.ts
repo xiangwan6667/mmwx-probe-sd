@@ -68,7 +68,7 @@ export const NodeInfoSchema = z
   })
   .passthrough();
 
-export type NodeInfo = z.output<typeof NodeInfoSchema> & { billable_traffic_used?: number; traffic_period_end?: string };
+export type NodeInfo = z.output<typeof NodeInfoSchema> & { billable_traffic_used?: number; traffic_period_end?: string; period_traffic_up?: number; period_traffic_down?: number; traffic_usage_label?: string };
 
 export interface NodeRealtime {
   cpu: { usage: number };

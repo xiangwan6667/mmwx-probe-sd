@@ -15,7 +15,7 @@ export function getTodayTrafficRecordRangeHours(startMs: number, endMs: number) 
 }
 
 export function getTodayTrafficRefreshInterval(
-  source: "metrics" | "records" | undefined,
+  source: "metrics" | "records" | "daily" | undefined,
   hasError: boolean,
 ) {
   if (hasError) return TRAFFIC_STATS_ERROR_RETRY_MS;

@@ -112,9 +112,7 @@ function TrafficSampleChart({
         <strong>本日网络上下行</strong>
         <span>{samples.length} 个采样</span>
       </header>
-      {samples.length === 0 ? (
-        <div className="traffic-detail-empty">本日暂无速率采样</div>
-      ) : (
+      {samples.length > 0 && (
         <Suspense
           fallback={
             <div className="traffic-chart-loading">
@@ -142,8 +140,8 @@ export function Traffic() {
       .map((node) => {
         const stat = stats.get(node.uuid) ?? {
           uuid: node.uuid,
-          trafficUp: 0,
-          trafficDown: 0,
+          trafficUp: NaN,
+          trafficDown: NaN,
           peakUp: 0,
           peakUpAt: null,
           peakDown: 0,
@@ -164,8 +162,8 @@ export function Traffic() {
     const sampled = details.filter((detail) => detail.stat.hasSamples);
     return {
       sampledDetails: sampled,
-      totalUp: sampled.reduce((sum, detail) => sum + detail.stat.trafficUp, 0),
-      totalDown: sampled.reduce((sum, detail) => sum + detail.stat.trafficDown, 0),
+      totalUp: details.reduce((sum, detail) => sum + detail.stat.trafficUp, 0),
+      totalDown: details.reduce((sum, detail) => sum + detail.stat.trafficDown, 0),
       peakUp: sampled.reduce<TrafficDetail | null>(
         (best, detail) => (!best || detail.stat.peakUp > best.stat.peakUp ? detail : best),
         null,
@@ -218,7 +216,7 @@ export function Traffic() {
       ) : (
         <>
           <section className="traffic-summary-grid" aria-label="今日流量汇总">
-            <article className="traffic-summary-card">
+            {Number.isFinite(totalUp + totalDown) && (<article className="traffic-summary-card">
               <div className="traffic-summary-head">
                 <span className="assets-eyebrow">今日流量</span>
                 <span>{DAY_FORMATTER.format(now)}</span>
@@ -230,9 +228,9 @@ export function Traffic() {
                 <span><ArrowUp size={13} aria-hidden />{sampledDetails.length ? formatBytes(totalUp) : "—"}</span>
                 <span><ArrowDown size={13} aria-hidden />{sampledDetails.length ? formatBytes(totalDown) : "—"}</span>
               </div>
-            </article>
+            </article>)}
 
-            <article className="traffic-summary-card">
+            {trafficQuery.data?.source !== "daily" && (<article className="traffic-summary-card">
               <div className="traffic-summary-head">
                 <span className="assets-eyebrow">今日采样峰值</span>
                 <span>统计至 {TIME_FORMATTER.format(updatedAt)}</span>
@@ -241,13 +239,13 @@ export function Traffic() {
                 <PeakSummaryRow direction="up" detail={peakUp} />
                 <PeakSummaryRow direction="down" detail={peakDown} />
               </div>
-            </article>
+            </article>)}
           </section>
 
           <div className="assets-section-head">
             <span className="assets-eyebrow">节点明细</span>
             <span className="assets-count">{details.length} 台</span>
-            <span className="traffic-sample-note">峰值按历史采样计算</span>
+            <span className="traffic-sample-note">{trafficQuery.data?.source === "daily" ? "主控每日累计" : "峰值按历史采样计算"}</span>
           </div>
 
           {/* 桌面表格与移动卡片按 JS 媒体查询二选一渲染(与 Assets 同方案),
@@ -259,8 +257,8 @@ export function Traffic() {
                 <tr>
                   <th><span>节点</span></th>
                   <th data-numeric><span>今日流量</span></th>
-                  <th data-numeric><span>上行峰值</span></th>
-                  <th data-numeric><span>下行峰值</span></th>
+                  {trafficQuery.data?.source !== "daily" && <th data-numeric><span>上行峰值</span></th>}
+                  {trafficQuery.data?.source !== "daily" && <th data-numeric><span>下行峰值</span></th>}
                   <th data-action><span>操作</span></th>
                 </tr>
               </thead>
@@ -285,25 +283,25 @@ export function Traffic() {
                         <td data-numeric data-strong>
                           {stat.hasSamples ? (
                             <span className="traffic-volume-value">
-                              <strong>{formatBytes(total)}</strong>
-                              <small>↑ {formatBytes(stat.trafficUp)} · ↓ {formatBytes(stat.trafficDown)}</small>
+                              {Number.isFinite(total) && <strong>{formatBytes(total)}</strong>}
+                              <small>{Number.isFinite(stat.trafficUp) && `↑ ${formatBytes(stat.trafficUp)}`} {Number.isFinite(stat.trafficDown) && `↓ ${formatBytes(stat.trafficDown)}`}</small>
                             </span>
                           ) : (
                             <span className="traffic-no-data">无数据</span>
                           )}
                         </td>
-                        <td data-numeric>
+                        {trafficQuery.data?.source !== "daily" && (<td data-numeric>
                           {stat.hasSamples ? <PeakValue value={stat.peakUp} timeMs={stat.peakUpAt} /> : "—"}
-                        </td>
-                        <td data-numeric>
+                        </td>)}
+                        {trafficQuery.data?.source !== "daily" && (<td data-numeric>
                           {stat.hasSamples ? <PeakValue value={stat.peakDown} timeMs={stat.peakDownAt} /> : "—"}
-                        </td>
+                        </td>)}
                         <td data-action>
-                          <TrafficDetailToggle
+                          {samples.length > 0 && <TrafficDetailToggle
                             expanded={expanded}
                             controlsId={detailId}
                             onClick={() => setExpandedUuid(expanded ? null : node.uuid)}
-                          />
+                          />}
                         </td>
                       </tr>
                       {expanded && (
@@ -335,21 +333,21 @@ export function Traffic() {
                       <span>{node.name}</span>
                     </Link>
                     <div className="traffic-node-card-actions">
-                      <strong>{stat.hasSamples ? formatBytes(total) : "无数据"}</strong>
-                      <TrafficDetailToggle
+                      {Number.isFinite(total) && <strong>{formatBytes(total)}</strong>}
+                      {samples.length > 0 && <TrafficDetailToggle
                         expanded={expanded}
                         controlsId={detailId}
                         onClick={() => setExpandedUuid(expanded ? null : node.uuid)}
-                      />
+                      />}
                     </div>
                   </header>
                   {stat.hasSamples && (
                     <>
                       <div className="traffic-node-card-directions">
-                        <span>↑ {formatBytes(stat.trafficUp)}</span>
-                        <span>↓ {formatBytes(stat.trafficDown)}</span>
+                        {Number.isFinite(stat.trafficUp) && <span>↑ {formatBytes(stat.trafficUp)}</span>}
+                        {Number.isFinite(stat.trafficDown) && <span>↓ {formatBytes(stat.trafficDown)}</span>}
                       </div>
-                      <dl className="traffic-node-card-peaks">
+                      {trafficQuery.data?.source !== "daily" && (<dl className="traffic-node-card-peaks">
                         <div>
                           <dt>上行峰值</dt>
                           <dd><PeakValue value={stat.peakUp} timeMs={stat.peakUpAt} /></dd>
@@ -358,7 +356,7 @@ export function Traffic() {
                           <dt>下行峰值</dt>
                           <dd><PeakValue value={stat.peakDown} timeMs={stat.peakDownAt} /></dd>
                         </div>
-                      </dl>
+                      </dl>)}
                     </>
                   )}
                   {expanded && <TrafficSampleChart id={detailId} samples={samples} />}

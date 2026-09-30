@@ -40,6 +40,8 @@ const IPV6_SEGMENT_REGEX = /^[\dA-F]{1,4}$/i
 const IPV6_DOUBLE_COLON = '::'
 
 const loading = ref(true)
+const hasVisitorData = ref(false)
+const requestError = ref(false)
 const device = ref('检测中')
 const browser = ref('检测中')
 const ip = ref('获取中')
@@ -50,7 +52,7 @@ const visitTime = ref(formatVisitTime(new Date()))
 const flagVisible = ref(true)
 const expand = ref(false)
 
-const subtitle = computed(() => loading.value ? '检测中' : location.value || '网络访客')
+const subtitle = computed(() => loading.value ? '检测中' : requestError.value ? '访客信息获取失败' : location.value)
 const flagSrc = computed(() => countryCode.value ? getFlagSrc(countryCode.value) : '')
 const displayIp = computed(() => expand.value ? ip.value : maskIpForCollapsedState(ip.value))
 
@@ -83,7 +85,9 @@ const visitorRows = computed<VisitorInfoRow[]>(() => [
     expandOnly: true,
   },
 ])
-const visibleRows = computed(() => visitorRows.value.filter(item => expand.value || !item.expandOnly))
+const visibleRows = computed(() => requestError.value && !loading.value
+  ? [{ value: subtitle.value, icon: 'tabler:world-pin' }]
+  : visitorRows.value.filter(item => item.value && (expand.value || !item.expandOnly)))
 
 function getItemTransitionStyle(index: number): Record<string, string> {
   return {
@@ -204,7 +208,7 @@ function detectClient(): VisitorClientData {
   }
 }
 
-async function fetchJson<T>(url: string, timeoutMs: number): Promise<T> {
+async function fetchJson<T>(url: string, timeoutMs: number): Promise<T | null> {
   const controller = new AbortController()
   const timeoutId = window.setTimeout(() => controller.abort(), timeoutMs)
 
@@ -213,6 +217,7 @@ async function fetchJson<T>(url: string, timeoutMs: number): Promise<T> {
     if (!response.ok) {
       throw new Error(`Request failed: ${response.status}`)
     }
+    if (response.status === 204) return null
     return await response.json() as T
   }
   finally {
@@ -223,15 +228,16 @@ async function fetchJson<T>(url: string, timeoutMs: number): Promise<T> {
 async function fetchVisitorGeo(): Promise<VisitorGeoData | null> {
   try {
     const data = await fetchJson<{ ip?: string, country?: string, code?: string, org?: string }>('/api/visitor', 4000)
-    if (!data.ip) return null
+    if (!data?.ip) return null
     return {
       ip: data.ip,
-      isp: data.org || '未知运营商',
-      location: data.country || '未知位置',
+      isp: data.org || '',
+      location: data.country || '',
       countryCode: data.code || '',
     }
   }
   catch {
+    requestError.value = true
     return null
   }
 }
@@ -248,6 +254,7 @@ onMounted(async () => {
 
   const geo = await fetchVisitorGeo()
   if (geo) {
+    hasVisitorData.value = true
     ip.value = geo.ip
     isp.value = geo.isp
     location.value = geo.location
@@ -255,9 +262,9 @@ onMounted(async () => {
     appStore.visitorCountryCode = geo.countryCode.toUpperCase()
   }
   else {
-    ip.value = '暂无法获取'
-    isp.value = '网络信息不可用'
-    location.value = '网络访客'
+    ip.value = ''
+    isp.value = ''
+    location.value = ''
   }
 
   loading.value = false
@@ -265,7 +272,7 @@ onMounted(async () => {
 </script>
 
 <template>
-  <div class="pointer-events-none fixed inset-x-0 bottom-2.5 z-30 flex justify-center">
+  <div v-if="loading || hasVisitorData || requestError" class="pointer-events-none fixed inset-x-0 bottom-2.5 z-30 flex justify-center">
     <div
       class="pointer-events-auto cursor-default p-1.5 px-3 shadow-[-1px_-1px_0_background,0_0_16px_rgba(0,0,0,0.05)] transition-[border-radius,transform,background-color,box-shadow] duration-300 ease-[cubic-bezier(0.22,1,0.36,1)] bg-background/30 backdrop-blur-sm"
       :class="[

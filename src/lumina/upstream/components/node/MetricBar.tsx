@@ -60,6 +60,7 @@ export function MetricBar({
     [activeSegments, paint],
   );
 
+  if (!Number.isFinite(fraction)) return null;
   return (
     <div className="metric-item">
       <div className="flex justify-between items-center gap-3 min-w-0">

@@ -86,6 +86,7 @@ function CompactGauge({
     "--compact-gauge-fill": `${clamp01(fraction) * 100}%`,
   } as CSSProperties;
 
+  if (!Number.isFinite(fraction)) return null;
   return (
     <div
       className="compact-node-gauge"
@@ -184,6 +185,7 @@ function CompactInfoRow({
 }) {
   const style = color ? ({ "--compact-info-row-color": color } as CSSProperties) : undefined;
 
+  if (value === "—" || value === "未填") return null;
   return (
     <span className="compact-node-info-row" style={style}>
       <span className="compact-node-info-row-label">
@@ -406,6 +408,7 @@ function CompactNodeVitals({
   node: CompactNode;
   loadFraction: number;
 }) {
+  if (![node.cpuPct,node.ramPct,node.diskPct,node.load1].some(Number.isFinite)) return null;
   return (
     <div className="compact-node-vitals">
       <CompactGauge
@@ -472,12 +475,13 @@ function CompactNodeInfoStrip({
   const infoTileCount =
     1 + (showTrafficTotal ? 1 : 0) + (showBilling ? 1 : 0) + (showConnections ? 1 : 0);
 
+  if (![node.netUp,node.netDown].some(Number.isFinite) && !showTrafficTotal && !showBilling && !showConnections) return null;
   return (
     <div
       className="compact-node-info-strip"
       style={{ "--compact-info-columns": infoTileCount } as CSSProperties}
     >
-      <CompactInfoTile
+      {([node.netUp,node.netDown].some(Number.isFinite)) && (<CompactInfoTile
         label="实时速率"
         color="var(--progress-cpu)"
       >
@@ -494,10 +498,10 @@ function CompactNodeInfoStrip({
           color={speedRateColor(downRate.unit)}
         />
         <CompactTrafficPulse up={trafficTrend.up} down={trafficTrend.down} />
-      </CompactInfoTile>
+      </CompactInfoTile>)}
       {showTrafficTotal && (
         <CompactInfoTile
-          label="累计流量"
+          label="开机累计流量"
           color="var(--text-primary)"
         >
           <CompactInfoRow
@@ -630,6 +634,7 @@ const CompactNodeHealth = memo(function CompactNodeHealth({
     pingLoading,
     pingError,
   );
+  if (!pingLoading && !pingError && ping.lastValue == null && ping.loss == null) return null;
   return (
     <div
       className="compact-node-bottom"
@@ -640,7 +645,7 @@ const CompactNodeHealth = memo(function CompactNodeHealth({
           : undefined
       }
     >
-      <CompactHealthItem
+      {(pingLoading || pingError || Number.isFinite(ping.lastValue)) && (<CompactHealthItem
         icon={<Clock3 size={12} />}
         label="延迟"
         value={ping.lastValue != null ? Math.round(ping.lastValue).toString() : emptyText}
@@ -648,8 +653,8 @@ const CompactNodeHealth = memo(function CompactNodeHealth({
         color={latencyColor}
       >
         <HealthBars buckets={pingBuckets} kind="latency" />
-      </CompactHealthItem>
-      <CompactHealthItem
+      </CompactHealthItem>)}
+      {(pingLoading || pingError || Number.isFinite(ping.loss)) && (<CompactHealthItem
         icon={<Unplug size={12} />}
         label="丢包"
         value={ping.loss != null ? formatFixed(ping.loss, 1) : emptyText}
@@ -657,7 +662,7 @@ const CompactNodeHealth = memo(function CompactNodeHealth({
         color={lossColor}
       >
         <HealthBars buckets={pingBuckets} kind="loss" />
-      </CompactHealthItem>
+      </CompactHealthItem>)}
     </div>
   );
 });
@@ -705,10 +710,10 @@ export const CompactNodeCard = memo(function CompactNodeCard({
     pingError,
     osName,
   } = model;
-  const showTrafficTotal = themeSettings.isReady && themeSettings.compactShowTrafficTotal;
-  const showBilling = themeSettings.isReady && themeSettings.compactShowBilling;
+  const showTrafficTotal = themeSettings.isReady && themeSettings.compactShowTrafficTotal && [node.trafficUp,node.trafficDown].some(Number.isFinite);
+  const showBilling = themeSettings.isReady && themeSettings.compactShowBilling && Boolean(node.expired_at || (showCosts && renewalPrice));
   const showUptime = themeSettings.isReady && themeSettings.compactShowUptime;
-  const showConnections = themeSettings.isReady && themeSettings.showConnections;
+  const showConnections = themeSettings.isReady && themeSettings.showConnections && [node.connectionsTcp,node.connectionsUdp].some(Number.isFinite);
   // 开关关闭或节点离线时,完全跳过格式化工作。
   const uptimeLabel = showUptime && !isOffline ? formatCompactUptime(node.uptime) : "";
 
@@ -735,7 +740,7 @@ export const CompactNodeCard = memo(function CompactNodeCard({
         expireColor={expireColor}
         renewalPrice={renewalPrice}
       />
-      <CompactTrafficBar traffic={traffic} uptimeLabel={uptimeLabel} reset={trafficReset} />
+      {Number.isFinite(node.billable_traffic_used) && Number.isFinite(node.traffic_limit) && <CompactTrafficBar traffic={traffic} uptimeLabel={uptimeLabel} reset={trafficReset} />}
       {homepagePingLines.length === HOMEPAGE_MULTI_PING_TASK_COUNT ? (
         <MultiPingStatus
           lines={homepagePingLines}

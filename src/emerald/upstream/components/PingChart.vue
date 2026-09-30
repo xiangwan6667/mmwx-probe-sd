@@ -9,7 +9,6 @@ import { computed, onMounted, onScopeDispose, ref, shallowRef, watch } from 'vue
 import VChart from 'vue-echarts'
 import { Button } from '@emerald/components/ui/button'
 import { DataTooltip } from '@emerald/components/ui/data-tooltip'
-import { Empty } from '@emerald/components/ui/empty'
 import { Spinner } from '@emerald/components/ui/spinner'
 import { Tabs, TabsList, TabsTrigger } from '@emerald/components/ui/tabs'
 import { useBackgroundSurface } from '@emerald/composables/useBackgroundSurface'
@@ -171,7 +170,7 @@ async function fetchRecords() {
 
     remoteData.value = records
     lossRecordsData.value = result.lossRecords ?? []
-    tasks.value = result.tasks
+    tasks.value = result.tasks.filter(task => result.records.some(record => record.task_id === task.id && record.value >= 0) || result.lossRecords.some(record => record.task_id === task.id && record.loss >= 0))
 
     if (tasks.value.length > 0 && selectedTaskIds.value.length === 0) {
       selectedTaskIds.value = tasks.value.map(t => t.id)
@@ -580,7 +579,7 @@ onMounted(() => {
 </script>
 
 <template>
-  <div class="flex flex-col gap-4">
+  <div v-if="loading || error || tasks.length > 0" class="flex flex-col gap-4">
     <!-- 时间选择器 -->
     <Tabs v-model="selectedView" class="w-full items-center">
       <div class="min-w-0 flex-1 overflow-x-auto pointer-events-auto">
@@ -618,7 +617,7 @@ onMounted(() => {
         {{ error }}
       </div>
       <div v-else-if="tasks.length === 0 && !loading" class="py-8">
-        <Empty description="暂无延迟数据" />
+
       </div>
 
       <template v-else>

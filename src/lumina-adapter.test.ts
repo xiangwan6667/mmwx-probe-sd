@@ -82,3 +82,28 @@ test('Footer routes use return-route results rather than ping latency',async()=>
  assert.deepEqual(cardRouteLines({enabled:true,servers:[{online:true}]},'0'),[]);
  assert.deepEqual(cardRouteLines({...payload,enabled:false},'0'),[]);
 });
+
+test('Lumina today traffic identifies daily totals without claiming rate samples',async()=>{
+ const {receivePayload}=await import('./lumina/bridge');
+ const {getTodayTrafficMetrics}=await import('./lumina/upstream/services/api');
+ const {buildTodayTrafficMetricSamples}=await import('./lumina/upstream/utils/trafficStats');
+ const now=new Date(2026,8,30,12).getTime();
+ receivePayload({enabled:true,servers:[{online:true,daily_traffic:[{date:'2026-09-30',uplink:0,downlink:10,total:10}]}]});
+ const data=await getTodayTrafficMetrics(['0'],now-1000,now);
+ assert.equal(data.source,'daily');
+ assert.deepEqual(buildTodayTrafficMetricSamples(data.series,'0'),[]);
+ const {getTodayTrafficRefreshInterval}=await import('./lumina/upstream/hooks/todayTrafficQueryPolicy');
+ assert.equal(getTodayTrafficRefreshInterval(data.source,false),300000);
+});
+
+test('Lumina daily totals preserve missing directions and absent node rows',async()=>{
+ const {summarizeDailyTrafficMetrics}=await import('./lumina/upstream/utils/trafficStats');
+ const rows=summarizeDailyTrafficMetrics([{metricKey:'traffic.up',client:'0',points:[{time:'2026-09-30T01:00:00Z',value:123,count:1}]}],['0','1']);
+ assert.equal(rows[0].trafficUp,123);
+ assert.ok(Number.isNaN(rows[0].trafficDown));
+ assert.equal(rows[1].hasSamples,false);
+ assert.ok(Number.isNaN(rows[1].trafficUp));
+ assert.ok(Number.isNaN(rows.reduce((sum,row)=>sum+row.trafficUp,0)));
+ const zero=summarizeDailyTrafficMetrics([{metricKey:'traffic.down',client:'0',points:[{time:'2026-09-30T01:00:00Z',value:0,count:1}]}],['0']);
+ assert.equal(zero[0].trafficDown,0);
+});

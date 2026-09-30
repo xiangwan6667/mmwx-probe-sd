@@ -163,7 +163,7 @@ export function NetworkChart({
 
 	if (error) return <p className="text-sm text-muted-foreground text-center py-8">网络历史数据暂时不可用</p>;
 	if (!monitorData) return <NetworkChartLoading />;
-	if (!monitorData.data?.length) return <p className="text-sm text-muted-foreground text-center py-8">{t("monitor.noData")}</p>;
+	if (!monitorData.data?.length) return null;
 
 	if (monitorData?.success && !monitorData.data) {
 		return (

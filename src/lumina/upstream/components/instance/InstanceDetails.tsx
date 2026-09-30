@@ -1,3 +1,4 @@
+import { hasMeasurement, hasText } from "@lumina/utils/dataVisibility";
 import { formatFixed } from "@lumina/utils/format";
 import { LuminaUnlocks } from '../../../ProbeUnlocks';
 import { useEffect, type ReactNode } from "react";
@@ -73,46 +74,46 @@ export function InstanceDetails({
         <div className="instance-info-group">
           <div className="instance-info-group-title">系统</div>
           <InfoRow label="状态" value={isOnline ? "在线" : "离线"} />
-          <InfoRow
+          {(hasText(meta.cpu_name) || hasMeasurement(meta.cpu_cores)) && (<InfoRow
             label="CPU"
-            value={`${meta.cpu_name || "—"}${meta.cpu_cores > 0 ? ` (x${meta.cpu_cores})` : ""}`}
-          />
-          <InfoRow label="架构" value={meta.arch || "—"} />
-          <InfoRow label="虚拟化" value={meta.virtualization || "—"} />
-          <InfoRow label="显卡" value={meta.gpu_name || "—"} />
-          <InfoRow label="操作系统" value={meta.os || "—"} />
+            value={[meta.cpu_name,hasMeasurement(meta.cpu_cores) ? `${meta.cpu_cores} 核` : ""].filter(Boolean).join(" · ")}
+          />)}
+          {hasText(meta.arch) && (<InfoRow label="架构" value={meta.arch || "—"} />)}
+          {hasText(meta.virtualization) && (<InfoRow label="虚拟化" value={meta.virtualization || "—"} />)}
+          {hasText(meta.gpu_name) && (<InfoRow label="显卡" value={meta.gpu_name || "—"} />)}
+          {hasText(meta.os) && (<InfoRow label="操作系统" value={meta.os || "—"} />)}
         </div>
 
-        <div className="instance-info-group">
+        {([metrics.ramUsed,metrics.diskUsed,metrics.swapUsed,metrics.load1,metrics.load5,metrics.load15,metrics.uptime].some(hasMeasurement)) && (<div className="instance-info-group">
           <div className="instance-info-group-title">资源</div>
-          <InfoRow label="内存" value={`${formatBytes(metrics.ramUsed)} / ${formatBytes(metrics.ramTotal)}`} />
-          <InfoRow
+          {hasMeasurement(metrics.ramUsed) && hasMeasurement(metrics.ramTotal) && (<InfoRow label="内存" value={`${formatBytes(metrics.ramUsed)} / ${formatBytes(metrics.ramTotal)}`} />)}
+          {hasMeasurement(metrics.swapUsed) && hasMeasurement(metrics.swapTotal) && (<InfoRow
             label="Swap"
             value={
               metrics.swapTotal > 0
                 ? `${formatBytes(metrics.swapUsed)} / ${formatBytes(metrics.swapTotal)}`
                 : Number.isFinite(metrics.swapTotal) ? "无" : "—"
             }
-          />
-          <InfoRow label="磁盘" value={`${formatBytes(metrics.diskUsed)} / ${formatBytes(metrics.diskTotal)}`} />
-          <InfoRow
+          />)}
+          {hasMeasurement(metrics.diskUsed) && hasMeasurement(metrics.diskTotal) && (<InfoRow label="磁盘" value={`${formatBytes(metrics.diskUsed)} / ${formatBytes(metrics.diskTotal)}`} />)}
+          {[metrics.load1,metrics.load5,metrics.load15].some(hasMeasurement) && (<InfoRow
             label="负载"
-            value={`${formatFixed(metrics.load1, 2)} | ${formatFixed(metrics.load5, 2)} | ${formatFixed(metrics.load15, 2)}`}
-          />
-          <InfoRow
+            value={[metrics.load1,metrics.load5,metrics.load15].filter(hasMeasurement).map(value=>formatFixed(value,2)).join(" | ")}
+          />)}
+          {hasMeasurement(metrics.uptime) && (<InfoRow
             label="运行时长"
             value={uptime.unit ? `${uptime.value} ${uptime.unit}` : uptime.value}
-          />
-        </div>
+          />)}
+        </div>)}
 
         <div className="instance-info-group">
           <div className="instance-info-group-title">网络</div>
-          <InfoRow
+          {[metrics.netUp,metrics.netDown].some(hasMeasurement) && (<InfoRow
             label={isOnline ? "实时网络" : "缓存网络"}
-            value={`↑ ${formatBytes(metrics.netUp)}/s · ↓ ${formatBytes(metrics.netDown)}/s`}
-          />
+            value={[hasMeasurement(metrics.netUp) ? `↑ ${formatBytes(metrics.netUp)}/s` : "",hasMeasurement(metrics.netDown) ? `↓ ${formatBytes(metrics.netDown)}/s` : ""].filter(Boolean).join(" · ")}
+          />)}
           <InfoRow label={isOnline ? "最近更新" : "最后上报"} value={lastUpdated} />
-          <InfoRow
+          {(trafficQuery.isPending || trafficQuery.isError || Boolean(todayStat?.hasSamples)) && (<InfoRow
             label="今日流量"
             value={
               <span className="instance-info-inline-value">
@@ -136,33 +137,34 @@ export function InstanceDetails({
                 </button>
               </span>
             }
-          />
-          <InfoRow
+          />)}
+          {trafficQuery.data?.source !== "daily" && Boolean(todayStat?.peakUpAt != null || todayStat?.peakDownAt != null) && (<InfoRow
             label="峰值速度"
             value={formatTodayPeakValue(todayStat, trafficQuery.isPending)}
-          />
-          <div className="instance-info-item is-stack">
-            <span className="instance-info-label">总流量</span>
+          />)}
+          {(hasMeasurement(meta.billable_traffic_used) || [metrics.trafficUp,metrics.trafficDown].some(hasMeasurement)) && (<div className="instance-info-item is-stack">
+            <span className="instance-info-label">{meta.traffic_usage_label || "当前计费用量"}</span>
             <div className="instance-info-traffic">
-              <span className="instance-info-value">{`↑ ${formatBytes(metrics.trafficUp)} · ↓ ${formatBytes(metrics.trafficDown)}`}</span>
-              <div
+              {[metrics.trafficUp,metrics.trafficDown].some(hasMeasurement) && <span className="instance-info-value">开机累计 {hasMeasurement(metrics.trafficUp) && `↑ ${formatBytes(metrics.trafficUp)}`} {hasMeasurement(metrics.trafficDown) && `↓ ${formatBytes(metrics.trafficDown)}`}</span>}
+              {hasMeasurement(meta.billable_traffic_used) && hasMeasurement(meta.traffic_limit) && <div
                 className={`instance-progress-track${trafficUsage.unlimited ? " is-unlimited" : ""}`}
                 aria-hidden
               >
-                {!trafficUsage.unlimited && (
+                {!trafficUsage.unlimited && Number.isFinite(trafficUsage.fraction) && (
                   <span
                     className="instance-progress-fill"
                     style={{ width: `${trafficUsage.fraction * 100}%` }}
                   />
                 )}
-              </div>
-              <span className="instance-info-note">
+              </div>}
+              {hasMeasurement(meta.billable_traffic_used) && <span className="instance-info-note">
+                {meta.traffic_usage_label || "当前计费用量"} · {" "}
                 {trafficUsage.unlimited
                   ? `${formatBytes(trafficUsage.used)} / ∞`
                   : `${formatBytes(trafficUsage.used)} / ${formatBytes(trafficUsage.limit)}`}
-              </span>
+              </span>}
             </div>
-          </div>
+          </div>)}
         </div>
       </div>
     </InstancePanel>

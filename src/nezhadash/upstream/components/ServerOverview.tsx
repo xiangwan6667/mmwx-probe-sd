@@ -1,6 +1,6 @@
 // MMWX adaptation (2026-09-29): host data/theme/router integration; see licenses/NezhaDash-NOTICE.md.
 import { getProbe } from "../../bridge";
-import { bootTraffic } from "../../../traffic-display";
+import { summarizeTraffic } from "../../../traffic-display";
 import {
 	ArrowDownCircleIcon,
 	ArrowUpCircleIcon,
@@ -26,18 +26,15 @@ export default function ServerOverview({
 	online,
 	offline,
 	total,
-	up,
-	down,
-	upSpeed,
-	downSpeed,
 }: ServerOverviewProps) {
 	const { t } = useTranslation();
 	const { status, setStatus } = useStatus();
 	const servers = getProbe().servers || [];
-	const hasUp = servers.length > 0 && servers.every(server => bootTraffic(server).uplink !== undefined);
-	const hasDown = servers.length > 0 && servers.every(server => bootTraffic(server).downlink !== undefined);
-	const hasUpSpeed = servers.length > 0 && servers.every(server => !server.online || server.upload_speed !== undefined);
-	const hasDownSpeed = servers.length > 0 && servers.every(server => !server.online || server.download_speed !== undefined);
+	const traffic = summarizeTraffic(servers);
+	const hasUp = Number.isFinite(traffic.uplink);
+	const hasDown = Number.isFinite(traffic.downlink);
+	const hasUpSpeed = Number.isFinite(traffic.uploadSpeed);
+	const hasDownSpeed = Number.isFinite(traffic.downloadSpeed);
 
 	const customBackgroundImage =
 		(window.CustomBackgroundImage as string) !== ""
@@ -131,7 +128,7 @@ export default function ServerOverview({
 					</section>
 				</CardContent>
 			</Card>
-			<Card
+			{(hasUp || hasDown || Number.isFinite(traffic.used) || hasUpSpeed || hasDownSpeed) && (<Card
 				className={cn(
 					"hover:ring-purple-500 ring-1 ring-transparent transition-all",
 					{
@@ -143,32 +140,33 @@ export default function ServerOverview({
 					<section className="flex flex-col gap-1 w-full">
 						<div className="flex items-center w-full justify-between">
 							<p className="text-sm font-medium md:text-base">
-								{t("serverOverview.network")}
+								周期流量
 							</p>
 						</div>
-						<section className="flex items-start flex-row z-10 pr-0 gap-1">
-							<NumericText
-								value={`↑${hasUp ? formatBytes(up) : "—"}`}
+						<section title="各服务器当前周期原始上/下行，含离线服务器；计费用量按主控规则和调整计算" className="flex items-start flex-row z-10 pr-0 gap-1">
+							{hasUp && (<NumericText
+								value={`↑${hasUp ? formatBytes(traffic.uplink) : "—"}`}
 								className="sm:text-[12px] text-[10px] text-blue-800 dark:text-blue-400  text-nowrap font-medium"
-							/>
-							<NumericText
-								value={`↓${hasDown ? formatBytes(down) : "—"}`}
+							/>)}
+							{hasDown && (<NumericText
+								value={`↓${hasDown ? formatBytes(traffic.downlink) : "—"}`}
 								className="sm:text-[12px] text-[10px]  text-purple-800 dark:text-purple-400  text-nowrap font-medium"
-							/>
+							/>)}
 						</section>
+						{Number.isFinite(traffic.used) && (<p className="text-[11px] text-muted-foreground">计费用量 {Number.isFinite(traffic.used) ? formatBytes(traffic.used) : "—"}</p>)}
 						<section className="flex flex-col sm:flex-row -mr-1 sm:items-center items-start gap-1">
-							<p className="text-[11px] flex items-center text-nowrap font-semibold">
+							{hasUpSpeed && (<p className="text-[11px] flex items-center text-nowrap font-semibold">
 								<ArrowUpCircleIcon className="size-3 mr-0.5 sm:mb-px" />
-								{hasUpSpeed ? `${formatBytes(upSpeed)}/s` : "—"}
-							</p>
-							<p className="text-[11px] flex items-center  text-nowrap font-semibold">
+								{hasUpSpeed ? `${formatBytes(traffic.uploadSpeed)}/s` : "—"}
+							</p>)}
+							{hasDownSpeed && (<p className="text-[11px] flex items-center  text-nowrap font-semibold">
 								<ArrowDownCircleIcon className="size-3 mr-0.5" />
-								{hasDownSpeed ? `${formatBytes(downSpeed)}/s` : "—"}
-							</p>
+								{hasDownSpeed ? `${formatBytes(traffic.downloadSpeed)}/s` : "—"}
+							</p>)}
 						</section>
 					</section>
 				</CardContent>
-			</Card>
+			</Card>)}
 		</section>
 	);
 }

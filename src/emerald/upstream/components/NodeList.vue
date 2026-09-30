@@ -1,4 +1,6 @@
 <script setup lang="ts">
+import { getPayload, subscribePayload } from '../../bridge'
+import { shallowRef, onScopeDispose } from 'vue'
 import ProbeUnlocks from "./ProbeUnlocks.vue"
 import ProbeLineBadges from './ProbeLineBadges.vue'
 import type { NodeData } from '@emerald/stores/nodes'
@@ -12,7 +14,7 @@ import { useBackgroundSurface } from '@emerald/composables/useBackgroundSurface'
 import { useNodeFormatters } from '@emerald/composables/useNodeFormatters'
 import { useAppStore } from '@emerald/stores/app'
 import { formatDateTime, formatMetric, getStatus } from '@emerald/utils/helper'
-import { formatOfflineTime, getMemPercentage, getDiskPercentage, getCustomTags, getPriceTags, getRemainingTimeTagClass, getTrafficUsed, getTrafficUsedPercentage, hasRegion, showTrafficProgress } from '@emerald/utils/nodeHelpers'
+import { formatOfflineTime, getMemPercentage, getDiskPercentage, getCustomTags, getPriceTags, getRemainingTimeTagClass, getTrafficUsed, getTrafficUsedPercentage, hasRegion, hasMeasurement, showTrafficProgress } from '@emerald/utils/nodeHelpers'
 import { getOSImage, getOSName } from '@emerald/utils/osImageHelper'
 import { getFlagSrc, getRegionDisplayName } from '@emerald/utils/regionHelper'
 
@@ -40,7 +42,7 @@ const appStore = useAppStore()
 const { pickSurfaceClass } = useBackgroundSurface()
 const { formatBytes, formatBytesPerSecond, formatUptime } = useNodeFormatters()
 
-const columns: ColumnConfig[] = [
+const allColumns: ColumnConfig[] = [
   { key: 'status', label: '状态', width: '40px', sortable: true },
   { key: 'os', label: '系统', width: '40px', sortable: true },
   { key: 'name', label: '节点', width: 'minmax(160px, 1fr)', sortable: true },
@@ -52,6 +54,18 @@ const columns: ColumnConfig[] = [
   { key: 'rate', label: '速率', width: '80px', sortable: true },
   { key: 'networks', label: '延迟目标', width: '136px', sortable: false },
 ]
+
+const payload = shallowRef(getPayload())
+onScopeDispose(subscribePayload(next => { payload.value = next }))
+const columns = computed(() => allColumns.filter(column => props.nodes.some(node => columnAvailable(node, column.key))))
+function columnAvailable(node: NodeData, key: string): boolean {
+ const fields: Record<string, Array<keyof NodeData>> = {cpu:['cpu','load','load5','load15'],mem:['ram','mem_total'],disk:['disk','disk_total'],traffic:['billable_traffic_used','traffic_limit','net_total_up','net_total_down'],rate:['net_in','net_out']}
+ if (fields[key]) return fields[key].some(field => hasMeasurement(node[field]))
+ if (key === 'os') return Boolean(node.os)
+ if (key === 'tags') return Boolean(node.tags || getPriceTags(node, appStore.lang).length)
+ if (key === 'networks') return Boolean(payload.value?.servers?.[Number(node.uuid)]?.ping?.some(series => hasMeasurement(series.current_ms) || hasMeasurement(series.loss_pct) || series.buckets.some(bucket => hasMeasurement(bucket.ms) || hasMeasurement(bucket.loss))))
+ return true
+}
 
 const sortKey = ref<string>('')
 const sortDir = ref<1 | -1>(1)
@@ -104,10 +118,10 @@ const sortedNodes = computed(() => {
   })
 })
 
-const columnKeys = computed(() => columns.map(c => c.key))
+const columnKeys = computed(() => columns.value.map(c => c.key))
 
 const gridStyle = computed(() => ({
-  gridTemplateColumns: columns.map(c => c.width).join(' '),
+  gridTemplateColumns: columns.value.map(c => c.width).join(' '),
 }))
 
 const offlineOverlayContentStyle = computed(() => {
@@ -201,7 +215,7 @@ function getRowTransitionStyle(index: number): Record<string, string> {
                 </div>
                 <div class="flex flex-row text-[11px] text-muted-foreground/70">
                   <DataTooltip
-                    v-if="node.online" :content="formatUptime(node.uptime)" class="shrink-0" placement="right"
+                    v-if="node.online && hasMeasurement(node.uptime)" :content="formatUptime(node.uptime)" class="shrink-0" placement="right"
                     content-class="whitespace-pre-wrap left-0 ml-0 w-max"
                   >
                     <span>
@@ -226,7 +240,7 @@ function getRowTransitionStyle(index: number): Record<string, string> {
               </div>
 
               <!-- 标签 -->
-              <div v-else-if="col.key === 'tags'" class="space-y-1">
+              <div v-else-if="col.key === 'tags' && columnAvailable(node, col.key)" class="space-y-1">
                 <ProbeLineBadges :uuid="node.uuid" />
                 <div class="flex flex-wrap gap-1 items-center">
                   <Badge
@@ -239,7 +253,7 @@ function getRowTransitionStyle(index: number): Record<string, string> {
               </div>
 
               <!-- 三网 -->
-              <div v-else-if="col.key === 'networks'" class="flex flex-col gap-0.5">
+              <div v-else-if="col.key === 'networks' && columnAvailable(node, col.key)" class="flex flex-col gap-0.5">
                 <NodePingListCell
                   :uuid="node.uuid"
                   :online="node.online"
@@ -255,19 +269,19 @@ function getRowTransitionStyle(index: number): Record<string, string> {
 
               <!-- 操作系统 -->
               <div v-else-if="col.key === 'os'" class="flex justify-center">
-                <img :src="getOSImage(node.os)" :alt="getOSName(node.os)" class="size-4">
+                <img v-if="node.os" :src="getOSImage(node.os)" :alt="getOSName(node.os)" class="size-4">
               </div>
 
               <!-- CPU -->
-              <div v-else-if="col.key === 'cpu'" class="group">
+              <div v-else-if="col.key === 'cpu' && columnAvailable(node, col.key)" class="group">
                 <div class="space-y-1">
                   <div class="text-[10px] text-muted-foreground truncate">
                     <span class="inline group-hover:hidden">
-                      {{ formatMetric(node.cpu, 1, '%') }}
+                      <span v-if="hasMeasurement(node.cpu)">{{ formatMetric(node.cpu, 1, '%') }}</span>
                     </span>
                     <span class="hidden group-hover:inline">
-                      {{ formatMetric(node.load, 2) }}, {{ formatMetric(node.load5, 2) }}, {{ formatMetric(node.load15, 2)
-                      }}
+                      <span v-if="hasMeasurement(node.load)">{{ formatMetric(node.load, 2) }}</span><span v-if="hasMeasurement(node.load) && hasMeasurement(node.load5)">, </span><span v-if="hasMeasurement(node.load5)">{{ formatMetric(node.load5, 2) }}</span><span v-if="hasMeasurement(node.load15) && (hasMeasurement(node.load) || hasMeasurement(node.load5))">, </span><span v-if="hasMeasurement(node.load15)">{{ formatMetric(node.load15, 2)
+                      }}</span>
                     </span>
                   </div>
                   <ProgressThin v-if="Number.isFinite(node.cpu)" :percentage="node.cpu" :status="getStatus(node.cpu)" :height="4" />
@@ -275,15 +289,15 @@ function getRowTransitionStyle(index: number): Record<string, string> {
               </div>
 
               <!-- 内存 -->
-              <div v-else-if="col.key === 'mem'" class="group">
-                <DataTooltip placement="top" class="block" :content-class="[!node.swap && '!hidden']">
+              <div v-else-if="col.key === 'mem' && columnAvailable(node, col.key)" class="group">
+                <DataTooltip placement="top" class="block" :content-class="[!hasMeasurement(node.swap) && '!hidden']">
                   <div class="space-y-1">
                     <div class="text-[10px] text-muted-foreground truncate">
                       <span class="inline group-hover:hidden">
                         {{ formatMetric(getMemPercentage(node), 1, '%') }}
                       </span>
                       <span class="hidden group-hover:inline">
-                        {{ formatBytes(node.ram) }} / {{ formatBytes(node.mem_total) }}
+                        <span v-if="hasMeasurement(node.ram)">{{ formatBytes(node.ram) }}</span> <span v-if="hasMeasurement(node.ram) && hasMeasurement(node.mem_total)">/</span> <span v-if="hasMeasurement(node.mem_total)">{{ formatBytes(node.mem_total) }}</span>
                       </span>
                     </div>
                     <ProgressThin
@@ -301,14 +315,14 @@ function getRowTransitionStyle(index: number): Record<string, string> {
               </div>
 
               <!-- 硬盘 -->
-              <div v-else-if="col.key === 'disk'" class="group">
+              <div v-else-if="col.key === 'disk' && columnAvailable(node, col.key)" class="group">
                 <div class="space-y-1">
                   <div class="text-[10px] text-muted-foreground truncate">
                     <span class="inline group-hover:hidden">
                       {{ formatMetric(getDiskPercentage(node), 1, '%') }}
                     </span>
                     <span class="hidden group-hover:inline">
-                      {{ formatBytes(node.disk) }} / {{ formatBytes(node.disk_total) }}
+                      <span v-if="hasMeasurement(node.disk)">{{ formatBytes(node.disk) }}</span> <span v-if="hasMeasurement(node.disk) && hasMeasurement(node.disk_total)">/</span> <span v-if="hasMeasurement(node.disk_total)">{{ formatBytes(node.disk_total) }}</span>
                     </span>
                   </div>
                   <ProgressThin
@@ -319,47 +333,49 @@ function getRowTransitionStyle(index: number): Record<string, string> {
               </div>
 
               <!-- 流量 -->
-              <div v-else-if="col.key === 'traffic'" class="group">
+              <div v-else-if="col.key === 'traffic' && columnAvailable(node, col.key)" class="group">
                 <DataTooltip placement="top" class="flex items-center gap-2" content-class="mb-1.5">
                   <div class="space-y-1 w-full">
                     <div class="text-[10px] text-muted-foreground truncate">
                       <span class="inline group-hover:hidden">
-                        {{ formatMetric(getTrafficUsedPercentage(node), 1, '%') }}
+                        <span v-if="hasMeasurement(getTrafficUsedPercentage(node))">{{ formatMetric(getTrafficUsedPercentage(node), 1, '%') }}</span>
                       </span>
                       <span class="hidden group-hover:inline">
-                        {{ formatBytes(getTrafficUsed(node)) }} /
+                        <span v-if="hasMeasurement(getTrafficUsed(node))">{{ formatBytes(getTrafficUsed(node)) }}</span><span v-if="hasMeasurement(getTrafficUsed(node)) && hasMeasurement(node.traffic_limit)"> / </span>
                         <template v-if="showTrafficProgress(node)">{{ formatBytes(node.traffic_limit) }}</template>
-                        <template v-else>{{ Number.isFinite(node.traffic_limit) ? '∞' : '—' }}</template>
+                        <template v-else><span v-if="hasMeasurement(node.traffic_limit)">∞</span></template>
                       </span>
                     </div>
                     <ProgressThin v-if="Number.isFinite(getTrafficUsedPercentage(node))" :percentage="getTrafficUsedPercentage(node)" status="success" :height="4" />
                   </div>
                   <template #content>
+                    <span v-if="hasMeasurement(node.net_total_up) || hasMeasurement(node.net_total_down)" class="text-muted-foreground">开机累计</span>
                     <span class="flex flex-row gap-0.5 items-center whitespace-nowrap">
                       <Icon icon="tabler:chevron-up" width="12" height="12" />
-                      {{ formatBytes(node.net_total_up) }}
+                      <span v-if="hasMeasurement(node.net_total_up)">{{ formatBytes(node.net_total_up) }}</span>
                     </span>
                     <span class="flex flex-row gap-0.5 items-center whitespace-nowrap">
                       <Icon icon="tabler:chevron-down" width="12" height="12" />
-                      {{ formatBytes(node.net_total_down) }}
+                      <span v-if="hasMeasurement(node.net_total_down)">{{ formatBytes(node.net_total_down) }}</span>
                     </span>
                   </template>
                 </DataTooltip>
               </div>
 
               <!-- 速率 -->
-              <div v-else-if="col.key === 'rate'">
+              <div v-else-if="col.key === 'rate' && columnAvailable(node, col.key)">
                 <div class="text-[10px] flex flex-col ">
                   <span class="text-emerald-600 flex flex-row gap-1 items-center">
                     <Icon icon="tabler:chevron-up" width="12" height="12" />
-                    {{ formatBytesPerSecond(node.net_out) }}
+                    <span v-if="hasMeasurement(node.net_out)">{{ formatBytesPerSecond(node.net_out) }}</span>
                   </span>
                   <span class="text-blue-600 flex flex-row gap-1 items-center">
                     <Icon icon="tabler:chevron-down" width="12" height="12" />
-                    {{ formatBytesPerSecond(node.net_in) }}
+                    <span v-if="hasMeasurement(node.net_in)">{{ formatBytesPerSecond(node.net_in) }}</span>
                   </span>
                 </div>
               </div>
+              <div v-else />
             </template>
           </div>
 
@@ -372,7 +388,7 @@ function getRowTransitionStyle(index: number): Record<string, string> {
                   <ProbeUnlocks :uuid="node.uuid" />
                   <span class="text-red-500">离线</span> {{ node.name }}
                 </div>
-                <div class="text-xs text-muted-foreground">
+                <div v-if="node.time" class="text-xs text-muted-foreground">
                   {{ formatOfflineTime(node) }}
                 </div>
               </div>

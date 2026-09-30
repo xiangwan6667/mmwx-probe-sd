@@ -165,32 +165,32 @@ function mergeRealtime(
   const updatedAt = toTimestamp(rt.updated_at);
   const trafficTotals = resolveTrafficTotals(
     metrics,
-    rt.network?.totalUp ?? 0,
-    rt.network?.totalDown ?? 0,
+    rt.network?.totalUp ?? NaN,
+    rt.network?.totalDown ?? NaN,
   );
 
   return {
     online,
-    cpuPct: rt.cpu?.usage ?? 0,
+    cpuPct: rt.cpu?.usage ?? NaN,
     ramUsed,
     ramTotal,
-    ramPct: ramTotal > 0 ? (ramUsed / ramTotal) * 100 : NaN,
+    ramPct: ramTotal > 0 ? (ramUsed / ramTotal) * 100 : ramTotal === 0 && ramUsed === 0 ? 0 : NaN,
     swapUsed,
     swapTotal,
     diskUsed,
     diskTotal,
-    diskPct: diskTotal > 0 ? (diskUsed / diskTotal) * 100 : NaN,
-    netUp: rt.network?.up ?? 0,
-    netDown: rt.network?.down ?? 0,
+    diskPct: diskTotal > 0 ? (diskUsed / diskTotal) * 100 : diskTotal === 0 && diskUsed === 0 ? 0 : NaN,
+    netUp: rt.network?.up ?? NaN,
+    netDown: rt.network?.down ?? NaN,
     trafficUp: trafficTotals.up,
     trafficDown: trafficTotals.down,
-    uptime: rt.uptime ?? 0,
-    load1: rt.load?.load1 ?? 0,
-    load5: rt.load?.load5 ?? 0,
-    load15: rt.load?.load15 ?? 0,
-    process: rt.process ?? 0,
-    connectionsTcp: rt.connections?.tcp ?? 0,
-    connectionsUdp: rt.connections?.udp ?? 0,
+    uptime: rt.uptime ?? NaN,
+    load1: rt.load?.load1 ?? NaN,
+    load5: rt.load?.load5 ?? NaN,
+    load15: rt.load?.load15 ?? NaN,
+    process: rt.process ?? NaN,
+    connectionsTcp: rt.connections?.tcp ?? NaN,
+    connectionsUdp: rt.connections?.udp ?? NaN,
     updatedAt: updatedAt > 0 ? updatedAt : metrics.updatedAt,
   };
 }
@@ -251,6 +251,9 @@ export function shallowEqualNodeInfo(a: NodeInfo, b: NodeInfo) {
     Object.is(a.public_remark, b.public_remark) &&
     Object.is(a.billable_traffic_used, b.billable_traffic_used) &&
     Object.is(a.traffic_period_end, b.traffic_period_end) &&
+    Object.is(a.period_traffic_up, b.period_traffic_up) &&
+    Object.is(a.period_traffic_down, b.period_traffic_down) &&
+    a.traffic_usage_label === b.traffic_usage_label &&
     Object.is(a.traffic_limit, b.traffic_limit) &&
     Object.is(a.traffic_limit_type, b.traffic_limit_type) &&
     Object.is(a.created_at, b.created_at)

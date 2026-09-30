@@ -259,8 +259,8 @@ const ChartCard = memo(function ChartCard({
   note,
   uuid,
   points,
-  keys,
-  colors,
+  keys: inputKeys,
+  colors: inputColors,
   resolvedAppearance,
   rangeHours,
   unit = "",
@@ -285,6 +285,9 @@ const ChartCard = memo(function ChartCard({
   axisSize?: number;
   xRange?: [number, number] | null;
 }) {
+  const availableSeries = inputKeys.map((key,index)=>({key,color:inputColors[index]})).filter(({key})=>points.some(point=>Number.isFinite(point[key])));
+  const keys = availableSeries.map(item=>item.key);
+  const colors = availableSeries.map(item=>item.color);
   const { w, h, ref: chartSizeRef } = useResponsiveChartSize("grid");
   const dataRef = useRef<uPlot.AlignedData>([[]]);
   const [tooltip, setTooltip] = useState<ChartTooltipState>({
@@ -347,6 +350,7 @@ const ChartCard = memo(function ChartCard({
     [enhancedOptions, w, h],
   );
 
+  if (!points.some(point => keys.some(key => Number.isFinite(point[key])))) return null;
   return (
     <div
       className="instance-chart-card"
@@ -358,7 +362,7 @@ const ChartCard = memo(function ChartCard({
           <span>{title}</span>
         </div>
         <div className="instance-series-stats">
-          <span className="tabular">{value}</span>
+          {value && (typeof value !== "string" || !value.includes("—")) && <span className="tabular">{value}</span>}
           {note != null && <span className="tabular text-[var(--text-tertiary)]">{note}</span>}
         </div>
       </header>
@@ -513,13 +517,7 @@ export function LoadChart({
     );
   }
 
-  if (!points.length) {
-    return (
-      <InstancePanel title="负载图表">
-        <div className="instance-empty">暂无负载历史数据</div>
-      </InstancePanel>
-    );
-  }
+  if (!points.some(point => DOWNSAMPLE_KEYS.some(key => Number.isFinite(point[key])))) return null;
 
   return (
     <InstancePanel
@@ -590,10 +588,10 @@ export function LoadChart({
             isRealtime && node
               ? node.swapTotal
                 ? `Swap ${formatBytes(node.swapUsed)} / ${formatBytes(node.swapTotal)}`
-                : "Swap —"
+                : undefined
               : latestHistoryRecord && latestHistoryTotals && latestHistoryTotals.swapTotal > 0
                 ? `Swap ${formatBytes(latestHistoryRecord.swap)} / ${formatBytes(latestHistoryTotals.swapTotal)}`
-                : "Swap —"
+                : undefined
           }
           points={points}
           keys={MEMORY_KEYS}
@@ -639,9 +637,9 @@ export function LoadChart({
                 : "—"
           }
           note={
-            <span className="instance-overview-multi">
-              <span className="inline-flex items-center gap-1"><ArrowDown size={11} />{isRealtime && node ? formatBytes(node.trafficDown) : latestHistoryRecord ? formatBytes(latestHistoryRecord.net_total_down) : "—"}</span>
-              <span className="inline-flex items-center gap-1"><ArrowUp size={11} />{isRealtime && node ? formatBytes(node.trafficUp) : latestHistoryRecord ? formatBytes(latestHistoryRecord.net_total_up) : "—"}</span>
+            <span className="instance-overview-multi" title="开机累计流量">
+              {Number.isFinite(isRealtime ? node?.trafficDown : latestHistoryRecord?.net_total_down) && <span className="inline-flex items-center gap-1"><ArrowDown size={11} />{formatBytes(isRealtime ? node?.trafficDown : latestHistoryRecord?.net_total_down)}</span>}
+              {Number.isFinite(isRealtime ? node?.trafficUp : latestHistoryRecord?.net_total_up) && <span className="inline-flex items-center gap-1"><ArrowUp size={11} />{formatBytes(isRealtime ? node?.trafficUp : latestHistoryRecord?.net_total_up)}</span>}
             </span>
           }
           points={points}
@@ -660,12 +658,12 @@ export function LoadChart({
           uuid={uuid}
           value={
             isRealtime && node
-              ? `TCP ${formatFixed(node.connectionsTcp)} / UDP ${formatFixed(node.connectionsUdp)}`
+              ? [Number.isFinite(node.connectionsTcp) ? `TCP ${formatFixed(node.connectionsTcp)}` : "",Number.isFinite(node.connectionsUdp) ? `UDP ${formatFixed(node.connectionsUdp)}` : ""].filter(Boolean).join(" / ")
               : latestHistoryRecord
-                ? `TCP ${formatFixed(latestHistoryRecord.connections)} / UDP ${formatFixed(latestHistoryRecord.connections_udp)}`
+                ? [Number.isFinite(latestHistoryRecord.connections) ? `TCP ${formatFixed(latestHistoryRecord.connections)}` : "",Number.isFinite(latestHistoryRecord.connections_udp) ? `UDP ${formatFixed(latestHistoryRecord.connections_udp)}` : ""].filter(Boolean).join(" / ")
                 : "—"
           }
-          note="连接"
+          note={undefined}
           points={points}
           keys={CONNECTION_KEYS}
           colors={CONNECTION_COLORS}

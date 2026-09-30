@@ -8,6 +8,7 @@
   height: 36px;
   max-width: min(38rem, calc(100vw - 10rem));
   align-items: center;
+  min-width: 0;
   pointer-events: none;
   transition:
     opacity 160ms ease,
@@ -17,6 +18,7 @@
 
 .home-brand-title {
   position: relative;
+  min-width: 0;
   margin: 0;
   overflow: hidden;
   color: var(--text-primary);
@@ -36,14 +38,6 @@
     visibility 160ms ease;
 }
 
-.home-dashboard.is-home-header-hidden .home-brand,
-.home-dashboard.is-home-header-hidden .floating-controls {
-  visibility: hidden;
-  opacity: 0;
-  pointer-events: none;
-  transform: translateY(-6px);
-}
-
 @media (max-width: 720px) {
   .home-brand {
     max-width: calc(100vw - 8.5rem);
@@ -53,16 +47,6 @@
     font-size: 19px;
   }
 
-}
-
-/* 中小屏的完整快捷栏会占用顶部大部分宽度。由 React 同步显式状态类，兼容
-   Chrome 87，并覆盖平板宽度；折叠后站点名立即恢复。 */
-@media (max-width: 1023px) {
-  .home-dashboard.is-controls-expanded .home-brand {
-    visibility: hidden;
-    opacity: 0;
-    transform: translateX(-8px);
-  }
 }
 
 .home-overview {
@@ -893,9 +877,6 @@
   transition: padding-top 180ms ease;
 }
 
-.home-dashboard.is-home-header-hidden {
-  padding-top: 0;
-}
 
 /* 首页控件条复用卡片网格列定义：分组标签落在第一列，排序控件钉在最后一列。 */
 .home-controls-bar {

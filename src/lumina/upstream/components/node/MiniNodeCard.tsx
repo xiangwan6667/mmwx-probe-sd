@@ -133,6 +133,7 @@ function MiniMetricBar({
     "--mini-metric-color": paint,
   };
 
+  if (!Number.isFinite(fraction)) return null;
   return (
     <div className="metric-item">
       <div className="mini-metric-head">
@@ -157,6 +158,7 @@ function MiniVitals({
   node: MiniNode;
   loadFraction: number;
 }) {
+  if (![node.cpuPct,node.ramPct,node.diskPct,node.load1].some(Number.isFinite)) return null;
   return (
     <div className="mini-node-vitals">
       <MiniMetricBar
@@ -207,6 +209,7 @@ function MiniFlowRow({
   color?: string;
   title: string;
 }) {
+  if (value === "—") return null;
   return (
     <span
       className="mini-node-flow-row"
@@ -223,7 +226,7 @@ function MiniFlowRow({
   );
 }
 
-// 左栏集中显示实时速率，右栏集中显示累计流量；每栏均按上行、下行排列。
+// 左栏集中显示实时速率，右栏集中显示开机累计流量；每栏均按上行、下行排列。
 function MiniFlow({
   node,
   upRate,
@@ -233,9 +236,10 @@ function MiniFlow({
   upRate: ByteRateDisplay;
   downRate: ByteRateDisplay;
 }) {
+  if (![node.netUp,node.netDown,node.trafficUp,node.trafficDown].some(Number.isFinite)) return null;
   return (
     <div className="mini-node-flow">
-      <div className="mini-node-flow-group" aria-label="实时网速">
+      {([node.netUp,node.netDown].some(Number.isFinite)) && (<div className="mini-node-flow-group" aria-label="实时网速">
         <MiniFlowRow
           icon={<ArrowUp size={12} strokeWidth={2.4} />}
           value={upRate.value}
@@ -250,8 +254,8 @@ function MiniFlow({
           color={speedRateColor(downRate.unit)}
           title="实时下行"
         />
-      </div>
-      <div className="mini-node-flow-group" aria-label="累计流量">
+      </div>)}
+      {([node.trafficUp,node.trafficDown].some(Number.isFinite)) && (<div className="mini-node-flow-group" aria-label="开机累计流量">
         <MiniFlowRow
           icon={<ArrowUp size={12} strokeWidth={2.2} />}
           value={formatBytes(node.trafficUp)}
@@ -262,7 +266,7 @@ function MiniFlow({
           value={formatBytes(node.trafficDown)}
           title="累计下行"
         />
-      </div>
+      </div>)}
     </div>
   );
 }
@@ -345,6 +349,7 @@ const MiniHealth = memo(function MiniHealth({
     pingLoading,
     pingError,
   );
+  if (!pingLoading && !pingError && ping.lastValue == null && ping.loss == null) return null;
   return (
     <div
       className="mini-node-health"
@@ -355,7 +360,7 @@ const MiniHealth = memo(function MiniHealth({
           : undefined
       }
     >
-      <div className="mini-node-health-item">
+      {(pingLoading || pingError || Number.isFinite(ping.lastValue)) && (<div className="mini-node-health-item">
         <div className="mini-node-health-head">
           <span className="mini-node-health-label">
             <Clock3 size={12} strokeWidth={2} />
@@ -373,8 +378,8 @@ const MiniHealth = memo(function MiniHealth({
           </strong>
         </div>
         <MiniHealthBars kind="latency" buckets={pingBuckets} />
-      </div>
-      <div className="mini-node-health-item">
+      </div>)}
+      {(pingLoading || pingError || Number.isFinite(ping.loss)) && (<div className="mini-node-health-item">
         <div className="mini-node-health-head">
           <span className="mini-node-health-label">
             <Unplug size={12} strokeWidth={2} />
@@ -392,7 +397,7 @@ const MiniHealth = memo(function MiniHealth({
           </strong>
         </div>
         <MiniHealthBars kind="loss" buckets={pingBuckets} />
-      </div>
+      </div>)}
     </div>
   );
 });

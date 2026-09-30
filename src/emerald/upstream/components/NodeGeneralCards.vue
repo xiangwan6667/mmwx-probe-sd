@@ -10,6 +10,7 @@ import { useAppStore } from '@emerald/stores/app'
 import { useNodesStore } from '@emerald/stores/nodes'
 import * as financeHelper from '@emerald/utils/financeHelper'
 import { formatBytesPerSecondSplit as originalSpeedSplit, formatBytesSplit as originalBytesSplit } from '@emerald/utils/helper'
+import { sumNodeMetric as sumMetric } from '@emerald/utils/nodeHelpers'
 
 const props = defineProps<{
   nodes?: NodeData[]
@@ -48,10 +49,6 @@ function setExchangeRateBaseCurrency(event: Event): void {
   if (financeHelper.isSupportedCurrency(target.value)) financeHelper.setStoredFinanceCurrency(target.value)
 }
 
-function sumMetric(nodes: NodeData[], key: keyof NodeData): number {
-  if (!nodes.length || nodes.some(node => typeof node[key] !== 'number' || !Number.isFinite(node[key]))) return Number.NaN
-  return nodes.reduce((sum, node) => sum + (node[key] as number), 0)
-}
 function formatBytesSplit(value: number, decimals: Parameters<typeof originalBytesSplit>[1]) {
   return Number.isFinite(value) ? originalBytesSplit(value, decimals) : { value: '—', unit: '' }
 }
@@ -62,7 +59,8 @@ const totalSpeed = computed(() => {
   const onlineNodes = summaryNodes.value.filter(node => node.online)
   return { up: sumMetric(onlineNodes, 'net_out'), down: sumMetric(onlineNodes, 'net_in') }
 })
-const totalTraffic = computed(() => ({ up: sumMetric(summaryNodes.value, 'net_total_up'), down: sumMetric(summaryNodes.value, 'net_total_down') }))
+const totalTraffic = computed(() => ({ up: sumMetric(summaryNodes.value, 'period_traffic_up'), down: sumMetric(summaryNodes.value, 'period_traffic_down') }))
+const formattedBillableTraffic = computed(() => formatBytesSplit(sumMetric(summaryNodes.value, 'billable_traffic_used'), appStore.byteDecimals))
 
 const formattedTrafficUp = computed(() => formatBytesSplit(totalTraffic.value.up, appStore.byteDecimals))
 const formattedTrafficDown = computed(() => formatBytesSplit(totalTraffic.value.down, appStore.byteDecimals))
@@ -83,17 +81,17 @@ const financeGroups = computed(() => financeHelper.calculateFinanceGroups(summar
 const financeRateCurrencies = computed(() => [...new Set(['USD', 'CNY', selectedCurrency.value, ...financeGroups.value.map(group => group.currency)])])
 const selectedGroup = computed(() => financeHelper.calculateConvertedFinance(summaryNodes.value, selectedCurrency.value, exchangeRates.value, excludeFreeNodes.value))
 const exchangeRateBaseCurrency = computed(() => selectedCurrency.value)
-const formattedRemainingValue = computed(() => financeHelper.formatFinanceAmount(selectedGroup.value?.remaining, exchangeRateBaseCurrency.value))
+const formattedRemainingValue = computed(() => financeHelper.formatFinanceAmount(selectedGroup.value?.remaining ?? selectedGroup.value?.total, exchangeRateBaseCurrency.value))
 const financeSummaryItems = computed(() => [
   { label: '总价值', ...financeHelper.formatFinanceAmount(selectedGroup.value?.total ?? Number.NaN, exchangeRateBaseCurrency.value) },
   { label: '月均支出', ...financeHelper.formatFinanceAmount(selectedGroup.value?.monthly ?? Number.NaN, exchangeRateBaseCurrency.value) },
   { label: '剩余价值', ...financeHelper.formatFinanceAmount(selectedGroup.value?.remaining ?? Number.NaN, exchangeRateBaseCurrency.value) },
-])
+].filter(item => item.value !== '—'))
 const exchangeRateRows = computed(() => financeGroups.value.map(group => ({
   currency: group.currency,
   targetSymbol: financeHelper.formatFinanceAmount(group.remaining, group.currency).symbol,
   rate: financeHelper.formatFinanceAmount(group.remaining, group.currency).value,
-})))
+})).filter(row => row.rate !== '—'))
 const showEarth = computed(() => appStore.earthViewMode === 'earth' || appStore.earthViewMode === 'earth-stop')
 const showMaps = computed(() => appStore.earthViewMode === 'maps')
 const showVisualPanel = computed(() => showEarth.value || showMaps.value)
@@ -117,7 +115,7 @@ onMounted(() => {
     <NodeEarthMaps v-else-if="showMaps" :nodes="globeNodes" class="col-span-12 col-start-1 md:col-span-6 md:col-start-7" />
 
     <div :class="cardGridClass">
-      <CardX
+      <CardX v-if="Number.isFinite(totalMemory.used) && Number.isFinite(totalMemory.total)"
         hoverable
         class="group h-full border-none rounded-md transition-all"
         :class="[
@@ -149,7 +147,7 @@ onMounted(() => {
           </Transition>
         </div>
       </CardX>
-      <CardX
+      <CardX v-if="Number.isFinite(totalDisk.used) && Number.isFinite(totalDisk.total)"
         hoverable
         class="group h-full border-none rounded-md transition-all"
         :class="[
@@ -181,7 +179,7 @@ onMounted(() => {
         </div>
       </CardX>
       <div
-        class="relative w-full h-full"
+        v-if="summaryNodes.length > 0 && (selectedGroup.remaining !== null || selectedGroup.total !== null || selectedGroup.monthly !== null)" class="relative w-full h-full"
         :class="showVisualPanel ? 'col-span-4 row-span-1 col-start-5 row-start-1' : 'col-span-1 row-start-1 col-start-2 min-h-18 md:min-h-24 md:row-start-1 md:col-start-3'"
       >
         <CardX
@@ -192,7 +190,7 @@ onMounted(() => {
         >
           <div class="flex h-full flex-col justify-between gap-1">
             <div class="flex items-start justify-between">
-              <span class="text-xs font-medium tracking-wider text-muted-foreground">剩余价值</span>
+              <span class="text-xs font-medium tracking-wider text-muted-foreground">{{ selectedGroup.remaining !== null ? '剩余价值' : '总价值' }}</span>
               <Icon
                 icon="tabler:cash" :width="20" :height="20"
                 class="text-slate-500/20 group-hover:text-slate-500 transition-colors"
@@ -280,7 +278,7 @@ onMounted(() => {
           </div>
         </CardX>
       </div>
-      <CardX
+      <CardX v-if="Number.isFinite(totalTraffic.up) && Number.isFinite(totalTraffic.down)"
         hoverable
         class="group h-full border-none rounded-md transition-all"
         :class="[
@@ -291,7 +289,7 @@ onMounted(() => {
       >
         <div class="flex h-full flex-col justify-between gap-1">
           <div class="flex items-start justify-between">
-            <span class="text-xs font-medium tracking-wider text-muted-foreground">累计流量</span>
+            <span class="text-xs font-medium tracking-wider text-muted-foreground">周期流量</span>
             <Icon
               icon="tabler:download" :width="20" :height="20"
               class="text-slate-500/20 group-hover:text-slate-500 transition-colors"
@@ -299,7 +297,7 @@ onMounted(() => {
           </div>
           <DataTooltip
             as="span" placement="top"
-            :content="`↑ ${formattedTrafficUp.value} ${formattedTrafficUp.unit}\n↓ ${formattedTrafficDown.value} ${formattedTrafficDown.unit}`"
+            :content="`周期原始上行 ↑ ${formattedTrafficUp.value} ${formattedTrafficUp.unit}\n周期原始下行 ↓ ${formattedTrafficDown.value} ${formattedTrafficDown.unit}${formattedBillableTraffic.value !== '—' ? '\n计费用量 ' + formattedBillableTraffic.value + ' ' + formattedBillableTraffic.unit : ''}\n主数字为原始上行 + 下行；计费用量按主控规则及调整计算`"
             class="min-w-0" content-class="whitespace-pre px-2 py-1 left-0 -translate-x-0 leading-normal"
           >
             <Transition v-bind="metricSwitchTransitionProps">
@@ -319,7 +317,7 @@ onMounted(() => {
         </div>
       </CardX>
 
-      <CardX
+      <CardX v-if="Number.isFinite(totalSpeed.up)"
         hoverable
         class="group h-full border-none rounded-md transition-all"
         :class="[
@@ -348,7 +346,7 @@ onMounted(() => {
           </Transition>
         </div>
       </CardX>
-      <CardX
+      <CardX v-if="Number.isFinite(totalSpeed.down)"
         hoverable
         class="group h-full border-none rounded-md transition-all"
         :class="[

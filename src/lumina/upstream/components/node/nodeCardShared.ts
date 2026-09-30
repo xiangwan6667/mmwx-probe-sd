@@ -57,8 +57,8 @@ export function formatOsLabel(osName: string, rawOs?: string | null): string {
 /** 节点卡片头部"查看实例详情"链接的 title 和 aria-label。 */
 export function nodeDetailLinkLabels(name: string, osName: string) {
   return {
-    title: `${osName} · 查看详情`,
-    ariaLabel: `查看 ${name} 详情，系统 ${osName}`,
+    title: osName ? `${osName} · 查看详情` : "查看详情",
+    ariaLabel: osName ? `查看 ${name} 详情，系统 ${osName}` : `查看 ${name} 详情`,
   };
 }
 

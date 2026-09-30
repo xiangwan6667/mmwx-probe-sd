@@ -9,13 +9,13 @@ import dayjs from 'dayjs'
 import { computed, onMounted, onScopeDispose, ref, shallowRef, watch } from 'vue'
 import VChart from 'vue-echarts'
 import { CardX } from '@emerald/components/ui/card-x'
-import { Empty } from '@emerald/components/ui/empty'
 import { Spinner } from '@emerald/components/ui/spinner'
 import { Tabs, TabsList, TabsTrigger } from '@emerald/components/ui/tabs'
 import { useBackgroundSurface } from '@emerald/composables/useBackgroundSurface'
 import { useAppStore } from '@emerald/stores/app'
 import { useNodesStore } from '@emerald/stores/nodes'
 import { formatBytes, formatBytesSplit } from '@emerald/utils/helper'
+import { appendLiveRecord, hasHistoryMeasurement } from '@emerald/utils/nodeHelpers'
 import '@emerald/utils/echarts' // 共享 ECharts 配置
 
 const props = defineProps<{
@@ -122,8 +122,9 @@ function receiveLive(next: NonNullable<ReturnType<typeof getPayload>>) {
   payload.value = next
   next.servers?.forEach((server, index) => {
     const uuid = String(index)
-    const record = snapshotRecord(uuid, server, Date.now())
-    if (record) liveRecords.set(uuid, [...(liveRecords.get(uuid) ?? []), record].slice(-150))
+    const now = Date.now()
+    const record = snapshotRecord(uuid, server, now)
+    liveRecords.set(uuid, appendLiveRecord(liveRecords.get(uuid) ?? [], uuid, record, now))
   })
   if (isRealtime.value) void fetchRecentData()
 }
@@ -636,7 +637,7 @@ onMounted(() => {
 </script>
 
 <template>
-  <div class="flex flex-col gap-4">
+  <div v-if="loading || error || hasHistoryMeasurement(remoteData, ['cpu', 'load', 'ram', 'disk', 'net_in', 'net_out', 'connections', 'connections_udp'])" class="flex flex-col gap-4">
     <!-- 时间选择器 -->
     <Tabs v-model="selectedView" class="w-full items-center">
       <TabsList :class="pickSurfaceClass('h-8 bg-background/60 pointer-events-auto rounded-md', 'h-8 bg-background/50 backdrop-blur-xl pointer-events-auto rounded-md')">
@@ -655,13 +656,13 @@ onMounted(() => {
         {{ error }}
       </div>
       <div v-else-if="remoteData.length === 0 && !loading" class="py-8">
-        <Empty description="暂无负载数据" />
+
       </div>
 
       <!-- 图表网格 -->
       <div v-else class="gap-4 grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3">
         <!-- CPU 卡片 -->
-        <CardX
+        <CardX v-if="hasHistoryMeasurement(remoteData, ['cpu', 'load'])"
           size="small"
           class="border-none transition-all rounded-md"
           :class="pickSurfaceClass('bg-background/60 hover:bg-background', 'bg-background/50 hover:bg-background backdrop-blur-xs')"
@@ -682,7 +683,7 @@ onMounted(() => {
         </CardX>
 
         <!-- 内存卡片 -->
-        <CardX
+        <CardX v-if="hasHistoryMeasurement(remoteData, ['ram'])"
           size="small"
           class="border-none transition-all rounded-md"
           :class="pickSurfaceClass('bg-background/60 hover:bg-background', 'bg-background/50 hover:bg-background backdrop-blur-xs')"
@@ -697,7 +698,7 @@ onMounted(() => {
                 </template>
                 <span v-else>-</span>
                 <span>·</span>
-                <template v-if="nodeInfo?.mem_total">
+                <template v-if="nodeInfo && Number.isFinite(nodeInfo.mem_total)">
                   <span>{{
                     formatBytesSplit(nodeInfo.mem_total).value }}</span>
                   <span>{{ formatBytesSplit(nodeInfo.mem_total).unit }}</span>
@@ -712,7 +713,7 @@ onMounted(() => {
         </CardX>
 
         <!-- 磁盘卡片 -->
-        <CardX
+        <CardX v-if="hasHistoryMeasurement(remoteData, ['disk'])"
           size="small"
           class="border-none transition-all rounded-md"
           :class="pickSurfaceClass('bg-background/60 hover:bg-background', 'bg-background/50 hover:bg-background backdrop-blur-xs')"
@@ -727,7 +728,7 @@ onMounted(() => {
                 </template>
                 <span v-else>-</span>
                 <span>·</span>
-                <template v-if="nodeInfo?.disk_total">
+                <template v-if="nodeInfo && Number.isFinite(nodeInfo.disk_total)">
                   <span>{{ formatBytesSplit(nodeInfo.disk_total).value }}</span>
                   <span>{{ formatBytesSplit(nodeInfo.disk_total).unit }}</span>
                 </template>
@@ -741,7 +742,7 @@ onMounted(() => {
         </CardX>
 
         <!-- 网络卡片 -->
-        <CardX
+        <CardX v-if="hasHistoryMeasurement(remoteData, ['net_in', 'net_out'])"
           size="small"
           class="border-none transition-all rounded-md"
           :class="pickSurfaceClass('bg-background/60 hover:bg-background', 'bg-background/50 hover:bg-background backdrop-blur-xs')"
@@ -775,7 +776,7 @@ onMounted(() => {
         </CardX>
 
         <!-- 连接数卡片 -->
-        <CardX
+        <CardX v-if="hasHistoryMeasurement(remoteData, ['connections', 'connections_udp'])"
           size="small"
           class="border-none transition-all rounded-md"
           :class="pickSurfaceClass('bg-background/60 hover:bg-background', 'bg-background/50 hover:bg-background backdrop-blur-xs')"

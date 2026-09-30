@@ -126,11 +126,11 @@ function ServerCard({
 			</div>
 			<div className="flex flex-col lg:items-start items-center gap-2">
 				<section
-					className={cn("grid grid-cols-5 items-center gap-3", {
-						"lg:grid-cols-6 lg:gap-4": fixedTopServerName,
+					className={cn("flex flex-wrap items-center gap-3", {
+						"lg:gap-4": fixedTopServerName,
 					})}
 				>
-					{fixedTopServerName && (
+					{fixedTopServerName && Boolean(platform) && (
 						<div
 							className={
 								"hidden col-span-1 items-center lg:flex lg:flex-row gap-2"
@@ -155,73 +155,73 @@ function ServerCard({
 							</div>
 						</div>
 					)}
-					<div className={"flex w-14 flex-col"}>
+					{Number.isFinite(cpu) && (<div className={"flex w-14 flex-col"}>
 						<p className="text-xs text-muted-foreground">{"CPU"}</p>
 						<div className="flex items-center text-xs font-semibold">
-							{probe?.cpu_pct !== undefined ? `${cpu.toFixed(2)}%` : "—"}
+							{`${cpu.toFixed(2)}%`}
 						</div>
-						<ServerUsageBar value={probe?.cpu_pct !== undefined ? cpu : 0} />
-					</div>
-					<div className={"flex w-14 flex-col"}>
+						<ServerUsageBar value={cpu} />
+					</div>)}
+					{Number.isFinite(mem) && (<div className={"flex w-14 flex-col"}>
 						<p className="text-xs text-muted-foreground">
 							{t("serverCard.mem")}
 						</p>
 						<div className="flex items-center text-xs font-semibold">
-							{probe?.mem_used !== undefined && !!probe?.mem_total ? `${mem.toFixed(2)}%` : "—"}
+							{`${mem.toFixed(2)}%`}
 						</div>
-						<ServerUsageBar value={probe?.mem_used !== undefined && !!probe?.mem_total ? mem : 0} />
-					</div>
-					<div className={"flex w-14 flex-col"}>
+						<ServerUsageBar value={mem} />
+					</div>)}
+					{Number.isFinite(stg) && (<div className={"flex w-14 flex-col"}>
 						<p className="text-xs text-muted-foreground">
 							{t("serverCard.stg")}
 						</p>
 						<div className="flex items-center text-xs font-semibold">
-							{probe?.disk_used !== undefined && !!probe?.disk_total ? `${stg.toFixed(2)}%` : "—"}
+							{`${stg.toFixed(2)}%`}
 						</div>
-						<ServerUsageBar value={probe?.disk_used !== undefined && !!probe?.disk_total ? stg : 0} />
-					</div>
-					<div className={"flex w-14 flex-col"}>
+						<ServerUsageBar value={stg} />
+					</div>)}
+					{Number.isFinite(up) && (<div className={"flex w-14 flex-col"}>
 						<p className="text-xs text-muted-foreground">
 							{t("serverCard.upload")}
 						</p>
 						<div className="flex items-center text-xs font-semibold">
-							{probe?.upload_speed === undefined ? "—" : up >= 1024
+							{up >= 1024
 								? `${(up / 1024).toFixed(2)}G/s`
 								: up >= 1
 									? `${up.toFixed(2)}M/s`
 									: `${(up * 1024).toFixed(2)}K/s`}
 						</div>
-					</div>
-					<div className={"flex w-14 flex-col"}>
+					</div>)}
+					{Number.isFinite(down) && (<div className={"flex w-14 flex-col"}>
 						<p className="text-xs text-muted-foreground">
 							{t("serverCard.download")}
 						</p>
 						<div className="flex items-center text-xs font-semibold">
-							{probe?.download_speed === undefined ? "—" : down >= 1024
+							{down >= 1024
 								? `${(down / 1024).toFixed(2)}G/s`
 								: down >= 1
 									? `${down.toFixed(2)}M/s`
 									: `${(down * 1024).toFixed(2)}K/s`}
 						</div>
-					</div>
+					</div>)}
 				</section>
 				{probe && (window as unknown as Record<string, unknown>).ShowTrafficBar !== false && (
 					<TrafficBar used={billableTraffic(probe)} limit={probe.traffic_limit ?? 0} periodEnd={probe.period_end} billingMode={trafficModeLabel(probe)} now={now} />
 				)}
-				{showNetTransfer && (
+				{showNetTransfer && (Number.isFinite(net_out_transfer) || Number.isFinite(net_in_transfer)) && (
 					<section className={"flex items-center w-full justify-between gap-1"}>
-						<Badge
+						{Number.isFinite(net_out_transfer) && (<Badge
 							variant="secondary"
 							className="items-center flex-1 justify-center rounded-[8px] text-nowrap text-[11px] border-muted-50 shadow-md shadow-neutral-200/30 dark:shadow-none"
 						>
-							{t("serverCard.upload")}:{formatBytes(net_out_transfer)}
-						</Badge>
-						<Badge
+							开机上行:{formatBytes(net_out_transfer)}
+						</Badge>)}
+						{Number.isFinite(net_in_transfer) && (<Badge
 							variant="outline"
 							className="items-center flex-1 justify-center rounded-[8px] text-nowrap text-[11px] shadow-md shadow-neutral-200/30 dark:shadow-none"
 						>
-							{t("serverCard.download")}:{formatBytes(net_in_transfer)}
-						</Badge>
+							开机下行:{formatBytes(net_in_transfer)}
+						</Badge>)}
 					</section>
 				)}
 				{parsedData?.planDataMod && <PlanInfo parsedData={parsedData} />}

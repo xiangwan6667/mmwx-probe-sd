@@ -1,6 +1,7 @@
+import {getPayload,subscribePayload} from "../../../bridge";
 import { LuminaUnlocks } from '../../../ProbeUnlocks';
 import { formatFixed } from "@lumina/utils/format";
-import { memo, useCallback, useState } from "react";
+import { memo, useCallback, useState, useSyncExternalStore } from "react";
 import { Link } from "react-router-dom";
 import { ArrowDown, ArrowUp, CircleDollarSign } from "lucide-react";
 import { clsx } from "clsx";
@@ -136,6 +137,7 @@ function ListGauge({
     },
     [activeSegments, paint],
   );
+  if (!Number.isFinite(fraction)) return null;
   return (
     <div className="node-list-gauge">
       <span className="node-list-gauge-value tabular">
@@ -159,6 +161,7 @@ function StackLine({
   unit?: string;
   color?: string;
 }) {
+  if (value === "—" || value === "未填") return null;
   return (
     <span className="node-list-line" style={color ? { color } : undefined}>
       {icon && <span className="node-list-line-icon">{icon}</span>}
@@ -200,6 +203,7 @@ function ListLatency({
     ? formatHealthBucketTooltip(hoveredBucket, "latency")
     : null;
 
+  if (!Number.isFinite(latency) && loadState !== "pending" && loadState !== "error") return null;
   return (
     <div
       className="node-list-latency"
@@ -267,7 +271,7 @@ const NodeRow = memo(function NodeRow({ uuid, showCosts }: { uuid: string; showC
   const usedPct = `${Math.round(clamp01(traffic.fraction) * 100)}%`;
   const rowLabel = [
     node.name,
-    `系统 ${formatOsLabel(osName, node.os)}`,
+    node.os ? `系统 ${formatOsLabel(osName, node.os)}` : "",
     `CPU ${pctText(node.cpuPct)}`,
     `内存 ${pctText(node.ramPct)}`,
     `磁盘 ${pctText(node.diskPct)}`,
@@ -280,7 +284,7 @@ const NodeRow = memo(function NodeRow({ uuid, showCosts }: { uuid: string; showC
     `运行 ${uptime.value}${uptime.unit}`,
     `到期 ${expire.value}${expire.unit}`,
     "查看详情",
-  ].join("，");
+  ].filter(item=>item && !item.includes("—")).join("，");
 
   return (
     <Link
@@ -321,12 +325,7 @@ const NodeRow = memo(function NodeRow({ uuid, showCosts }: { uuid: string; showC
         </div>
       </div>
 
-      <div className="node-list-cell col-os">
-        <OsLogo value={node.os} size={16} />
-        <span className="node-list-os-name" title={node.os || osName}>
-          {formatOsLabel(osName, node.os)}
-        </span>
-      </div>
+      <NodeOsCell os={node.os} osName={osName} />
 
       <div className="node-list-cell col-metric">
         <ListGauge value={pctText(node.cpuPct)} fraction={node.cpuPct / 100} paint="var(--progress-cpu)" redrawKey={redrawKey} />
@@ -365,15 +364,15 @@ const NodeRow = memo(function NodeRow({ uuid, showCosts }: { uuid: string; showC
 
       <div
         className="node-list-cell col-traffic"
-        title={`剩余 ${traffic.remainingLabel} · ${traffic.detail}`}
+        title={`开机累计上下行 · 剩余 ${traffic.remainingLabel} · ${traffic.detail}`}
       >
         <div className="node-list-traffic-rows">
           <StackLine icon={<ArrowUp size={11} strokeWidth={2.1} />} value={formatBytes(node.trafficUp)} />
           <StackLine icon={<ArrowDown size={11} strokeWidth={2.1} />} value={formatBytes(node.trafficDown)} />
         </div>
-        <span className="node-list-traffic-quota" style={{ color: traffic.color }}>
+        {Number.isFinite(node.billable_traffic_used) && Number.isFinite(node.traffic_limit) && <span className="node-list-traffic-quota" style={{ color: traffic.color }}>
           {usedPct}
-        </span>
+        </span>}
       </div>
 
       <div className="node-list-cell col-net">
@@ -397,8 +396,25 @@ const NodeRow = memo(function NodeRow({ uuid, showCosts }: { uuid: string; showC
 });
 
 export function NodeListView({ uuids, showCosts = true }: { uuids: string[]; showCosts?: boolean }) {
+  const payload=useSyncExternalStore(subscribePayload,getPayload,getPayload);
+  const servers=uuids.map(uuid=>payload?.servers?.[Number(uuid)]);
+  const finite=(value:unknown)=>typeof value==='number' && Number.isFinite(value);
+  const present=[true,
+    servers.some(server=>Boolean(server?.os)),
+    servers.some(server=>finite(server?.cpu_pct)),
+    servers.some(server=>finite(server?.mem_used)&&finite(server?.mem_total)),
+    servers.some(server=>finite(server?.disk_used)&&finite(server?.disk_total)),
+    servers.some(server=>Boolean(server?.loadavg?.trim())),
+    servers.some(server=>finite(server?.upload_speed)||finite(server?.download_speed)),
+    servers.some(server=>finite(server?.boot_traffic_up)||finite(server?.boot_traffic_down)||finite(server?.cumulative_up)||finite(server?.cumulative_down)||finite(server?.traffic_used)),
+    servers.some(server=>server?.ping?.some(ping=>finite(ping.current_ms)&&ping.current_ms>=0)),
+    servers.some(server=>finite(server?.uptime)||Boolean(server?.expires_at)),
+  ];
+  const widths=['minmax(196px,2.4fr)','minmax(116px,1.1fr)','minmax(82px,1fr)','minmax(82px,1fr)','minmax(82px,1fr)','minmax(72px,.78fr)','minmax(94px,1fr)','minmax(110px,1.15fr)','minmax(82px,.9fr)','minmax(102px,1fr)'];
+  const columnStyles=present.map((enabled,index)=>enabled?'':`.node-list-scroll .node-list-row > :nth-child(${index+1}){display:none}`).join('');
   return (
     <div className="node-list-scroll">
+      <style>{`${columnStyles}.node-list-scroll .node-list{min-width:0}.node-list-scroll .node-list-row{grid-template-columns:${widths.filter((_,index)=>present[index]).join(" ")}}`}</style>
       <div className="node-list">
         <div className="node-list-row node-list-head" aria-hidden>
           <div className="node-list-cell node-list-node">节点</div>
@@ -408,7 +424,7 @@ export function NodeListView({ uuids, showCosts = true }: { uuids: string[]; sho
           <div className="node-list-cell col-metric">磁盘</div>
           <div className="node-list-cell col-load">负载</div>
           <div className="node-list-cell col-live">实时</div>
-          <div className="node-list-cell col-traffic">流量</div>
+          <div className="node-list-cell col-traffic">开机流量</div>
           <div className="node-list-cell col-net">网络</div>
           <div className="node-list-cell col-life">在线 / 到期</div>
         </div>
@@ -418,4 +434,12 @@ export function NodeListView({ uuids, showCosts = true }: { uuids: string[]; sho
       </div>
     </div>
   );
+}
+
+/** Keep every row's column slots stable even when metadata is absent. */
+export function NodeOsCell({os,osName}:{os:string;osName:string}) {
+ return <div className="node-list-cell col-os">{Boolean(os) && <>
+  <OsLogo value={os} size={16} />
+  <span className="node-list-os-name" title={os}>{formatOsLabel(osName,os)}</span>
+ </>}</div>;
 }

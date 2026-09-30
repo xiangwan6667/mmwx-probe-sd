@@ -2,8 +2,41 @@ import type { ProbeServer } from './types'
 
 export type TrafficRange = 'period' | 'recent7'
 
+function finite(value: number | undefined): number | undefined {
+  return typeof value === 'number' && Number.isFinite(value) ? value : undefined
+}
+
 export function billableTraffic(server: ProbeServer): number | undefined {
-  return server.traffic_used ?? server.traffic_used_total
+  const used = finite(server.traffic_used)
+  if (used !== undefined) return used
+  // traffic_used_total is the raw U + D, not the adjusted billable amount.
+  const adjustment = finite(server.traffic_adjustment)
+  if (adjustment === undefined) return undefined
+  const up = finite(server.traffic_used_up)
+  const down = finite(server.traffic_used_down)
+  let raw: number | undefined
+  switch (server.traffic_stats_mode) {
+    case 'upload': raw = up; break
+    case 'download': raw = down; break
+    case 'both': raw = up !== undefined && down !== undefined ? up + down : undefined; break
+    case 'max': raw = up !== undefined && down !== undefined ? Math.max(up, down) : undefined; break
+  }
+  return raw === undefined ? undefined : Math.max(0, raw + adjustment)
+}
+
+/** Cycle directions, adjusted usage and live NIC speeds have independent scopes. */
+export function summarizeTraffic(servers: ProbeServer[]) {
+  const sum = (values: (number | undefined)[]): number =>
+    values.some(value => finite(value) === undefined)
+      ? NaN : values.reduce<number>((total, value) => total + value!, 0)
+  if (!servers.length) return { uplink: NaN, downlink: NaN, used: NaN, uploadSpeed: NaN, downloadSpeed: NaN }
+  return {
+    uplink: sum(servers.map(server => server.traffic_used_up)),
+    downlink: sum(servers.map(server => server.traffic_used_down)),
+    used: sum(servers.map(billableTraffic)),
+    uploadSpeed: sum(servers.filter(server => server.online).map(server => server.upload_speed)),
+    downloadSpeed: sum(servers.filter(server => server.online).map(server => server.download_speed)),
+  }
 }
 
 export function hasTrafficPeriod(server: ProbeServer): boolean {

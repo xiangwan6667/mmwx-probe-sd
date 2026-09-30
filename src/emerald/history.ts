@@ -1,9 +1,10 @@
 import type { ProbeServer, ProbePingSeries } from '../types';
 import type { RecordFormat } from './upstream/utils/recordHelper';
+import { bootTraffic } from '../traffic-display';
 export type SystemResponse = { success?: boolean; series?: Record<string, {t:number;value:number|null}[]> };
 export type PingResponse = { success?:boolean; generated_at?:number; bucket_sec?:number; all_series?:ProbePingSeries[] };
 const finite=(v:unknown):number|null=>typeof v==='number'&&Number.isFinite(v)?v:null;
-const fields={cpu_pct:'cpu',mem_used:'ram',mem_total:'ram_total',disk_used:'disk',disk_total:'disk_total',upload_speed:'net_out',download_speed:'net_in',tcp_connections:'connections',udp_connections:'connections_udp'} as const;
+const fields={cpu_pct:'cpu',mem_used:'ram',mem_total:'ram_total',disk_used:'disk',disk_total:'disk_total',upload_speed:'net_out',download_speed:'net_in',cumulative_up:'net_total_up',cumulative_down:'net_total_down',tcp_connections:'connections',udp_connections:'connections_udp'} as const;
 function blank(client:string,time:number):RecordFormat {return {client,time:new Date(time).toISOString(),cpu:null,gpu:null,gpu_usage:null,gpu_memory:null,ram:null,ram_total:null,swap:null,swap_total:null,load:null,temp:null,disk:null,disk_total:null,net_in:null,net_out:null,net_total_up:null,net_total_down:null,process:null,connections:null,connections_udp:null};}
 export function mapSystemHistory(uuid:string,payload:SystemResponse):RecordFormat[]{
  const records=new Map<number,RecordFormat>();
@@ -13,6 +14,7 @@ export function mapSystemHistory(uuid:string,payload:SystemResponse):RecordForma
 export function snapshotRecord(uuid:string,server:ProbeServer,now:number):RecordFormat|null{
  if(!server.online)return null; const r=blank(uuid,now);
  for(const [key,target] of Object.entries(fields))r[target]=finite(server[key as keyof ProbeServer]);
+ const traffic=bootTraffic(server);r.net_total_up=finite(traffic.uplink);r.net_total_down=finite(traffic.downlink);
  r.load=finite(Number.parseFloat(server.loadavg??''));return r;
 }
 const average=(a:number[])=>a.length?a.reduce((x,y)=>x+y,0)/a.length:undefined;

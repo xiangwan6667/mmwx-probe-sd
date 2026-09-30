@@ -530,13 +530,7 @@ export function PingChart({
     );
   }
 
-  if (!data?.records.length) {
-    return (
-      <InstancePanel title="Ping 图表">
-        <div className="instance-empty">暂无延迟记录</div>
-      </InstancePanel>
-    );
-  }
+  if (!data?.records.some(record => (Number.isFinite(record.value) && record.value >= 0) || Number.isFinite(record.loss))) return null;
 
   return (
     <InstancePanel title="Ping 图表" description={coverageLabel ?? undefined}>

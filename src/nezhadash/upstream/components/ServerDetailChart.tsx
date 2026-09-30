@@ -1,4 +1,5 @@
 // MMWX adaptation (2026-09-29): host data/theme/router integration; see licenses/NezhaDash-NOTICE.md.
+import { joinMetricSeries } from "../../measurements";
 import { getProbe } from "../../bridge";
 import { probeRangeOptions } from "../../../probe-ranges";
 import { useQuery } from "@tanstack/react-query";
@@ -274,7 +275,7 @@ export default function ServerDetailChart({
 				isTsdbEnabled={isTsdbEnabled}
 			/>
 			<section className="grid md:grid-cols-2 lg:grid-cols-3 grid-cols-1 gap-3 server-charts">
-				{(probe?.cpu_pct !== undefined) && (
+				{(selectedPeriod !== "realtime" || Number.isFinite(probe?.cpu_pct)) && (
 				<CpuChart
 					now={nezhaWsData.now}
 					data={server}
@@ -311,7 +312,7 @@ export default function ServerDetailChart({
 								/>
 							))
 						: null}
-				{(probe?.mem_total !== undefined) && (
+				{((probe?.mem_total ?? 0) > 0 && (selectedPeriod !== "realtime" || Number.isFinite(probe?.mem_used))) && (
 				<MemChart
 					now={nezhaWsData.now}
 					data={server}
@@ -319,7 +320,7 @@ export default function ServerDetailChart({
 					period={selectedPeriod}
 				/>
 				)}
-				{(probe?.disk_total !== undefined) && (
+				{((probe?.disk_total ?? 0) > 0 && (selectedPeriod !== "realtime" || Number.isFinite(probe?.disk_used))) && (
 				<DiskChart
 					now={nezhaWsData.now}
 					data={server}
@@ -328,7 +329,7 @@ export default function ServerDetailChart({
 				/>
 				)}
 
-				{(probe?.upload_speed !== undefined || probe?.download_speed !== undefined) && (
+				{(selectedPeriod !== "realtime" || Number.isFinite(probe?.upload_speed) || Number.isFinite(probe?.download_speed)) && (
 				<NetworkChart
 					now={nezhaWsData.now}
 					data={server}
@@ -336,7 +337,7 @@ export default function ServerDetailChart({
 					period={selectedPeriod}
 				/>
 				)}
-				{(probe?.tcp_connections !== undefined || probe?.udp_connections !== undefined) && (
+				{(selectedPeriod !== "realtime" || Number.isFinite(probe?.tcp_connections) || Number.isFinite(probe?.udp_connections)) && (
 				<ConnectChart
 					now={nezhaWsData.now}
 					data={server}
@@ -376,6 +377,7 @@ function useHistoricalData<T>(
 		const fetchData = async () => {
 			const loadingStartedAt = Date.now();
 			setIsLoading(true);
+			setDisplayData([]);
 
 			try {
 				const response = await fetchServerMetrics(
@@ -384,7 +386,7 @@ function useHistoricalData<T>(
 					period as MetricPeriod,
 				);
 				if (response.success && response.data?.data_points) {
-					const transformedData = response.data.data_points.map((point) =>
+					const transformedData = response.data.data_points.filter(point => Number.isFinite(point.value)).map((point) =>
 						transformData(point.ts, point.value),
 					);
 					if (!cancelled) {
@@ -518,6 +520,8 @@ function GpuChart({
 	} satisfies ChartConfig;
 
 	const displayData = period === "realtime" ? gpuChartData : gpuHistoricalData;
+
+	if (!isLoading && !displayData.some(point => Number.isFinite(point.gpu))) return null;
 
 	return (
 		<Card
@@ -724,6 +728,8 @@ function CpuChart({
 
 	const displayData = period === "realtime" ? cpuChartData : cpuHistoricalData;
 
+	if (!isLoading && !displayData.some(point => Number.isFinite(point.cpu))) return null;
+
 	return (
 		<Card
 			className={cn({
@@ -734,7 +740,7 @@ function CpuChart({
 				<section className="flex flex-col gap-1">
 					<div className="flex items-center justify-between">
 						<p className="text-md font-medium">CPU</p>
-						<section className="flex items-center gap-2">
+						{Number.isFinite(cpu) && (<section className="flex items-center gap-2">
 							<p className="text-xs text-end w-10 font-medium">
 								{cpu.toFixed(2)}%
 							</p>
@@ -745,7 +751,7 @@ function CpuChart({
 								value={cpu}
 								primaryColor="hsl(var(--chart-1))"
 							/>
-						</section>
+						</section>)}
 					</div>
 					<ChartContainer
 						config={chartConfig}
@@ -804,14 +810,14 @@ function CpuChart({
 										/>
 									}
 								/>
-								<Area
+								{displayData.some(point => Number.isFinite(point.cpu)) && (<Area
 									isAnimationActive={false}
 									dataKey="cpu"
 									type="step"
 									fill="hsl(var(--chart-1))"
 									fillOpacity={0.3}
 									stroke="hsl(var(--chart-1))"
-								/>
+								/>)}
 							</AreaChart>
 						)}
 					</ChartContainer>
@@ -926,6 +932,8 @@ function ProcessChart({
 
 	const displayData =
 		period === "realtime" ? processChartData : processHistoricalData;
+
+	if (!isLoading && !displayData.some(point => Number.isFinite(point.process))) return null;
 
 	return (
 		<Card
@@ -1063,6 +1071,7 @@ function MemChart({
 		const fetchMemData = async () => {
 			const loadingStartedAt = Date.now();
 			setIsLoadingMem(true);
+			setMemHistoricalData([]);
 			try {
 				const [memResponse, swapResponse] = await Promise.all([
 					fetchServerMetrics(data.id, "memory", period as MetricPeriod),
@@ -1070,30 +1079,7 @@ function MemChart({
 				]);
 
 				if (memResponse.success && memResponse.data?.data_points) {
-					const swapMap = new Map<number, number>();
-					if (swapResponse.success && swapResponse.data?.data_points) {
-						for (const point of swapResponse.data.data_points) {
-							// Convert bytes to percentage
-							const swapPercent =
-								data.host.swap_total > 0
-									? (point.value / data.host.swap_total) * 100
-									: 0;
-							swapMap.set(point.ts, swapPercent);
-						}
-					}
-
-					const combinedData = memResponse.data.data_points.map((point) => {
-						// Convert bytes to percentage
-						const memPercent =
-							data.host.mem_total > 0
-								? (point.value / data.host.mem_total) * 100
-								: 0;
-						return {
-							timeStamp: point.ts.toString(),
-							mem: memPercent,
-							swap: swapMap.get(point.ts) || 0,
-						};
-					});
+					const combinedData = joinMetricSeries(memResponse.data.data_points, swapResponse.data?.data_points ?? []).map(point => ({timeStamp: point.timeStamp, mem: data.host.mem_total > 0 ? point.left / data.host.mem_total * 100 : NaN, swap: data.host.swap_total > 0 ? point.right / data.host.swap_total * 100 : NaN}));
 					if (!cancelled) {
 						setMemHistoricalData(combinedData);
 					}
@@ -1188,6 +1174,8 @@ function MemChart({
 	const isMemLoading =
 		period !== "realtime" && (isLoadingMem || loadedPeriodMem !== period);
 
+	if (!isMemLoading && !displayData.some(point => Number.isFinite(point.mem) || Number.isFinite(point.swap))) return null;
+
 	return (
 		<Card
 			className={cn({
@@ -1198,7 +1186,7 @@ function MemChart({
 				<section className="flex flex-col gap-1">
 					<div className="flex items-center justify-between">
 						<section className="flex items-center gap-4">
-							<div className="flex flex-col">
+							{Number.isFinite(mem) && (<div className="flex flex-col">
 								<p className=" text-xs text-muted-foreground">
 									{t("serverDetailChart.mem")}
 								</p>
@@ -1212,8 +1200,8 @@ function MemChart({
 									/>
 									<p className="text-xs font-medium">{mem.toFixed(0)}%</p>
 								</div>
-							</div>
-							<div className="flex flex-col">
+							</div>)}
+							{Number.isFinite(swap) && (<div className="flex flex-col">
 								<p className=" text-xs text-muted-foreground">
 									{t("serverDetailChart.swap")}
 								</p>
@@ -1227,14 +1215,14 @@ function MemChart({
 									/>
 									<p className="text-xs font-medium">{swap.toFixed(0)}%</p>
 								</div>
-							</div>
+							</div>)}
 						</section>
 						<section className="flex flex-col items-end gap-0.5">
 							<div className="flex text-[11px] font-medium items-center gap-2">
 								{formatBytes(data.state.mem_used)} /{" "}
 								{formatBytes(data.host.mem_total)}
 							</div>
-							<div className="flex text-[11px] font-medium items-center gap-2">
+							{Number.isFinite(data.host.swap_total) && (<div className="flex text-[11px] font-medium items-center gap-2">
 								{data.host.swap_total ? (
 									<>
 										swap: {formatBytes(data.state.swap_used)} /{" "}
@@ -1243,7 +1231,7 @@ function MemChart({
 								) : (
 									<>no swap</>
 								)}
-							</div>
+							</div>)}
 						</section>
 					</div>
 					<ChartContainer
@@ -1311,22 +1299,22 @@ function MemChart({
 										/>
 									}
 								/>
-								<Area
+								{displayData.some(point => Number.isFinite(point.mem)) && (<Area
 									isAnimationActive={false}
 									dataKey="mem"
 									type="step"
 									fill="hsl(var(--chart-8))"
 									fillOpacity={0.3}
 									stroke="hsl(var(--chart-8))"
-								/>
-								<Area
+								/>)}
+								{displayData.some(point => Number.isFinite(point.swap)) && (<Area
 									isAnimationActive={false}
 									dataKey="swap"
 									type="step"
 									fill="hsl(var(--chart-10))"
 									fillOpacity={0.3}
 									stroke="hsl(var(--chart-10))"
-								/>
+								/>)}
 							</AreaChart>
 						)}
 					</ChartContainer>
@@ -1363,7 +1351,7 @@ function DiskChart({
 		() => (timestamp: number, value: number) => {
 			// Convert bytes to percentage
 			const diskPercent =
-				data.host.disk_total > 0 ? (value / data.host.disk_total) * 100 : 0;
+				data.host.disk_total > 0 ? (value / data.host.disk_total) * 100 : NaN;
 			return {
 				timeStamp: timestamp.toString(),
 				disk: diskPercent,
@@ -1445,6 +1433,8 @@ function DiskChart({
 	const displayData =
 		period === "realtime" ? diskChartData : diskHistoricalData;
 
+	if (!isLoading && !displayData.some(point => Number.isFinite(point.disk))) return null;
+
 	return (
 		<Card
 			className={cn({
@@ -1456,7 +1446,7 @@ function DiskChart({
 					<div className="flex items-center justify-between">
 						<p className="text-md font-medium">{t("serverDetailChart.disk")}</p>
 						<section className="flex flex-col items-end gap-0.5">
-							<section className="flex items-center gap-2">
+							{Number.isFinite(disk) && (<section className="flex items-center gap-2">
 								<p className="text-xs text-end w-10 font-medium">
 									{disk.toFixed(0)}%
 								</p>
@@ -1467,7 +1457,7 @@ function DiskChart({
 									value={disk}
 									primaryColor="hsl(var(--chart-5))"
 								/>
-							</section>
+							</section>)}
 							<div className="flex text-[11px] font-medium items-center gap-2">
 								{formatBytes(data.state.disk_used)} /{" "}
 								{formatBytes(data.host.disk_total)}
@@ -1533,14 +1523,14 @@ function DiskChart({
 										/>
 									}
 								/>
-								<Area
+								{displayData.some(point => Number.isFinite(point.disk)) && (<Area
 									isAnimationActive={false}
 									dataKey="disk"
 									type="step"
 									fill="hsl(var(--chart-5))"
 									fillOpacity={0.3}
 									stroke="hsl(var(--chart-5))"
-								/>
+								/>)}
 							</AreaChart>
 						)}
 					</ChartContainer>
@@ -1598,6 +1588,7 @@ function NetworkChart({
 		const fetchNetworkData = async () => {
 			const loadingStartedAt = Date.now();
 			setIsLoadingNetwork(true);
+			setNetworkHistoricalData([]);
 			try {
 				const [uploadResponse, downloadResponse] = await Promise.all([
 					fetchServerMetrics(data.id, "net_out_speed", period as MetricPeriod),
@@ -1605,19 +1596,7 @@ function NetworkChart({
 				]);
 
 				if (uploadResponse.success && uploadResponse.data?.data_points) {
-					const downloadMap = new Map<number, number>();
-					if (downloadResponse.success && downloadResponse.data?.data_points) {
-						for (const point of downloadResponse.data.data_points) {
-							// Convert bytes to MB
-							downloadMap.set(point.ts, point.value / 1024 / 1024);
-						}
-					}
-
-					const combinedData = uploadResponse.data.data_points.map((point) => ({
-						timeStamp: point.ts.toString(),
-						upload: point.value / 1024 / 1024, // Convert bytes to MB
-						download: downloadMap.get(point.ts) || 0,
-					}));
+					const combinedData = joinMetricSeries(uploadResponse.data.data_points, downloadResponse.data?.data_points ?? []).map(point => ({timeStamp: point.timeStamp, upload: point.left / 1024 / 1024, download: point.right / 1024 / 1024}));
 					if (!cancelled) {
 						setNetworkHistoricalData(combinedData);
 					}
@@ -1708,7 +1687,7 @@ function NetworkChart({
 		period !== "realtime" &&
 		(isLoadingNetwork || loadedPeriodNetwork !== period);
 
-	let maxDownload = Math.max(...displayData.map((item) => item.download));
+	let maxDownload = Math.max(1, ...displayData.map((item) => item.download).filter(Number.isFinite));
 	maxDownload = Math.ceil(maxDownload);
 	if (maxDownload < 1) {
 		maxDownload = 1;
@@ -1723,6 +1702,8 @@ function NetworkChart({
 		},
 	} satisfies ChartConfig;
 
+	if (!isNetworkLoading && !displayData.some(point => Number.isFinite(point.upload) || Number.isFinite(point.download))) return null;
+
 	return (
 		<Card
 			className={cn({
@@ -1733,7 +1714,7 @@ function NetworkChart({
 				<section className="flex flex-col gap-1">
 					<div className="flex items-center">
 						<section className="flex items-center gap-4">
-							<div className="flex flex-col w-20">
+							{Number.isFinite(up) && (<div className="flex flex-col w-20">
 								<p className="text-xs text-muted-foreground">
 									{t("serverDetailChart.upload")}
 								</p>
@@ -1747,8 +1728,8 @@ function NetworkChart({
 												: `${(up * 1024).toFixed(2)}K/s`}
 									</p>
 								</div>
-							</div>
-							<div className="flex flex-col w-20">
+							</div>)}
+							{Number.isFinite(down) && (<div className="flex flex-col w-20">
 								<p className=" text-xs text-muted-foreground">
 									{t("serverDetailChart.download")}
 								</p>
@@ -1762,7 +1743,7 @@ function NetworkChart({
 												: `${(down * 1024).toFixed(2)}K/s`}
 									</p>
 								</div>
-							</div>
+							</div>)}
 						</section>
 					</div>
 					<ChartContainer
@@ -1833,22 +1814,22 @@ function NetworkChart({
 										/>
 									}
 								/>
-								<Line
+								{displayData.some(point => Number.isFinite(point.upload)) && (<Line
 									isAnimationActive={false}
 									dataKey="upload"
 									type="linear"
 									stroke="hsl(var(--chart-1))"
 									strokeWidth={1}
 									dot={false}
-								/>
-								<Line
+								/>)}
+								{displayData.some(point => Number.isFinite(point.download)) && (<Line
 									isAnimationActive={false}
 									dataKey="download"
 									type="linear"
 									stroke="hsl(var(--chart-4))"
 									strokeWidth={1}
 									dot={false}
-								/>
+								/>)}
 							</LineChart>
 						)}
 					</ChartContainer>
@@ -1905,6 +1886,7 @@ function ConnectChart({
 		const fetchConnectData = async () => {
 			const loadingStartedAt = Date.now();
 			setIsLoadingConnect(true);
+			setConnectHistoricalData([]);
 			try {
 				const [tcpResponse, udpResponse] = await Promise.all([
 					fetchServerMetrics(data.id, "tcp_conn", period as MetricPeriod),
@@ -1912,18 +1894,7 @@ function ConnectChart({
 				]);
 
 				if (tcpResponse.success && tcpResponse.data?.data_points) {
-					const udpMap = new Map<number, number>();
-					if (udpResponse.success && udpResponse.data?.data_points) {
-						for (const point of udpResponse.data.data_points) {
-							udpMap.set(point.ts, point.value);
-						}
-					}
-
-					const combinedData = tcpResponse.data.data_points.map((point) => ({
-						timeStamp: point.ts.toString(),
-						tcp: point.value,
-						udp: udpMap.get(point.ts) || 0,
-					}));
+					const combinedData = joinMetricSeries(tcpResponse.data.data_points, udpResponse.data?.data_points ?? []).map(point => ({timeStamp: point.timeStamp, tcp: point.left, udp: point.right}));
 					if (!cancelled) {
 						setConnectHistoricalData(combinedData);
 					}
@@ -2020,6 +1991,8 @@ function ConnectChart({
 		period !== "realtime" &&
 		(isLoadingConnect || loadedPeriodConnect !== period);
 
+	if (!isConnectLoading && !displayData.some(point => Number.isFinite(point.tcp) || Number.isFinite(point.udp))) return null;
+
 	return (
 		<Card
 			className={cn({
@@ -2030,20 +2003,20 @@ function ConnectChart({
 				<section className="flex flex-col gap-1">
 					<div className="flex items-center">
 						<section className="flex items-center gap-4">
-							<div className="flex flex-col w-12">
+							{Number.isFinite(tcp) && (<div className="flex flex-col w-12">
 								<p className="text-xs text-muted-foreground">TCP</p>
 								<div className="flex items-center gap-1">
 									<span className="relative inline-flex  size-1.5 rounded-full bg-[hsl(var(--chart-1))]" />
 									<p className="text-xs font-medium">{tcp}</p>
 								</div>
-							</div>
-							<div className="flex flex-col w-12">
+							</div>)}
+							{Number.isFinite(udp) && (<div className="flex flex-col w-12">
 								<p className=" text-xs text-muted-foreground">UDP</p>
 								<div className="flex items-center gap-1">
 									<span className="relative inline-flex  size-1.5 rounded-full bg-[hsl(var(--chart-4))]" />
 									<p className="text-xs font-medium">{udp}</p>
 								</div>
-							</div>
+							</div>)}
 						</section>
 					</div>
 					<ChartContainer
@@ -2108,22 +2081,22 @@ function ConnectChart({
 										/>
 									}
 								/>
-								<Line
+								{displayData.some(point => Number.isFinite(point.tcp)) && (<Line
 									isAnimationActive={false}
 									dataKey="tcp"
 									type="linear"
 									stroke="hsl(var(--chart-1))"
 									strokeWidth={1}
 									dot={false}
-								/>
-								<Line
+								/>)}
+								{displayData.some(point => Number.isFinite(point.udp)) && (<Line
 									isAnimationActive={false}
 									dataKey="udp"
 									type="linear"
 									stroke="hsl(var(--chart-4))"
 									strokeWidth={1}
 									dot={false}
-								/>
+								/>)}
 							</LineChart>
 						)}
 					</ChartContainer>

@@ -32,7 +32,8 @@ test('Lumina quota uses adjusted billable usage independently of boot counters',
   assert.equal(traffic.used, 12);
   assert.equal(traffic.remaining, 8);
   assert.equal(traffic.fraction, 0.6);
-  assert.equal(resolveTrafficUsage('sum', 3, 8, 20, NaN).used, 11);
+  assert.ok(Number.isNaN(resolveTrafficUsage('sum', 3, 8, 20, NaN).used));
+  assert.equal(resolveTrafficUsage('sum', 3, 8, 20).used, 11);
 });
 
 import { normalizeBillingCycle, formatRenewalPrice } from './lumina/upstream/utils/billing';
@@ -58,4 +59,69 @@ test('Lumina reset hint requires an explicit future traffic period end', () => {
   const reset = getTrafficResetDisplay('2026-10-15', now);
   assert.ok(reset?.title.includes('2026-10-15'));
   assert.ok(!reset?.title.includes('每月'));
+});
+
+import { summarizePeriodTraffic } from './lumina/upstream/utils/traffic';
+test('Lumina overview sums period traffic including offline nodes without mixing boot counters', () => {
+ const nodes = [{period_traffic_up:0,period_traffic_down:10,online:false},{period_traffic_up:20,period_traffic_down:30,online:true}];
+ assert.deepEqual(summarizePeriodTraffic(nodes), {up:20,down:40});
+ assert.ok(Number.isNaN(summarizePeriodTraffic([{period_traffic_down:10}]).up));
+});
+
+import { hasMeasurement, allMeasurements, hasText } from './lumina/upstream/utils/dataVisibility';
+test('Lumina data visibility hides missing fields while preserving zero and recovery',()=>{
+ assert.equal(hasMeasurement(NaN),false); assert.equal(hasMeasurement(undefined),false);
+ assert.equal(hasMeasurement(0),true); assert.equal(hasMeasurement(3),true);
+ assert.equal(allMeasurements([0,NaN]),false); assert.equal(allMeasurements([0,3]),true);
+ assert.equal(hasText(''),false); assert.equal(hasText('Linux'),true);
+});
+
+test('Lumina metric rendering removes missing data and restores measured zero',async()=>{
+ const {createElement}=await import('react');
+ const {renderToStaticMarkup}=await import('react-dom/server');
+ const {MetricBar}=await import('./lumina/upstream/components/node/MetricBar');
+ const props={icon:null,label:'CPU',valueText:'0.00',unit:'%',fraction:NaN,paint:'red'};
+ assert.equal(renderToStaticMarkup(createElement(MetricBar,props)), '');
+ assert.match(renderToStaticMarkup(createElement(MetricBar,{...props,fraction:0})), /0.00/);
+ assert.equal(renderToStaticMarkup(createElement(MetricBar,props)), '');
+});
+
+test('Lumina retains explicitly reported zero uptime and renewal price',async()=>{
+ const {formatUptimeDays}=await import('./lumina/upstream/utils/format');
+ assert.equal(formatUptimeDays(0).value,'0');
+ assert.equal(formatRenewalPrice({price:0,currency:'CNY',billing_cycle:'30'}),'免费');
+});
+
+test('Lumina list keeps the OS cell slot for mixed missing metadata',async()=>{
+ const {createElement}=await import('react');
+ const {renderToStaticMarkup}=await import('react-dom/server');
+ const {NodeOsCell}=await import('./lumina/upstream/components/node/NodeListView');
+ const row=(os:string)=>renderToStaticMarkup(createElement('div',null,createElement('div',null,'node'),createElement(NodeOsCell,{os,osName:os}),createElement('div',null,'CPU 0')));
+ for (const os of ['', 'Linux']) {
+  const html=row(os);
+  assert.match(html, /class="node-list-cell col-os"/);
+  assert.ok(html.indexOf('col-os') < html.indexOf('CPU 0'));
+ }
+ assert.equal(renderToStaticMarkup(createElement(NodeOsCell,{os:'',osName:'unknown'})), '<div class="node-list-cell col-os"></div>');
+});
+
+test('Lumina absent OS has neither fallback icon nor invented Linux description',async()=>{
+ const {createElement}=await import('react'); const {renderToStaticMarkup}=await import('react-dom/server');
+ const {OsLogo}=await import('./lumina/upstream/components/ui/OsLogo');
+ const {nodeDetailLinkLabels}=await import('./lumina/upstream/components/node/nodeCardShared');
+ assert.equal(renderToStaticMarkup(createElement(OsLogo,{value:''})), '');
+ assert.deepEqual(nodeDetailLinkLabels('node',''),{title:'查看详情',ariaLabel:'查看 node 详情'});
+ assert.match(renderToStaticMarkup(createElement(OsLogo,{value:'Linux'})), /Linux/);
+});
+
+test('Lumina home brand renders and updates the supplied public site title',async()=>{
+ const {createElement}=await import('react'); const {renderToStaticMarkup}=await import('react-dom/server');
+ const {HomeBrand}=await import('./lumina/upstream/components/node/NodeGrid');
+ const {publicConfig}=await import('./lumina/data-adapter');
+ for(const title of ['测试探针站','更新后的很长站点名字']) {
+  const config=publicConfig({enabled:true,title});
+  const html=renderToStaticMarkup(createElement(HomeBrand,{siteName:config.sitename}));
+  assert.match(html,new RegExp(title));
+ }
+ assert.equal(renderToStaticMarkup(createElement(HomeBrand,{siteName:''})), '');
 });
