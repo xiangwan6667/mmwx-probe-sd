@@ -58,7 +58,16 @@ export function saveThemePreference(theme: ProbeThemePreference) {
 }
 
 export function readColorModePreference(): ProbeColorMode {
-  return normalizeColorMode(read(COLOR_KEY));
+  const preference = read(COLOR_KEY);
+  if (preference !== null) return normalizeColorMode(preference);
+  // The host may only have an in-memory choice when storage is unavailable.
+  // Inherit the preference (including system), not a frozen resolved color.
+  try {
+    if (window.parent !== window) {
+      return normalizeColorMode(window.parent.document.documentElement.dataset.colorModePreference);
+    }
+  } catch { /* Standalone tests and cross-origin embeds use the default. */ }
+  return "system";
 }
 
 // Embedded documents can inherit the parent's forced color-scheme. Read the

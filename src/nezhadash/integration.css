@@ -198,6 +198,33 @@
   outline: 2px solid hsl(var(--ring));
   outline-offset: 2px;
 }
+.nezha-time-range-trigger {
+  display: inline-flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  min-height: 28px;
+  padding: 4px 12px;
+  border: 1px solid hsl(var(--border));
+  border-radius: 999px;
+  background: hsl(var(--muted));
+  color: hsl(var(--foreground));
+  font-size: 12px;
+}
+.nezha-time-range-trigger:focus-visible {
+  outline: 2px solid hsl(var(--ring));
+  outline-offset: 2px;
+}
+/* Use the cards' glass brightness for these two popups over a wallpaper. */
+:root.dark:has(.nezha-glass-root.has-custom-background) :is(.nezha-unlocks-panel, .nezha-time-range-menu) {
+  background-color: hsl(var(--card) / 0.62) !important;
+}
+:root.dark:has(.nezha-glass-root.has-custom-background) .nezha-unlocks-tabs button[aria-pressed="true"] {
+  background-color: hsl(var(--foreground) / 0.12);
+}
+:root.dark:has(.nezha-glass-root.has-custom-background) .nezha-unlocks-tabs button:hover {
+  background-color: hsl(var(--foreground) / 0.16);
+}
 .nezha-sort-menu {
   width: 168px;
   max-width: calc(100vw - 24px);
@@ -220,6 +247,7 @@
 }
 @media (pointer: coarse) {
   .nezha-sort-item { min-height: 44px; }
+  .nezha-time-range-trigger { min-height: 44px; }
 }
 
 .visitor-capsule {

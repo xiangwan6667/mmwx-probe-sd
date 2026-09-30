@@ -5,7 +5,6 @@ import { NetworkChart } from "@/components/NetworkChart"
 import ServerDetailChart from "@/components/ServerDetailChart"
 import ServerDetailOverview from "@/components/ServerDetailOverview"
 import TabSwitch from "@/components/TabSwitch"
-import { Separator } from "@/components/ui/separator"
 import { useEffect, useState } from "react"
 import { useNavigate, useParams } from "react-router-dom"
 
@@ -30,12 +29,10 @@ export default function ServerDetail() {
   return (
     <div className="mx-auto w-full max-w-5xl px-0 flex flex-col gap-4 server-info">
       <ServerDetailOverview server_id={server_id} />
-      <section className="flex items-center my-2 w-full">
-        <Separator className="flex-1" />
+      <section className="flex items-center justify-center my-2 w-full">
         <div className="flex justify-center w-full max-w-[200px]">
           <TabSwitch tabs={tabs} currentTab={currentTab} setCurrentTab={setCurrentTab} />
         </div>
-        <Separator className="flex-1" />
       </section>
       <div style={{ display: currentTab === tabs[0] ? "block" : "none" }}>
         <ServerDetailChart server_id={server_id} />

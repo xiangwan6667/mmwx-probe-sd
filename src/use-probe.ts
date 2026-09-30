@@ -35,6 +35,11 @@ export function applyAppearance(input?: ProbeAppearance) {
       systemColorScheme().matches);
   root.classList.add(dark ? "dark" : "light");
   root.style.colorScheme = dark ? "dark" : "light";
+  root.dataset.colorModePreference = colorMode;
+  if (root.dataset.appearanceBoot) {
+    root.style.backgroundColor = "";
+    delete root.dataset.appearanceBoot;
+  }
   root.dataset.themeReady = "true";
   if (input) {
     try {

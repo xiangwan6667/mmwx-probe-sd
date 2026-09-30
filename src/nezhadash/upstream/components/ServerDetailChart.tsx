@@ -3,6 +3,7 @@ import { useQuery } from "@tanstack/react-query"
 import { resourceHistory } from "../../resource-history"
 import { getProbe } from "../../bridge"
 import { probeRangeOptions } from "../../../probe-ranges"
+import { TimeRangeMenu } from "../../TimeRangeMenu"
 import type { MetricPeriod } from "@/types/nezha-api"
 import { Card, CardContent } from "@/components/ui/card"
 import { ChartConfig, ChartContainer } from "@/components/ui/chart"
@@ -54,7 +55,7 @@ export default function ServerDetailChart({ server_id }: { server_id: string }) 
  const [range, setRange] = useState<string>("realtime")
  const {data: savedHistory, isLoading, error} = useQuery({queryKey:["bitjebe-resource-history",server_id,range],queryFn:()=>resourceHistory(Number(server_id),range as MetricPeriod),enabled:range !== "realtime"})
  return <div>
- <select aria-label="资源图表时间范围" value={range} onChange={event=>setRange(event.target.value)} className="mb-3 rounded-full bg-muted px-3 py-1 text-xs"><option value="realtime">实时</option>{probeRangeOptions(getProbe().history_days).map(option=><option key={option.key} value={option.key}>{option.label}</option>)}</select>
+ <TimeRangeMenu label="资源图表时间范围" value={range} onValueChange={setRange} className="mb-3" options={[{key: "realtime", label: "实时"}, ...probeRangeOptions(getProbe().history_days)]} />
  {error ? <p className="text-sm text-muted-foreground">历史数据暂不可用</p> : isLoading ? <ServerDetailChartLoading /> : <ResourceCharts key={range} server_id={server_id} savedHistory={range === "realtime" ? undefined : savedHistory || []} />}
  </div>
 }

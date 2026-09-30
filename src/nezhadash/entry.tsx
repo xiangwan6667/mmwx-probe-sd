@@ -15,6 +15,7 @@ import { nezhaConfigSignatures } from './config-signature';
 import { receiveProbe, useProbeBridge } from './bridge';
 import type { NezhaWebsocketResponse } from './upstream/types/nezha-api';
 import { loadSiteSettings } from '../site-settings';
+import { applyAppearance } from '../use-probe';
 import './upstream/i18n';
 import 'flag-icons/css/flag-icons.min.css';
 import 'font-logos/assets/font-logos.css';
@@ -24,6 +25,8 @@ import './integration.css';
 import '../touch-controls.css';
 
 const queryClient = new QueryClient();
+// Keep the restored colors while waiting for site settings and bridge data.
+applyAppearance();
 let configSignatures: ReturnType<typeof nezhaConfigSignatures> | undefined;
 // This entry receives data from the host; direct visits return to its public URL.
 if (window.parent === window) window.location.replace(`/${window.location.hash}`);

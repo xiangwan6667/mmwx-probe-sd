@@ -1,6 +1,7 @@
 // MMWX adaptation (2026-09-30): host integration; see licenses/NezhaDash-NOTICE.md.
 import { getProbe } from "../../bridge"
 import { probeRangeOptions } from "../../../probe-ranges"
+import { TimeRangeMenu } from "../../TimeRangeMenu"
 import { monitorDictionary } from "../../monitor-dictionary"
 "use client"
 
@@ -17,7 +18,6 @@ import { Area, CartesianGrid, ComposedChart, Line, XAxis, YAxis } from "recharts
 
 import NetworkChartLoading from "./NetworkChartLoading"
 import { Label } from "./ui/label"
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "./ui/select"
 import { Switch } from "./ui/switch"
 
 interface ResultItem {
@@ -417,18 +417,8 @@ export const NetworkChartClient = React.memo(function NetworkChart({
             {chartDataKey.length} {t("monitor.monitorCount")}
           </CardDescription>
           <div className="flex items-center mt-0.5 space-x-3">
-            <Select value={String(hours)} onValueChange={(v) => onHoursChange(Number(v))}>
-              <SelectTrigger className="w-[70px] h-7 text-xs">
-                <SelectValue />
-              </SelectTrigger>
-              <SelectContent>
-                {TIME_OPTIONS.map((opt) => (
-                  <SelectItem key={opt.value} value={opt.value} className="text-xs">
-                    {opt.label}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
+            <TimeRangeMenu label="网络图表时间范围" value={String(hours)} onValueChange={v => onHoursChange(Number(v))}
+              options={TIME_OPTIONS.map(option => ({ key: option.value, label: option.label }))} />
             <div className="flex items-center space-x-2">
               <Switch id="Peak" checked={isPeakEnabled} onCheckedChange={setIsPeakEnabled} />
               <Label className="text-xs" htmlFor="Peak">

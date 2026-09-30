@@ -5,11 +5,12 @@ import { getProbe } from '../../bridge';
 import { createRequestCache } from '../../request-cache';
 import { toMonitor, toNezhaGroups, type ProbeSeriesResponse } from '../../adapter';
 import { effectiveProbeRange, probeRangeOptions } from '../../../probe-ranges';
+import { DEFAULT_PROBE_ICON } from '../../../document-branding';
 
 export const fetchServerGroup = async () => toNezhaGroups(getProbe());
 export const fetchLoginUser = async () => ({ success: true, data: { id: 0, username: '', password: '', created_at: '', updated_at: '' } });
 export const fetchService = async (): Promise<ServiceResponse> => ({ success: true, data: { services: {}, cycle_transfer_stats: {} } });
-export const fetchSetting = async () => ({ success: true, data: { config: { debug: false, language: 'zh-CN', site_name: getProbe().title || '服务器状态', site_desc: '', user_template: 'Nezha', admin_template: '', custom_code: '' }, private_site: false, version: '', tsdb_enabled: true } });
+export const fetchSetting = async () => ({ success: true, data: { config: { debug: false, language: 'zh-CN', site_name: getProbe().title || '服务器状态', site_icon: getProbe().icon?.trim() || DEFAULT_PROBE_ICON, site_desc: '', user_template: 'Nezha', admin_template: '', custom_code: '' }, private_site: false, version: '', tsdb_enabled: true } });
 export type MonitorPeriod = MetricPeriod;
 type SeriesBody = ProbeSeriesResponse & { series?: Record<string, {t:number;value:number}[]> };
 const cachedRequest = createRequestCache<SeriesBody>();

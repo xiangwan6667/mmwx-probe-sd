@@ -1,7 +1,7 @@
 // MMWX adaptation (2026-09-30): host integration; see licenses/NezhaDash-NOTICE.md.
 import { PasskeyLogin } from "../../../PasskeyLogin"
+import { DEFAULT_PROBE_ICON } from "../../../document-branding"
 import { ModeToggle } from "@/components/ThemeSwitcher"
-import { Separator } from "@/components/ui/separator"
 import { Skeleton } from "@/components/ui/skeleton"
 import { useBackground } from "@/hooks/use-background"
 import { useWebSocketContext } from "@/hooks/use-websocket-context"
@@ -39,8 +39,7 @@ function Header() {
 
   const siteName = settingData?.data?.config?.site_name
 
-  // @ts-expect-error CustomLogo is a global variable
-  const customLogo = window.CustomLogo || "/nezhadash/apple-touch-icon.png"
+  const customLogo = settingData?.data?.config?.site_icon || DEFAULT_PROBE_ICON
 
   const customDesc = settingData?.data?.config?.site_desc || (window as any).CustomDesc || ""
 
@@ -97,7 +96,6 @@ function Header() {
             />
           </div>
           {isLoading ? <Skeleton className="h-6 w-20 rounded-[5px] bg-muted-foreground/10 animate-none" /> : siteName || "NEZHA"}
-          <Separator orientation="vertical" className="mx-2 hidden h-4 w-[1px] md:block" />
           <p className="hidden text-sm font-medium opacity-40 md:block">{customDesc}</p>
         </section>
         <section className="flex items-center gap-2 header-handles">

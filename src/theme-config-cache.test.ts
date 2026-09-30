@@ -23,6 +23,12 @@ test('Emerald reuses configuration until title, retention, globe, icon or login 
   }
   assert.equal(read(initial, true).theme_settings?.hideAdminEntryWhenLoggedOut, false);
 });
+test('Nezha settings invalidate when the host icon changes or is removed', () => {
+  const original = nezhaConfigSignatures({ ...initial, icon: '/first.svg' }).setting;
+  assert.notEqual(nezhaConfigSignatures({ ...initial, icon: '/second.svg' }).setting, original);
+  assert.notEqual(nezhaConfigSignatures(initial).setting, original);
+  assert.equal(nezhaConfigSignatures({ ...initial, icon: '  ' }).setting, nezhaConfigSignatures(initial).setting);
+});
 test('history cache deduplicates, expires, evicts oldest entries, and retries failures', async () => {
   let time = 0;
   let calls = 0;
