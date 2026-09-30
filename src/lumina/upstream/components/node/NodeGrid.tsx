@@ -661,7 +661,7 @@ export function NodeGrid() {
       ? ({ "--mini-card-min-width": `${minColumnWidth}px` } as MiniGridStyle)
       : { gridTemplateColumns: `repeat(auto-fill, minmax(min(100%, ${minColumnWidth}px), 1fr))` };
   const gridElement = (
-    <div className={gridWrapClassName} style={gridStyle}>
+    <div className={mode === "large" ? `${gridWrapClassName} node-grid-large` : gridWrapClassName} style={gridStyle}>
       {cards}
     </div>
   );

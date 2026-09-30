@@ -686,7 +686,7 @@ function NodeCardFooter({
         />
       </div>
       <div className="probe-card-footer-badges">
-        <ProbeLineBadges uuid={uuid} scrollable />
+        <ProbeLineBadges uuid={uuid} />
         {(footerTags.length > 0 || renewalPrice) && (
           <>
             <div className="dstatus-tags-row" ref={rowRef} title={footerTags.length > 0 ? tagTitle : undefined}>
