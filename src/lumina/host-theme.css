@@ -21,8 +21,14 @@
 .probe-line-name { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .probe-line-badge strong { color: var(--text-primary); font-variant-numeric: tabular-nums; white-space: nowrap; }
 .probe-line-empty { color: var(--text-tertiary); font-size: 11px; }
-.probe-card-footer-badges { display: flex; align-items: center; flex-wrap: wrap; gap: 8px; }
-.probe-card-footer-badges > .dstatus-tags-row:not(.dstatus-tags-measure) { width: auto; flex: 0 1 auto; }
+/* Reserve the renewal chip's space so route length cannot add a footer row.
+   Keep every route readable in a horizontally scrollable strip. */
+.probe-card-footer-badges { display: flex; align-items: center; flex-wrap: nowrap; gap: 8px; min-width: 0; }
+.probe-card-footer-badges > .probe-line-badges { flex: 1 1 0; flex-wrap: nowrap; overflow-x: auto; scrollbar-width: none; }
+.probe-card-footer-badges > .probe-line-badges::-webkit-scrollbar { display: none; }
+.probe-card-footer-badges .probe-line-badge { flex: 0 0 auto; }
+.probe-card-footer-badges > .dstatus-tags-row:not(.dstatus-tags-measure) { width: auto; flex: 0 1 auto; max-width: 45%; padding-top: 0; }
+.probe-card-footer-badges > .probe-line-badges:focus-visible { outline: 2px solid var(--ring); outline-offset: -2px; border-radius: 8px; }
 /* Use the upstream traffic popover surface, typography and row rhythm. */
 .node-traffic-trigger.lumina-unlocks-trigger { display: inline-flex; flex: none; width: 28px; height: 28px; align-items: center; justify-content: center; padding: 0; border: 1px solid var(--border); background: var(--fill-tertiary); color: var(--text-secondary); }
 .lumina-unlocks-panel { margin: 0; width: min(320px, calc(100vw - 16px)); box-sizing: border-box; overflow: auto; overscroll-behavior: contain; font-family: inherit; }

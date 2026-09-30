@@ -7,8 +7,8 @@ test('Lumina overview displays billed usage as the main total without depending 
  const {createElement}=await import('react'); const {renderToStaticMarkup}=await import('react-dom/server');
  const {MemoryRouter}=await import('react-router-dom');
  const {HomeOverviewCards}=await import('./lumina/upstream/components/node/NodeGrid');
- const render=(billableTraffic:number)=>renderToStaticMarkup(createElement(MemoryRouter,null,createElement(HomeOverviewCards,{
-  overview:{totalNodes:2,onlineNodes:1,offlineNodes:1,billableTraffic,trafficLimit:42.48*1024**4,remainingTraffic:40.55*1024**4,netUp:0,netDown:0},
+ const render=(billableTraffic:number,trafficUp=NaN,trafficDown=NaN)=>renderToStaticMarkup(createElement(MemoryRouter,null,createElement(HomeOverviewCards,{
+  overview:{totalNodes:2,onlineNodes:1,offlineNodes:1,billableTraffic,trafficUp,trafficDown,trafficLimit:42.48*1024**4,remainingTraffic:40.55*1024**4,netUp:0,netDown:0},
   costSummary:null,costLoading:false,showOverviewRatings:false,showTrafficRating:false,showBandwidthRating:false,showAssetRating:false,
   trafficRatingLabels:'',bandwidthRatingLabels:'',assetRatingLabels:'',showCosts:false,showDetailButton:false,renewalNodes:[],dense:false,onWarmTraffic:()=>{},
  })));
@@ -22,6 +22,17 @@ test('Lumina overview displays billed usage as the main total without depending 
  }
  assert.match(render(0), /overview-card-value">0<span/);
  assert.doesNotMatch(render(NaN), /data-metric="traffic"/);
+ const trafficCard=(html:string)=>html.match(/<article[^>]*data-metric="traffic"[\s\S]*?<\/article>/)?.[0] ?? '';
+ const directions=trafficCard(render(1.93*1024**4,11.35*1024**4,1.43*1024**4));
+ assert.match(directions,/overview-card-value">1\.93<span/);
+ assert.match(directions,/↑ 11\.35 TB · ↓ 1\.43 TB/);
+ assert.doesNotMatch(directions,/配额|剩余/);
+ const partial=trafficCard(render(1024,0,NaN));
+ assert.match(partial,/↑ 0 B/);
+ assert.doesNotMatch(partial,/↓|—/);
+ const downloadOnly=trafficCard(render(1024,NaN,2048));
+ assert.match(downloadOnly,/↓ 2\.00 KB/);
+ assert.doesNotMatch(downloadOnly,/↑|—/);
 });
 
 test('Lumina distinguishes missing measurements from real zero', () => {

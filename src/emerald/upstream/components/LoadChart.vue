@@ -178,6 +178,7 @@ async function fetchData() {
 // ==================== 数据处理 ====================
 
 const chartData = computed(() => remoteData.value)
+const hasLoadData = computed(() => hasHistoryMeasurement(chartData.value, ['load']))
 
 const latestStatus = computed(() => {
   const data = remoteData.value
@@ -294,13 +295,13 @@ const cpuChartOption = computed(() => ({
       max: 100,
       axisLabel: { ...baseYAxisConfig.value.axisLabel, formatter: '{value}%' },
     },
-    {
+    ...(hasLoadData.value ? [{
       ...baseYAxisConfig.value,
-      name: isRealtime.value ? '负载' : '负载（未提供）',
+      name: '负载',
       nameTextStyle: { color: chartThemeColors.value.textSecondary, padding: [0, 0, 0, 40] },
       min: 0,
       splitLine: { show: false },
-    },
+    }] : []),
   ],
   series: [
     {
@@ -325,7 +326,7 @@ const cpuChartOption = computed(() => ({
         },
       },
     },
-    {
+    ...(hasLoadData.value ? [{
       name: '负载',
       type: 'line',
       data: chartData.value.map(r => r.load),
@@ -333,7 +334,7 @@ const cpuChartOption = computed(() => ({
       showSymbol: false,
       yAxisIndex: 1,
       lineStyle: { width: 1.5, color: chartColors.secondary, cap: 'round' as const },
-    },
+    }] : []),
   ],
 }))
 
@@ -678,7 +679,7 @@ onMounted(() => {
             </div>
           </template>
           <div class="h-48">
-            <VChart :option="cpuChartOption" autoresize />
+            <VChart :option="cpuChartOption" :update-options="{ replaceMerge: ['yAxis', 'series'] }" autoresize />
           </div>
         </CardX>
 

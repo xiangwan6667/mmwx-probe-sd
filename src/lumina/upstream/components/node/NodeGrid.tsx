@@ -1,4 +1,5 @@
 import { summarizeBillingTraffic } from '../../../../traffic-display';
+import { summarizePeriodTraffic } from '@lumina/utils/traffic';
 import { useCallback, useEffect, useMemo, useState, type CSSProperties } from "react";
 import { Link } from "react-router-dom";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
@@ -79,6 +80,8 @@ interface HomeOverview {
   onlineNodes: number;
   offlineNodes: number;
   billableTraffic: number;
+  trafficUp: number;
+  trafficDown: number;
   trafficLimit: number;
   remainingTraffic: number;
   netUp: number;
@@ -166,6 +169,12 @@ export function HomeOverviewCards({
       : costLoading
         ? "计算中"
         : "—";
+  const trafficDirections = [
+    { arrow: "↑", value: overview.trafficUp },
+    { arrow: "↓", value: overview.trafficDown },
+  ].filter(direction => Number.isFinite(direction.value));
+  const trafficDetailLabel = trafficDirections.map(({ arrow, value }) => `${arrow} ${formatBytes(value, 2)}`).join(" · ");
+  const trafficCompactLabel = trafficDirections.map(({ arrow, value }) => `${arrow}${formatCompactBytes(value)}`).join(" ");
   const bandwidthDetailLabel = `↑ ${formatByteRateLabel(overview.netUp)} · ↓ ${formatByteRateLabel(overview.netDown)}`;
   const bandwidthCompactLabel = `↑${formatCompactBytes(overview.netUp)} ↓${formatCompactBytes(overview.netDown)}`;
   const trafficRating =
@@ -274,6 +283,10 @@ export function HomeOverviewCards({
           </p>
         </div>
         <div className="overview-card-footer">
+          {trafficDirections.length > 0 && <p className="overview-card-sub" title={trafficDetailLabel}>
+            <span className="overview-card-sub-full">{trafficDetailLabel}</span>
+            <span className="overview-card-sub-compact">{trafficCompactLabel}</span>
+          </p>}
           {renderRating(trafficRating)}
         </div>
       </article>)}
@@ -440,6 +453,7 @@ export function NodeGrid() {
     let onlineNodes = 0;
     let offlineNodes = 0;
     const billingTraffic = summarizeBillingTraffic(visibleMeta);
+    const periodTraffic = summarizePeriodTraffic(visibleMeta);
     let netUp = 0;
     let netDown = 0;
     for (const node of visibleNodes) {
@@ -456,6 +470,8 @@ export function NodeGrid() {
       onlineNodes,
       offlineNodes,
       billableTraffic: billingTraffic.used,
+      trafficUp: periodTraffic.up,
+      trafficDown: periodTraffic.down,
       trafficLimit: billingTraffic.limit,
       remainingTraffic: billingTraffic.remaining,
       netUp,
