@@ -5,6 +5,7 @@ import { Card, CardContent } from "@/components/ui/card"
 import { useStatus } from "@/hooks/use-status"
 import { formatBytes } from "@/lib/format"
 import { cn } from "@/lib/utils"
+import { ArrowDownCircleIcon, ArrowUpCircleIcon } from "@heroicons/react/20/solid"
 import { useTranslation } from "react-i18next"
 
 type ServerOverviewProps = {
@@ -20,6 +21,10 @@ type ServerOverviewProps = {
 export default function ServerOverview({ online, offline, total }: ServerOverviewProps) {
   const { t } = useTranslation()
   const traffic = summarizeTraffic(getProbe().servers || [])
+  const hasUp = Number.isFinite(traffic.uplink)
+  const hasDown = Number.isFinite(traffic.downlink)
+  const hasUpSpeed = Number.isFinite(traffic.uploadSpeed)
+  const hasDownSpeed = Number.isFinite(traffic.downloadSpeed)
   const { status, setStatus } = useStatus()
 
   // @ts-expect-error DisableAnimatedMan is a global variable
@@ -108,7 +113,7 @@ export default function ServerOverview({ online, offline, total }: ServerOvervie
             </section>
           </CardContent>
         </Card>
-        {Number.isFinite(traffic.used) && (<Card
+        {(hasUp || hasDown || hasUpSpeed || hasDownSpeed) && (<Card
           className={cn("hover:ring-purple-500 ring-1 ring-transparent transition-all", {
             "bg-card/70": customBackgroundImage,
           })}
@@ -116,9 +121,22 @@ export default function ServerOverview({ online, offline, total }: ServerOvervie
           <CardContent className="flex h-full items-center relative px-6 py-3">
             <section className="flex flex-col gap-1 w-full">
               <div className="flex items-center w-full justify-between">
-                <p className="text-sm font-medium md:text-base">已用流量</p>
+                <p className="text-sm font-medium md:text-base">{t("serverOverview.network")}</p>
               </div>
-              <p className="text-lg font-semibold">{formatBytes(traffic.used)}</p>
+              {(hasUp || hasDown) && (<section className="flex items-start flex-row z-10 pr-0 gap-1">
+                {hasUp && <p className="sm:text-[12px] text-[10px] text-blue-800 dark:text-blue-400   text-nowrap font-medium">↑{formatBytes(traffic.uplink)}</p>}
+                {hasDown && <p className="sm:text-[12px] text-[10px]  text-purple-800 dark:text-purple-400  text-nowrap font-medium">↓{formatBytes(traffic.downlink)}</p>}
+              </section>)}
+              {(hasUpSpeed || hasDownSpeed) && (<section className="flex flex-col sm:flex-row -mr-1 sm:items-center items-start gap-1">
+                {hasUpSpeed && <p className="text-[11px] flex items-center text-nowrap font-semibold">
+                  <ArrowUpCircleIcon className="size-3 mr-0.5 sm:mb-[1px]" />
+                  {formatBytes(traffic.uploadSpeed)}/s
+                </p>}
+                {hasDownSpeed && <p className="text-[11px] flex items-center  text-nowrap font-semibold">
+                  <ArrowDownCircleIcon className="size-3 mr-0.5" />
+                  {formatBytes(traffic.downloadSpeed)}/s
+                </p>}
+              </section>)}
             </section>
             {!disableAnimatedMan && (
               <img

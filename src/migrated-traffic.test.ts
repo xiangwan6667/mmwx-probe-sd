@@ -107,7 +107,7 @@ test('Nezha preserves missing measurements instead of inventing zero', () => {
   assert.ok(Number.isNaN(missing.host.boot_time));
 });
 
-test('Nezha overview renders only billed usage, preserves zero and hides missing usage', async () => {
+test('Nezha network overview renders cycle directions and online speeds in the upstream layout', async () => {
   const { createElement } = await import('react');
   const { renderToStaticMarkup } = await import('react-dom/server');
   const { default: ServerOverview } = await import('./nezhadash/upstream/components/ServerOverview');
@@ -122,13 +122,32 @@ test('Nezha overview renders only billed usage, preserves zero and hides missing
         { value: { status: 'all', setStatus: () => {} } }, createElement(ServerOverview,
           { online: 1, offline: 0, total: servers.length, up: 0, down: 0, upSpeed: 0, downSpeed: 0 })));
     };
-    assert.match(render(payload.servers!), /已用流量/);
-    assert.doesNotMatch(render(payload.servers!), /周期流量|配额|剩余/);
-    assert.match(render([{ online: true, traffic_used: 0, traffic_used_up: 0,
-      traffic_used_down: 0, upload_speed: 0, download_speed: 0 }]), /0 Bytes/);
-    assert.doesNotMatch(render([{ online: true }]), /已用流量/);
-    assert.doesNotMatch(render([{ online: true, traffic_used_up: 1, upload_speed: 1 }]), /已用流量/);
-    assert.match(render(payload.servers!), /已用流量/);
+    const full = render(payload.servers!);
+    assert.match(full, /serverOverview.network/);
+    assert.match(full, /↑500 Bytes/);
+    assert.match(full, /↓700 Bytes/);
+    assert.match(full, /3 Bytes\/s/);
+    assert.match(full, /4 Bytes\/s/);
+    assert.doesNotMatch(full, /已用流量|配额|剩余|99 Bytes\/s/);
+
+    const zero = render([{ online: true, traffic_used: 0, traffic_used_up: 0,
+      traffic_used_down: 0, upload_speed: 0, download_speed: 0 }]);
+    assert.match(zero, /↑0 Bytes/);
+    assert.match(zero, /↓0 Bytes/);
+    assert.equal(zero.match(/0 Bytes\/s/g)?.length, 2);
+
+    assert.doesNotMatch(render([{ online: true }]), /serverOverview.network/);
+    assert.doesNotMatch(render([{ online: true, traffic_used: 10,
+      boot_traffic_up: 100, boot_traffic_down: 200 }]), /serverOverview.network/);
+    const partial = render([{ online: true, traffic_used_up: 1, upload_speed: 2 }]);
+    assert.match(partial, /↑1 Bytes/);
+    assert.match(partial, /2 Bytes\/s/);
+    assert.doesNotMatch(partial, /↓|NaN|0 Bytes/);
+
+    const incomplete = render([...payload.servers!, { online: true, upload_speed: 1, download_speed: 2 }]);
+    assert.doesNotMatch(incomplete, /↑|↓/);
+    assert.match(incomplete, /4 Bytes\/s/);
+    assert.match(incomplete, /6 Bytes\/s/);
   } finally {
     Object.assign(globalThis, { window: previousWindow });
   }
