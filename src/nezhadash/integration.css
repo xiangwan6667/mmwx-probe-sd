@@ -1,4 +1,10 @@
 /* Host controls and conditional glass surfaces over the upstream page styles. */
+/* Keep the bootstrap canvas when application CSS takes over, including while
+   site settings load and the body is still empty. */
+:root {
+  background-color: hsl(var(--background));
+}
+
 .nezha-unlocks-trigger { width: 28px; height: 28px; padding: 0; border-radius: 999px; flex: none; }
 .nezha-unlocks-trigger svg { color: #047857; }
 .nezha-unlocks-trigger[data-complete="true"] svg { color: #b7791f; }
